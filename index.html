@@ -129,6 +129,8 @@ main{flex:1 1 auto;min-height:0;display:flex;gap:6px}
 .row .r-rank{font-family:"Cinzel",serif;font-weight:700;font-size:11px;color:#a08a4a;width:14px;text-align:center;flex-shrink:0}
 .row .r-body{flex:1;min-width:0;line-height:1.15}
 .row .r-name{font-weight:700;font-size:clamp(11px,0.95vw,13.5px);color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ppb{color:#6b4fa3;font-weight:700}
+.tip .t-pp{color:#cdb6f5;font-weight:700;font-size:11.5px;margin-bottom:2px}
 .row .r-area{font-size:9.5px;color:#8a7a55;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row .r-wait{font-family:"Shippori Mincho",serif;font-weight:800;font-size:17px;flex-shrink:0;font-variant-numeric:tabular-nums;text-align:right}
 .row .r-wait small{font-size:9px;font-weight:600}
@@ -223,6 +225,7 @@ main{flex:1 1 auto;min-height:0;display:flex;gap:6px}
             <span><span class="dot" style="background:#a83a24"></span><span id="lg3">65分〜</span></span>
             <span><span class="dot" style="background:#5a6b8c"></span><span id="lg4">休止・調整</span></span>
             <span><span class="dot" style="background:#b4452f"></span><span id="lg5">レストラン</span></span>
+            <span><span class="dot" style="background:#6b4fa3"></span><span id="lg6">PP=プライオリティパス</span></span>
           </div>
           <div class="foot" id="footNote"></div>
         </div>
@@ -294,7 +297,7 @@ const T={
    restrictFc:"⚠ 本日は入場制限が予想されます",
    est:"想定来場者数",dom:"国内",inb:"インバウンド",basis:"（日本の暦・天候・訪日客動向に基づく推定）",
    wFail:"天候取得不可",wPlace:"東京エリア実況",wEffPre:"来場影響 ×",
-   lg:["〜30分","35〜60分","65分〜","休止・調整","レストラン"],
+   lg:["〜30分","35〜60分","65分〜","休止・調整","レストラン","PP=プライオリティパス(30分枠優先入場)"],
    foot:"営業時間 9:00–22:00 ｜ 待ち時間1分毎・天候10分毎・地震情報5分毎に更新 ｜ 最終更新 ",
    demo:"※架空パークのデモです。天候(Open-Meteo)と地震情報(P2P地震情報)は実データ、待ち時間・来場者数はシミュレーションです。",
    people:"人",attrType:"アトラクション",restType:"レストラン",
@@ -312,7 +315,7 @@ const T={
    restrictFc:"⚠ Entry restrictions are expected today",
    est:"Estimated attendance",dom:"Domestic",inb:"International",basis:"(Japanese calendar, weather & inbound trends)",
    wFail:"Weather unavailable",wPlace:"Tokyo area, live",wEffPre:"Attendance ×",
-   lg:["≤30 min","35–60 min","65+ min","Closed / adjusting","Restaurant"],
+   lg:["≤30 min","35–60 min","65+ min","Closed / adjusting","Restaurant","PP = Priority Pass (30-min slots)"],
    foot:"Hours 9:00–22:00 | Waits: 1 min, weather: 10 min, quake feed: 5 min | Updated ",
    demo:"Fictional park demo. Weather (Open-Meteo) & quake feed (P2P) are real data; waits & attendance are simulated.",
    people:"",attrType:"Attraction",restType:"Restaurant",
@@ -327,17 +330,130 @@ const T={
 const t=k=>T[LANG][k];
 
 /* ================= 暦 ================= */
-const HOLIDAYS={
- "2025-01-01":["元日","New Year's Day"],"2025-01-13":["成人の日","Coming of Age Day"],"2025-02-11":["建国記念の日","Foundation Day"],"2025-02-23":["天皇誕生日","Emperor's Birthday"],"2025-02-24":["振替休日","Holiday"],
- "2025-03-20":["春分の日","Vernal Equinox"],"2025-04-29":["昭和の日","Showa Day"],"2025-05-03":["憲法記念日","Constitution Day"],"2025-05-04":["みどりの日","Greenery Day"],"2025-05-05":["こどもの日","Children's Day"],"2025-05-06":["振替休日","Holiday"],
- "2025-07-21":["海の日","Marine Day"],"2025-08-11":["山の日","Mountain Day"],"2025-09-15":["敬老の日","Respect for the Aged Day"],"2025-09-23":["秋分の日","Autumnal Equinox"],"2025-10-13":["スポーツの日","Sports Day"],"2025-11-03":["文化の日","Culture Day"],"2025-11-23":["勤労感謝の日","Labor Thanksgiving"],"2025-11-24":["振替休日","Holiday"],
- "2026-01-01":["元日","New Year's Day"],"2026-01-12":["成人の日","Coming of Age Day"],"2026-02-11":["建国記念の日","Foundation Day"],"2026-02-23":["天皇誕生日","Emperor's Birthday"],
- "2026-03-20":["春分の日","Vernal Equinox"],"2026-04-29":["昭和の日","Showa Day"],"2026-05-03":["憲法記念日","Constitution Day"],"2026-05-04":["みどりの日","Greenery Day"],"2026-05-05":["こどもの日","Children's Day"],"2026-05-06":["振替休日","Holiday"],
- "2026-07-20":["海の日","Marine Day"],"2026-08-11":["山の日","Mountain Day"],"2026-09-21":["敬老の日","Respect for the Aged Day"],"2026-09-22":["国民の休日","National Holiday"],"2026-09-23":["秋分の日","Autumnal Equinox"],"2026-10-12":["スポーツの日","Sports Day"],"2026-11-03":["文化の日","Culture Day"],"2026-11-23":["勤労感謝の日","Labor Thanksgiving"],
- "2027-01-01":["元日","New Year's Day"],"2027-01-11":["成人の日","Coming of Age Day"],"2027-02-11":["建国記念の日","Foundation Day"],"2027-02-23":["天皇誕生日","Emperor's Birthday"],
- "2027-03-21":["春分の日","Vernal Equinox"],"2027-03-22":["振替休日","Holiday"],"2027-04-29":["昭和の日","Showa Day"],"2027-05-03":["憲法記念日","Constitution Day"],"2027-05-04":["みどりの日","Greenery Day"],"2027-05-05":["こどもの日","Children's Day"],
- "2027-07-19":["海の日","Marine Day"],"2027-08-11":["山の日","Mountain Day"],"2027-09-20":["敬老の日","Respect for the Aged Day"],"2027-09-23":["秋分の日","Autumnal Equinox"],"2027-10-11":["スポーツの日","Sports Day"],"2027-11-03":["文化の日","Culture Day"],"2027-11-23":["勤労感謝の日","Labor Thanksgiving"],
+/* ================= 日本の祝日（2025〜2035の10年分を自動計算） =================
+   ハッピーマンデー・春分秋分(近似式)・振替休日・国民の休日に対応 */
+const HNAME_EN={"元日":"New Year's Day","成人の日":"Coming of Age Day","建国記念の日":"National Foundation Day",
+ "天皇誕生日":"Emperor's Birthday","春分の日":"Vernal Equinox Day","昭和の日":"Showa Day","憲法記念日":"Constitution Day",
+ "みどりの日":"Greenery Day","こどもの日":"Children's Day","海の日":"Marine Day","山の日":"Mountain Day",
+ "敬老の日":"Respect for the Aged Day","秋分の日":"Autumnal Equinox Day","スポーツの日":"Sports Day",
+ "文化の日":"Culture Day","勤労感謝の日":"Labor Thanksgiving Day","振替休日":"Substitute Holiday","国民の休日":"National Holiday"};
+const HOLIDAY_CACHE={};
+function yearHolidays(y){
+  if (HOLIDAY_CACHE[y]) return HOLIDAY_CACHE[y];
+  const map={};
+  const add=(m,d,n)=>{map[m+"-"+d]=n;};
+  const nthMon=(m,n)=>{const first=new Date(y,m-1,1).getDay();return 1+((8-first)%7)+(n-1)*7;};
+  add(1,1,"元日");
+  add(1,nthMon(1,2),"成人の日");
+  add(2,11,"建国記念の日");
+  add(2,23,"天皇誕生日");
+  add(3,Math.floor(20.8431+0.242194*(y-1980))-Math.floor((y-1980)/4),"春分の日");
+  add(4,29,"昭和の日");
+  add(5,3,"憲法記念日"); add(5,4,"みどりの日"); add(5,5,"こどもの日");
+  add(7,nthMon(7,3),"海の日");
+  add(8,11,"山の日");
+  add(9,nthMon(9,3),"敬老の日");
+  add(9,Math.floor(23.2488+0.242194*(y-1980))-Math.floor((y-1980)/4),"秋分の日");
+  add(10,nthMon(10,2),"スポーツの日");
+  add(11,3,"文化の日"); add(11,23,"勤労感謝の日");
+  /* 振替休日：日曜と重なった祝日の直後の非祝日 */
+  Object.keys(Object.assign({},map)).forEach(k=>{
+    const [m,d]=k.split("-").map(Number);
+    if (new Date(y,m-1,d).getDay()===0){
+      let nd=new Date(y,m-1,d+1);
+      while (map[(nd.getMonth()+1)+"-"+nd.getDate()]) nd=new Date(y,nd.getMonth(),nd.getDate()+1);
+      if (nd.getFullYear()===y) map[(nd.getMonth()+1)+"-"+nd.getDate()]="振替休日";
+    }
+  });
+  /* 国民の休日：祝日に挟まれた平日（シルバーウィーク等） */
+  for (let m=1;m<=12;m++) for (let d=2;d<=30;d++){
+    const cur=new Date(y,m-1,d);
+    if (cur.getMonth()!==m-1||map[m+"-"+d]||cur.getDay()===0) continue;
+    const nx=new Date(y,m-1,d+1);
+    if (map[m+"-"+(d-1)]&&map[(nx.getMonth()+1)+"-"+nx.getDate()]) map[m+"-"+d]="国民の休日";
+  }
+  HOLIDAY_CACHE[y]=map;
+  return map;
+}
+function holidayOf(d){
+  const y=d.getFullYear();
+  if (y<2025||y>2035) return null;
+  return yearHolidays(y)[(d.getMonth()+1)+"-"+d.getDate()]||null;
+}
+function holidayPair(d){
+  const n=holidayOf(d);
+  return n?[n,HNAME_EN[n]||n]:null;
+}
+/* ================= 混雑区分と入場ペース（案B×案C複合） =================
+   普通(火水木)＝案B / 混雑(休日・月曜・金曜)＝案B寄りC / 超混雑(連休中日)＝案C /
+   特異日(暦上のサージ日)＝案C超え */
+const ULTRA_DAYS={101:"元日",504:"GW中日",814:"お盆ピーク",1031:"ハロウィン",1224:"クリスマスイブ",1225:"クリスマス"};
+function isOffDay(d){const w=d.getDay();return w===0||w===6||!!holidayOf(d);}
+function addDays(d,n){return new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);}
+function isHolidayMiddle(d){
+  return isOffDay(d)&&isOffDay(addDays(d,-1))&&isOffDay(addDays(d,1));
+}
+function rampLevel(d){
+  const md=mmdd(d);
+  if (ULTRA_DAYS[md]) return {lv:3,name:ULTRA_DAYS[md]};
+  if (isHolidayMiddle(d)) return {lv:2,name:null};
+  const w=d.getDay();
+  if (isOffDay(d)||w===1||w===5) return {lv:1,name:null};
+  return {lv:0,name:null};
+}
+/* [入場中心時刻, 傾き] lv0:案B lv1:混雑 lv2:案C lv3:特異日 */
+const RAMP=[[9.9,1.7],[9.8,1.85],[9.7,2.0],[9.5,2.6]];
+
+/* ================= プライオリティパス（PP） =================
+   30分区切りの優先入場パス。1日の配布量(stock)は固定で、
+   需要(想定来場者数×取得率k)が在庫を上回る混雑日は早く配布終了となる。
+   人気順に取得率が高く、在庫比も厳しいため、人気アトラクションほど先に終了する */
+const PP={
+  chase:  {k:0.160, stock:9000},
+  rail:   {k:0.120, stock:7400},
+  dam:    {k:0.120, stock:7400},
+  wheel:  {k:0.100, stock:6450},
+  factory:{k:0.085, stock:5740},
+  voyage: {k:0.075, stock:5230},
 };
+const PP_FIRST=10.0, PP_LAST=21.5, PP_SLOTS=24;   /* 10:00〜21:30開始の30分枠×24 */
+/* 発券の進行カーブ：入場ペース(混雑区分に連動)と時間経過のブレンド。
+   混雑日・特異日ほど序盤に集中し、早い時間に在庫が尽きる */
+function ppIssueCurve(tt,d){
+  const poly=Math.pow(Math.max(0,(tt-OPEN_H)/7),0.75);   /* 〜16時で配り切る形 */
+  return Math.min(1,0.5*cumulativeEntry(tt,d)+0.5*poly);
+}
+function ppInfo(id,d,tt,attTotal){
+  const cfg=PP[id]; if(!cfg) return null;
+  const demandAll=attTotal*cfg.k;
+  /* 配布終了時刻＝累計発券需要が在庫に達する時刻 */
+  let endT=null;
+  if (demandAll>cfg.stock){
+    for (let x=OPEN_H;x<=CLOSE_H;x+=1/12){
+      if (demandAll*ppIssueCurve(x,d)>=cfg.stock){endT=Math.round(x*12)/12;break;}
+    }
+  }
+  if (endT!=null&&tt>=endT) return {state:"end",endT};
+  const issued=Math.min(cfg.stock,demandAll*ppIssueCurve(tt,d));
+  let slot=PP_FIRST+Math.floor(issued/cfg.stock*PP_SLOTS)*0.5;
+  const minSlot=Math.ceil((tt+1)*2)/2;            /* 現在+1時間以降の枠から配布 */
+  slot=Math.max(slot,minSlot);
+  if (slot>PP_LAST) return {state:"end",endT:endT??tt};
+  return {state:"now",slot,endT};
+}
+function ppText(id,d,tt,attTotal,status,forecast){
+  if (!PP[id]) return null;
+  if (status&&status.st==="maint") return LANG==="ja"?"PP発券なし":"No PP today";
+  if (status&&status.st!=="open") return LANG==="ja"?"PP発券一時停止":"PP paused";
+  if (!forecast&&(tt<OPEN_H||tt>=CLOSE_H)) return null;
+  const info=ppInfo(id,d,forecast?OPEN_H+0.01:tt,attTotal);
+  if (forecast){
+    if (info.endT) return (LANG==="ja"?"PP終了予想 ":"PP est. end ")+fmtT(info.endT)+(LANG==="ja"?"頃":"");
+    return LANG==="ja"?"PP終日配布見込み":"PP available all day (est.)";
+  }
+  if (info.state==="end") return (LANG==="ja"?"PP本日分終了":"PP sold out")+(info.endT?"（"+fmtT(info.endT)+"）":"");
+  return (LANG==="ja"?"PP発券中 ":"PP now: ")+fmtT(info.slot)+"–"+fmtT(info.slot+0.5);
+}
 const WD_JA=["日","月","火","水","木","金","土"], WD_EN=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const dateKey=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 const mmdd=d=>(d.getMonth()+1)*100+d.getDate();
@@ -510,31 +626,36 @@ function redistFactor(d,tt){
 /* ================= 来場者数モデル ================= */
 function dailyAttendance(d){
   const key=dateKey(d),dow=d.getDay();
-  const holiday=HOLIDAYS[key]||null;
+  const holiday=holidayPair(d);
   let base;
   if (holiday) base=68000;
   else if (dow===6) base=64000;
   else if (dow===0) base=56000;
-  else if (dow===5) base=40000;
-  else base=29000;
+  else if (dow===5||dow===1) base=40000;   /* 金曜・月曜＝混雑 */
+  else base=29000;                          /* 火水木＝普通 */
+  const rl=rampLevel(d);
+  if (rl.lv===2) base=Math.max(base,71000); /* 連休中日＝超混雑 */
+  if (rl.lv===3) base=Math.max(base,68000); /* 暦上の特異日 */
   const season=seasonInfo(d);
   const domestic=Math.round(base*season.mul*(0.92+rand01("att-"+key)*0.16)*WX.mul/100)*100;
   const inb=inboundInfo(d);
   const inbound=Math.round(7000*inb.mul*(0.92+rand01("inb-"+key)*0.16)*(0.5+0.5*WX.mul)/100)*100;
   return {total:Math.min(MAX_CAP,domestic+inbound),domestic,inbound,holiday,season,inb};
 }
-function occupancyCurve(tt){
+function occupancyCurve(tt,d){
   if (tt<=OPEN_H||tt>=CLOSE_H) return 0;
-  const rise=1/(1+Math.exp(-(tt-10.6)*1.35));
+  const [c0,k]=RAMP[rampLevel(d).lv];
+  const rise=1/(1+Math.exp(-(tt-c0)*k));
   const fall=1/(1+Math.exp(-(tt-20.8)*1.10));
   let c=Math.max(0,rise-fall*0.98);
   if (tt>21.5) c*=(CLOSE_H-tt)/0.5;
   return c;
 }
-function cumulativeEntry(tt){
+function cumulativeEntry(tt,d){
   if (tt<=OPEN_H) return 0;
   if (tt>=CLOSE_H) return 1;
-  return Math.min(1,1/(1+Math.exp(-(tt-11.4)*1.1)));
+  const [c0,k]=RAMP[rampLevel(d).lv];
+  return Math.min(1,1/(1+Math.exp(-(tt-(c0+0.75))*k*0.8)));
 }
 const mealFactor=tt=>0.35+1.9*Math.exp(-Math.pow(tt-12.4,2)/1.445)+1.6*Math.exp(-Math.pow(tt-18.4,2)/1.62);
 /* ===== アトラクション別の需要プロファイル（人気順×時間帯パターン） =====
@@ -607,7 +728,7 @@ function calcWait(spot,d,tt,inPark,redist){
 
 /* ================= 描画 ================= */
 const mapInner=document.getElementById("mapInner"),tip=document.getElementById("tip");
-let activeId=null,currentWaits={},currentStatus={},fcMode=false;
+let activeId=null,currentWaits={},currentStatus={},fcMode=false,currentAtt=0,currentSimT=12;
 const waitClass=w=>w==null?"w-closed":w<=30?"w-ok":w<=60?"w-warn":"w-bad";
 const name=s=>LANG==="ja"?s.ja:s.en, area=s=>LANG==="ja"?s.areaJa:s.areaEn;
 const rangeStr=r=>`${Math.floor(r[0]/100)}/${r[0]%100}–${Math.floor(r[1]/100)}/${r[1]%100}`;
@@ -651,7 +772,9 @@ function showTip(s){
   else line=(fcMode?t("waitFc"):t("wait"))+w+t("min");
   let extra="";
   if (s.sunset&&(!st||st.st==="open")) extra="・"+t("sunsetInfo")+" "+fmtT(sunsetH());
-  tip.innerHTML=`<div class="t-name">${name(s)}</div><div class="t-wait">${line}</div>
+  const pp=ppText(s.id,new Date(),currentSimT,currentAtt,st,fcMode);
+  const ppLine=pp?`<div class="t-pp">🎫 ${pp}</div>`:"";
+  tip.innerHTML=`<div class="t-name">${name(s)}</div><div class="t-wait">${line}</div>${ppLine}
     <div class="t-area">${s.type==="a"?t("attrType"):t("restType")}・${area(s)}${extra}</div>`;
   tip.classList.add("show");
   const W=mapInner.clientWidth,H=mapInner.clientHeight;
@@ -680,9 +803,11 @@ function renderLists(){
       if (st&&st.st!=="open"){wc="w-maint";wtxt=statusShort(st);down="down";}
       else if (w==null){wc="w-closed";wtxt=new Date().getHours()<OPEN_H?t("before"):t("closed");}
       else {wc=waitClass(w);wtxt=`${w}<small> ${t("min")}</small>`;}
+      const pp=ppText(s.id,new Date(),currentSimT,currentAtt,st,fcMode);
+      const ppHtml=pp?` <span class="ppb">${pp}</span>`:"";
       return `<div class="row ${cls} ${down}" data-id="${s.id}" tabindex="0" role="button">
         <div class="r-rank">${i+1}</div>
-        <div class="r-body"><div class="r-name">${name(s)}</div><div class="r-area">${area(s)}</div></div>
+        <div class="r-body"><div class="r-name">${name(s)}</div><div class="r-area">${area(s)}${ppHtml}</div></div>
         <div class="r-wait ${wc}">${wtxt}</div></div>`;
     }).join("");
     panel.querySelectorAll(".row").forEach(r=>{
@@ -703,8 +828,8 @@ function refresh(){
   fcMode=tt<OPEN_H;
   const simT=fcMode?14.0:tt;
   const att=dailyAttendance(now);
-  const inPark=fcMode?att.total:Math.round(att.total*occupancyCurve(tt)/100)*100;
-  const entered=Math.round(att.total*cumulativeEntry(tt));
+  const inPark=fcMode?att.total:Math.round(att.total*occupancyCurve(tt,now)/100)*100;
+  const entered=Math.round(att.total*cumulativeEntry(tt,now));
   const redist=redistFactor(now,simT);
 
   document.getElementById("tCrowd").textContent=fcMode?t("crowdFc"):t("crowdNow");
@@ -729,6 +854,10 @@ function refresh(){
   if (att.holiday) tags.push(LANG==="ja"?"祝日「"+att.holiday[0]+"」":"Holiday: "+att.holiday[1]);
   const sn=LANG==="ja"?att.season.ja:att.season.en; if(sn)tags.push(sn);
   const inbn=LANG==="ja"?att.inb.ja:att.inb.en; if(inbn)tags.push(inbn+(LANG==="ja"?"（訪日増）":" (inbound surge)"));
+  const rlv=rampLevel(now);
+  if (rlv.lv===3) tags.push(LANG==="ja"?`特異日「${rlv.name}」・開園ダッシュ最大`:`Surge day: opening rush max`);
+  else if (rlv.lv===2) tags.push(LANG==="ja"?"連休中日（超混雑・開園ダッシュ強）":"Mid-holiday peak (heavy opening rush)");
+  else if (rlv.lv===1) tags.push(LANG==="ja"?"混雑日（開園ダッシュあり）":"Busy day (opening rush)");
   if (tags.length) note+=" ／ "+tags.join("・");
   document.getElementById("crowdNote").textContent=note+" "+t("basis");
 
@@ -746,7 +875,7 @@ function refresh(){
     document.getElementById("tRestCnt").textContent=(LANG==="ja"?`${rn}店舗`:`${rn} locations`);
   }
 
-  currentWaits={};currentStatus={};
+  currentWaits={};currentStatus={};currentAtt=att.total;currentSimT=simT;
   SPOTS.forEach(s=>{
     const stt=spotStatus(s,now,simT);
     currentStatus[s.id]=stt;
@@ -783,7 +912,7 @@ function tickClock(){
   const now=new Date();
   document.getElementById("clock").textContent=
     String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0")+":"+String(now.getSeconds()).padStart(2,"0");
-  const hol=HOLIDAYS[dateKey(now)];
+  const hol=holidayPair(now);
   document.getElementById("dateline").innerHTML=LANG==="ja"
     ? `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日（${WD_JA[now.getDay()]}）`+(hol?` <span class="holiday">☀ ${hol[0]}</span>`:"")
     : `${WD_EN[now.getDay()]}, ${now.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}`+(hol?` <span class="holiday">☀ ${hol[1]}</span>`:"");
