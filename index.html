@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>マローブルック・パーク｜リアルタイム待ち時間</title>
+<title>MALLOWBROOK PARK｜リアルタイム運営情報</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Cinzel:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -125,6 +125,7 @@ main{flex:1 1 auto;min-height:0;display:flex;gap:6px}
 .row:hover{transform:translateX(2px)}
 .row:focus-visible{outline:3px solid #ffd75e;outline-offset:1px}
 .row.rest{border-left-color:var(--copper)}
+.row.fac{border-left-color:#2a7d78}
 .row.down{background:linear-gradient(180deg,#e9ecf2,#d8dde8);border-left-color:var(--maint);border-color:#a9b3c9}
 .row .r-rank{font-family:"Cinzel",serif;font-weight:700;font-size:11px;color:#a08a4a;width:14px;text-align:center;flex-shrink:0}
 .row .r-body{flex:1;min-width:0;line-height:1.15}
@@ -144,7 +145,50 @@ main{flex:1 1 auto;min-height:0;display:flex;gap:6px}
 .foot{flex:0 0 auto;font-size:9px;color:#8fa0c4;line-height:1.5;padding:5px 4px 0}
 .foot .upd{color:#c9d3e8;font-variant-numeric:tabular-nums}
 
+.event-banner{flex:0 0 auto;padding:7px 12px;border-radius:10px;text-align:center;
+  background:linear-gradient(90deg,#7a4a12,#a5761f 50%,#7a4a12);border:1px solid #e0b45e;
+  color:#ffedc4;font-size:12px;font-weight:700;letter-spacing:.04em}
+.event-banner .eb-days{color:#fff;font-size:14px}
+.shows-card{flex:0 0 auto;background:rgba(27,42,74,.55);border:1px solid rgba(120,150,220,.45);border-radius:12px;padding:8px 10px}
+.shows-title{font-family:"Shippori Mincho",serif;font-weight:700;font-size:12.5px;color:#cdd8f2;letter-spacing:.08em;padding:0 2px 6px}
+.shows-row{display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin}
+.show-card{flex:1 1 0;min-width:150px;background:linear-gradient(180deg,#22355e,#1a2a4c);
+  border:1px solid #3d5385;border-radius:9px;padding:6px 9px;cursor:pointer;color:#e8edf8;
+  transition:transform .1s ease}
+.show-card:hover{transform:translateY(-2px)}
+.show-card .sc-name{font-weight:700;font-size:11.5px;line-height:1.25;color:#fff}
+.show-card .sc-venue{font-size:9.5px;color:#93a6cf;margin-top:1px}
+.show-card .sc-status{font-size:11px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums}
+.sc-live{color:#7fe0a5}.sc-soon{color:#ffd75e}.sc-up{color:#9fc2ff}.sc-done{color:#8b97b5}.sc-maint{color:#e8a1a1}
+.ico-show{background:#3a5aa8}.ico-well{background:#2a7d78}.ico-svc{background:#5a6b8c}
+.sheet-backdrop{display:none;position:fixed;inset:0;background:rgba(10,16,30,.62);z-index:100;align-items:flex-end;justify-content:center}
+.sheet-backdrop.show{display:flex}
+.sheet{position:relative;width:min(680px,100%);max-height:82vh;overflow-y:auto;
+  background:linear-gradient(180deg,#fbf5e6,#f3e9d2);border:2px solid var(--brass);border-bottom:none;
+  border-radius:18px 18px 0 0;padding:18px 20px 24px;box-shadow:0 -8px 40px rgba(0,0,0,.6)}
+.sheet-close{position:absolute;top:10px;right:12px;width:30px;height:30px;border-radius:50%;
+  border:1px solid var(--brass-dark);background:#efe3c4;color:var(--navy);font-weight:700;cursor:pointer;font-size:13px}
+.sh-cat{font-size:11px;color:#8a7a55;letter-spacing:.06em}
+.sh-name{font-family:"Shippori Mincho",serif;font-weight:800;font-size:19px;color:var(--navy);line-height:1.3;margin:2px 0}
+.sh-area{font-size:12px;color:#7a6b48;margin-bottom:8px}
+.sh-live{background:var(--navy);color:var(--parchment);border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:13px;line-height:1.6}
+.sh-live b{color:#f0c14b}
+.sh-live .ppb2{color:#cdb6f5;font-weight:700}
+.sh-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px}
+.sh-tag{font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:999px;background:#e8dcba;color:#5a4c2a;border:1px solid #cbb87f}
+.sh-tag.warn{background:#f3d9cf;color:#8a3a22;border-color:#d09a83}
+.sh-tagline{font-family:"Shippori Mincho",serif;font-weight:700;font-size:14px;color:var(--forest);margin-bottom:6px}
+.sh-desc{font-size:13px;line-height:1.8;color:var(--ink);margin-bottom:10px}
+.sh-meta{font-size:12px;color:#6b5d3f;margin-bottom:8px}
+.sh-menus{margin-top:4px}
+.sh-menus .m-title{font-size:11.5px;font-weight:700;color:#8a7a55;margin-bottom:4px}
+.sh-menus ul{list-style:none;display:flex;flex-wrap:wrap;gap:5px}
+.sh-menus li{font-size:12px;background:#fff8e8;border:1px solid #d8c896;border-radius:8px;padding:3px 10px;color:var(--navy)}
+.sh-note{margin-top:10px;font-size:11.5px;color:#8a5a2a;background:#f7ecd2;border-left:3px solid var(--brass);padding:6px 10px;border-radius:0 8px 8px 0}
 @media (max-width:900px), (orientation:portrait) and (max-width:1100px){
+  .event-banner{margin-bottom:8px}
+  .shows-card{margin-bottom:8px}
+  .sheet{border-radius:18px 18px 0 0}
   html,body{height:auto}
   .app{height:auto;display:block}
   header{flex-wrap:wrap;margin-bottom:8px}
@@ -201,6 +245,7 @@ main{flex:1 1 auto;min-height:0;display:flex;gap:6px}
     </section>
 
     <section class="side">
+      <div class="event-banner" id="eventBanner"></div>
       <div class="quake-banner" id="quakeBanner" role="alert"></div>
       <div class="gauge-card">
         <div class="gauge-head">
@@ -211,13 +256,19 @@ main{flex:1 1 auto;min-height:0;display:flex;gap:6px}
         <div class="restrict-banner" id="restrictBanner"></div>
         <div class="gauge-note" id="crowdNote"></div>
       </div>
+      <div class="shows-card">
+        <h2 class="shows-title" id="tShows">本日のショー＆パレード</h2>
+        <div class="shows-row" id="panelShows"></div>
+      </div>
       <div class="lists">
         <div class="col">
           <h2><span id="tAttr">アトラクション</span><span class="lg"><span id="tOpenCnt"></span><span id="tSort">待ち時間順</span></span></h2>
           <div class="rows" id="panelAttr"></div>
         </div>
         <div class="col rest-col">
-          <h2><span id="tRest">レストラン</span><span class="lg" id="tRestCnt"></span></h2>
+          <h2><span id="tFac">施設・サービス</span><span class="lg" id="tFacCnt"></span></h2>
+          <div class="rows" id="panelFac" style="flex:0 0 auto"></div>
+          <h2 style="padding-top:8px"><span id="tRest">レストラン＆カフェ</span><span class="lg" id="tRestCnt"></span></h2>
           <div class="rows" id="panelRest"></div>
           <div class="legend">
             <span><span class="dot" style="background:#3f7d57"></span><span id="lg1">〜30分</span></span>
@@ -225,6 +276,8 @@ main{flex:1 1 auto;min-height:0;display:flex;gap:6px}
             <span><span class="dot" style="background:#a83a24"></span><span id="lg3">65分〜</span></span>
             <span><span class="dot" style="background:#5a6b8c"></span><span id="lg4">休止・調整</span></span>
             <span><span class="dot" style="background:#b4452f"></span><span id="lg5">レストラン</span></span>
+            <span><span class="dot" style="background:#3a5aa8"></span><span id="lg7">ショー</span></span>
+            <span><span class="dot" style="background:#2a7d78"></span><span id="lg8">施設</span></span>
             <span><span class="dot" style="background:#6b4fa3"></span><span id="lg6">PP=プライオリティパス</span></span>
           </div>
           <div class="foot" id="footNote"></div>
@@ -234,40 +287,47 @@ main{flex:1 1 auto;min-height:0;display:flex;gap:6px}
   </main>
 </div>
 
+<!-- 施設詳細（ボトムシート/モーダル） -->
+<div class="sheet-backdrop" id="sheetBackdrop">
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true">
+    <button class="sheet-close" id="sheetClose" aria-label="閉じる">✕</button>
+    <div id="sheetBody"></div>
+  </div>
+</div>
+
 <script>
 "use strict";
 /* ================= スポット定義 =================
    人気度: 大時計塔チェイス > ランナウェイ・レール ＝ ダムビルダー > グランドギア・ホイール > 空飛ぶ修理工場 */
 const SPOTS = [
-  {id:"chase",   type:"a", big:true,  ja:"大時計塔チェイス 〜マロウのいたずら〜", en:"Great Clocktower Chase", areaJa:"メインストリート", areaEn:"Main Street", x:51.0, y:57.0, pop:1.00, cap:140},
-  {id:"rail",    type:"a", big:true,  ja:"コークハーバー・ランナウェイ・レール", en:"Cork Harbor Runaway Rail", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:83.0, y:84.0, pop:0.86, cap:120},
-  {id:"dam",     type:"a", big:true,  ja:"ビバのドタバタ・ダムビルダー", en:"Viva's Slapstick Dam Builder", areaJa:"いたずら横丁", areaEn:"Mischief Alley", x:27.5, y:24.5, pop:0.86, cap:120},
-  {id:"wheel",   type:"a", big:true,  ja:"ペニーのグランドギア・ホイール", en:"Penny's Grand Gear Wheel", areaJa:"ペニーのギアワークス", areaEn:"Penny's Gearworks", x:92.0, y:35.0, pop:0.72, cap:100},
-  {id:"factory", type:"a", big:true,  ja:"ペニーの空飛ぶ修理工場", en:"Penny's Flying Repair Works", areaJa:"ペニーのギアワークス", areaEn:"Penny's Gearworks", x:80.0, y:18.0, pop:0.62, cap:90},
-  {id:"jazz",    type:"a", ja:"ルルのジャズ・ドリームレビュー", en:"Lulu's Jazz Dream Revue", areaJa:"スターライト劇場", areaEn:"Starlight Theater", x:52.0, y:21.0, pop:0.50, cap:75},
-  {id:"voyage",  type:"a", ja:"キャプテン・コークの海の航海", en:"Captain Cork's Sea Voyage", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:75.0, y:51.0, pop:0.46, cap:70},
-  {id:"steam",   type:"a", ja:"マローブルック・スチームハーバー", en:"Mallowbrook Steam Harbor", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:80.5, y:56.0, pop:0.40, cap:60},
-  {id:"train",   type:"a", ja:"マロウのいたずら汽車", en:"Marlow's Mischief Express", areaJa:"いたずら横丁", areaEn:"Mischief Alley", x:23.5, y:28.5, pop:0.42, cap:60},
-  {id:"base",    type:"a", ja:"マロウのひみつ基地", en:"Marlow's Secret Hideout", areaJa:"いたずら横丁", areaEn:"Mischief Alley", x:10.0, y:32.0, pop:0.30, cap:45},
-  {id:"canoe",   type:"a", sunset:true, ja:"マロウのカヌー体験", en:"Marlow's Canoe Adventure", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:65.0, y:71.0, pop:0.28, cap:45},
-  {id:"stardust",type:"a", ja:"ポピーの星屑の小道", en:"Poppy's Stardust Path", areaJa:"月明かりの森", areaEn:"Moonlight Forest", x:44.5, y:79.0, pop:0.22, cap:35},
-  {id:"moss",    type:"a", ja:"フォレスト・モス・クッション・トレイル", en:"Forest Moss Cushion Trail", areaJa:"月明かりの森", areaEn:"Moonlight Forest", x:53.0, y:93.0, pop:0.18, cap:30},
+  {id:"chase",   type:"a", big:true,  ja:"大時計塔チェイス 〜マロウのいたずら〜", en:"Clocktower Chase: Mallow's Mischief", areaJa:"メインストリート", areaEn:"Main Street", x:51.0, y:57.0, pop:1.00, waitCapMin:140},
+  {id:"rail",    type:"a", big:true,  ja:"コークハーバー・ランナウェイ・レール", en:"Cork Harbor Runaway Rail", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:83.0, y:84.0, pop:0.86, waitCapMin:120},
+  {id:"dam",     type:"a", big:true,  ja:"ビバのドタバタ・ダムビルダー", en:"Viva's Slapstick Dam Builder", areaJa:"マロウとビバのいたずら横丁", areaEn:"Mallow & Viva's Mischief Alley", x:27.5, y:24.5, pop:0.86, waitCapMin:120},
+  {id:"wheel",   type:"a", big:true,  ja:"ペニーのグランドギア・ホイール", en:"Penny's Grand Gear Wheel", areaJa:"ペニーのギアワークス", areaEn:"Penny's Gearworks", x:92.0, y:35.0, pop:0.72, waitCapMin:100},
+  {id:"factory", type:"a", big:true,  ja:"ペニーの空飛ぶ修理工場", en:"Penny's Flying Repair Works", areaJa:"ペニーのギアワークス", areaEn:"Penny's Gearworks", x:80.0, y:18.0, pop:0.62, waitCapMin:90},
+  {id:"voyage",  type:"a", ja:"キャプテン・コークの海の航海", en:"Captain Cork's Sea Voyage", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:75.0, y:51.0, pop:0.46, waitCapMin:70},
+  {id:"steam",   type:"a", cat:"wellness", ja:"マローブルック・スチームハーバー", en:"Mallowbrook Steam Harbor", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:80.5, y:56.0, pop:0.40, waitCapMin:60},
+  {id:"train",   type:"a", ja:"マロウのいたずら汽車", en:"Mallow's Mischief Express", areaJa:"マロウとビバのいたずら横丁", areaEn:"Mallow & Viva's Mischief Alley", x:23.5, y:28.5, pop:0.42, waitCapMin:60},
+  {id:"base",    type:"a", ja:"マロウのひみつ基地", en:"Mallow's Secret Hideout", areaJa:"マロウとビバのいたずら横丁", areaEn:"Mallow & Viva's Mischief Alley", x:10.0, y:32.0, pop:0.30, waitCapMin:45},
+  {id:"canoe",   type:"a", sunset:true, ja:"マロウのカヌー体験", en:"Mallow's Canoe Adventure", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:65.0, y:71.0, pop:0.28, waitCapMin:45},
+  {id:"stardust",type:"a", ja:"ポピーの星屑の小道", en:"Poppy's Stardust Path", areaJa:"ポピーの月明かりの森", areaEn:"Poppy's Moonlight Forest", x:44.5, y:79.0, pop:0.22, waitCapMin:35},
+  {id:"moss",    type:"a", ja:"フォレスト・モス・クッション・トレイル", en:"Forest Moss Cushion Trail", areaJa:"ポピーの月明かりの森", areaEn:"Poppy's Moonlight Forest", x:53.0, y:93.0, pop:0.18, waitCapMin:30},
   /* ---- レストラン（増強版マップの15店舗） ---- */
-  {id:"hayate",    type:"r", ja:"カフェはやて", en:"Café Hayate", areaJa:"灯台時計塔付近", areaEn:"Lighthouse Plaza", x:62.5, y:51.0, pop:1.00, cap:90},
-  {id:"brasserie", type:"r", ja:"クロックライト・ブラッスリー", en:"Clocklight Brasserie", areaJa:"灯台時計塔付近", areaEn:"Lighthouse Plaza", x:37.0, y:47.0, pop:0.75, cap:75},
-  {id:"pumpkin",   type:"r", ja:"パンプキン・ランタン・テーブル", en:"Pumpkin Lantern Table", areaJa:"メインストリート", areaEn:"Main Street", x:45.5, y:64.5, pop:0.62, cap:60},
-  {id:"luludining",type:"r", ja:"ルルのスターライト・ダイニング", en:"Lulu's Starlight Dining", areaJa:"スターライト劇場", areaEn:"Starlight Theater", x:39.5, y:22.0, pop:0.80, cap:80},
-  {id:"damkitchen",type:"r", ja:"ビバのダムビルダー・キッチン", en:"Viva's Dam Builder Kitchen", areaJa:"いたずら横丁", areaEn:"Mischief Alley", x:18.0, y:35.5, pop:0.55, cap:45},
-  {id:"canteen",   type:"r", ja:"ペニーのギアワークス・キャンティーン", en:"Penny's Gearworks Canteen", areaJa:"ペニーのギアワークス", areaEn:"Penny's Gearworks", x:80.0, y:24.0, pop:0.60, cap:50},
-  {id:"wheelcafe", type:"r", ja:"グランドギア・ホイール・カフェ", en:"Grand Gear Wheel Café", areaJa:"ペニーのギアワークス", areaEn:"Penny's Gearworks", x:84.0, y:38.0, pop:0.45, cap:40},
-  {id:"grove",     type:"r", ja:"ポピーの月明かりのグローブ", en:"Poppy's Moonlight Grove", areaJa:"月明かりの森", areaEn:"Moonlight Forest", x:48.0, y:82.0, pop:0.58, cap:60},
-  {id:"stillhouse",type:"r", ja:"ムーンリット・スティルハウス", en:"Moonlit Stillhouse", areaJa:"月明かりの森", areaEn:"Moonlight Forest", x:25.0, y:87.5, pop:0.50, cap:50},
-  {id:"footlight", type:"r", ja:"フットライト・レスト・ステーション", en:"Footlight Rest Station", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:73.0, y:59.5, pop:0.40, cap:35},
-  {id:"wharfgrill",type:"r", ja:"キャプテン・コークのワーフ・グリル", en:"Captain Cork's Wharf Grill", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:84.0, y:53.0, pop:0.70, cap:70},
-  {id:"cargohall", type:"r", ja:"ハーバー・カーゴ・ホール", en:"Harbor Cargo Hall", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:88.0, y:68.5, pop:0.85, cap:65},
-  {id:"lulus",     type:"r", ja:"ルルズ・カフェ", en:"Lulu's Café", areaJa:"スターライト劇場", areaEn:"Starlight Theater", x:39.0, y:30.0, pop:0.55, cap:50},
-  {id:"icecream",  type:"r", ja:"アイスクリーム・パーラー", en:"Ice Cream Parlor", areaJa:"メインストリート", areaEn:"Main Street", x:8.0, y:55.0, pop:0.50, cap:45},
-  {id:"tearoom",   type:"r", ja:"スターリーフ・ティールーム", en:"Starleaf Tearoom", areaJa:"月明かりの森", areaEn:"Moonlight Forest", x:50.0, y:88.0, pop:0.45, cap:40},
+  {id:"hayate",    type:"r", ja:"カフェはやて", en:"Café Hayate", areaJa:"灯台時計塔付近", areaEn:"Lighthouse Plaza", x:62.5, y:51.0, pop:1.00, waitCapMin:90},
+  {id:"brasserie", type:"r", ja:"クロックライト・ブラッスリー", en:"Clocklight Brasserie", areaJa:"灯台時計塔付近", areaEn:"Lighthouse Plaza", x:37.0, y:47.0, pop:0.75, waitCapMin:75},
+  {id:"pumpkin",   type:"r", ja:"パンプキン・ランタン・テーブル", en:"Pumpkin Lantern Table", areaJa:"メインストリート", areaEn:"Main Street", x:45.5, y:64.5, pop:0.62, waitCapMin:60},
+  {id:"luludining",type:"r", ja:"ルルのスターライト・ダイニング", en:"Lulu's Starlight Dining", areaJa:"スターライト劇場", areaEn:"Starlight Theater", x:39.5, y:22.0, pop:0.80, waitCapMin:80},
+  {id:"damkitchen",type:"r", ja:"ビバのダムビルダー・キッチン", en:"Viva's Dam Builder Kitchen", areaJa:"マロウとビバのいたずら横丁", areaEn:"Mallow & Viva's Mischief Alley", x:18.0, y:35.5, pop:0.55, waitCapMin:45},
+  {id:"canteen",   type:"r", ja:"ペニーのギアワークス・キャンティーン", en:"Penny's Gearworks Canteen", areaJa:"ペニーのギアワークス", areaEn:"Penny's Gearworks", x:80.0, y:24.0, pop:0.60, waitCapMin:50},
+  {id:"wheelcafe", type:"r", ja:"グランドギア・ホイール・カフェ", en:"Grand Gear Wheel Café", areaJa:"ペニーのギアワークス", areaEn:"Penny's Gearworks", x:84.0, y:38.0, pop:0.45, waitCapMin:40},
+  {id:"grove",     type:"r", ja:"ポピーの月明かりのグローブ", en:"Poppy's Moonlight Grove", areaJa:"ポピーの月明かりの森", areaEn:"Poppy's Moonlight Forest", x:48.0, y:82.0, pop:0.58, waitCapMin:60},
+  {id:"stillhouse",type:"r", ja:"ムーンリット・スティルハウス", en:"Moonlit Stillhouse", areaJa:"ポピーの月明かりの森", areaEn:"Poppy's Moonlight Forest", x:25.0, y:87.5, pop:0.50, waitCapMin:50},
+  {id:"footlight", type:"r", cat:"service", ja:"フットライト・レスト・ステーション", en:"Footlight Rest Station", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:73.0, y:59.5, pop:0.40, waitCapMin:35},
+  {id:"wharfgrill",type:"r", ja:"キャプテン・コークのワーフ・グリル", en:"Captain Cork's Wharf Grill", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:84.0, y:53.0, pop:0.70, waitCapMin:70},
+  {id:"cargohall", type:"r", ja:"ハーバー・カーゴ・ホール", en:"Harbor Cargo Hall", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:88.0, y:68.5, pop:0.85, waitCapMin:65},
+  {id:"lulus",     type:"r", ja:"ルルズ・カフェ", en:"Lulu's Café", areaJa:"スターライト劇場", areaEn:"Starlight Theater", x:39.0, y:30.0, pop:0.55, waitCapMin:50},
+  {id:"icecream",  type:"r", ja:"アイスクリーム・パーラー", en:"Ice Cream Parlor", areaJa:"メインストリート", areaEn:"Main Street", x:8.0, y:55.0, pop:0.50, waitCapMin:45},
+  {id:"tearoom",   type:"r", ja:"スターリーフ・ティールーム", en:"Starleaf Tearoom", areaJa:"ポピーの月明かりの森", areaEn:"Poppy's Moonlight Forest", x:50.0, y:88.0, pop:0.45, waitCapMin:40},
 ];
 
 /* ================= 長期メンテナンス（閑散期中心・全期間が非重複＝大型同士の重複なし） ================= */
@@ -280,9 +340,242 @@ const MAINT = {
   train:  [629, 710],
   factory:[907, 918],
   steam:  [1014,1023],
-  jazz:   [1026,1106],
   voyage: [1109,1120],
   wheel:  [1124,1218],
+};
+/* ショーの休演期間（旧jazzメンテを移管） */
+const SHOW_MAINT={"lulu-jazz":[1026,1106]};
+
+/* ================= 季節イベント・エンターテインメント ================= */
+const EVENTS=[
+  {id:"summer-lantern-matsuri",ja:"マローブルック・サマーランタン祭り",en:"MALLOWBROOK SUMMER LANTERN MATSURI",startMMDD:801,endMMDD:831},
+  {id:"cork-harbor-christmas-lantern",ja:"コークハーバー・クリスマスランタン",en:"CORK HARBOR CHRISTMAS LANTERN",startMMDD:1201,endMMDD:1225},
+];
+const isSummerEvent=d=>{const md=mmdd(d);return md>=801&&md<=831;};
+const isChristmasEvent=d=>{const md=mmdd(d);return md>=1201&&md<=1225;};
+const ENTERTAINMENT=[
+  {id:"lulu-jazz",category:"indoor_show",ja:"ルルのジャズ・ドリームレビュー",en:"Lulu's Jazz Dream Revue",
+   venueJa:"ルルのスターライト劇場",venueEn:"Lulu's Starlight Theater",
+   timeGen:{start:9.5,intervalMin:30,durationMin:30},indoor:true,x:52.0,y:21.0,activeRule:"daily"},
+  {id:"mallowbrook-story-parade",category:"parade",ja:"マローブルック・ストーリー・パレード",en:"MALLOWBROOK STORY PARADE",
+   venueJa:"パレードルート",venueEn:"Parade Route",times:[11.0,14.0],durationMin:30,indoor:false,route:null,activeRule:"daily"},
+  {id:"lantern-mystique",category:"harbor_show",ja:"ランタン・ミスティーク 〜マローブルックの祭典〜",en:"Lantern Mystique: The Festival of Mallowbrook",
+   venueJa:"コークハーバー",venueEn:"Cork Harbor",times:[19.5],durationMin:30,indoor:false,activeRule:"normal_period"},
+  {id:"summer-matsuri-beat",category:"seasonal_harbor_show",ja:"マロウ・サマー・マツリ・ビート",en:"MALLOW SUMMER MATSURI BEAT",
+   venueJa:"コークハーバー",venueEn:"Cork Harbor",times:[19.5],durationMin:45,indoor:false,activeRule:"summer_event"},
+  {id:"christmas-harbor",category:"seasonal_harbor_show",ja:"ランタンズ・オブ・クリスマス・ハーバー",en:"Lanterns of Christmas Harbor",
+   venueJa:"コークハーバー",venueEn:"Cork Harbor",times:[15.0,19.5],durationMin:45,indoor:false,activeRule:"christmas_event"},
+];
+/* 休演・変更・中止の手動上書き（運営データ）。例: {"lulu-jazz":"cancelled"} */
+const SHOW_STATUS_OVERRIDE={};
+function showTimes(e,d){
+  if (e.timeGen){
+    const a=[];for(let x=e.timeGen.start;x<=CLOSE_H-e.timeGen.durationMin/60+1e-9;x+=e.timeGen.intervalMin/60)a.push(Math.round(x*100)/100);
+    return a;
+  }
+  return e.times||[];
+}
+function showActive(e,d){
+  if (e.activeRule==="daily") return true;
+  if (e.activeRule==="summer_event") return isSummerEvent(d);
+  if (e.activeRule==="christmas_event") return isChristmasEvent(d);
+  if (e.activeRule==="normal_period") return !isSummerEvent(d)&&!isChristmasEvent(d);
+  return false;
+}
+function showMaintOf(id,d){
+  const r=SHOW_MAINT[id];if(!r)return null;
+  const md=mmdd(d);return (md>=r[0]&&md<=r[1])?r:null;
+}
+/* 状態: {st:"dark"|"maint"|"cancel"|"upcoming"|"soon"|"live"|"done", ...} */
+function showStatus(e,d,tt){
+  if (!showActive(e,d)) return {st:"dark"};
+  const mr=showMaintOf(e.id,d);
+  if (mr) return {st:"maint",range:mr};
+  if (SHOW_STATUS_OVERRIDE[e.id]==="cancelled") return {st:"cancel"};
+  const dur=(e.timeGen?e.timeGen.durationMin:e.durationMin)/60;
+  const ts=showTimes(e,d);
+  for (const s of ts){
+    if (tt>=s&&tt<s+dur) return {st:"live",start:s,end:s+dur};
+  }
+  const next=ts.find(s=>s>tt);
+  if (next==null) return {st:"done"};
+  return {st:next-tt<=10/60?"soon":"upcoming",start:next,end:next+dur,minutesTo:Math.round((next-tt)*60)};
+}
+/* 本日のハーバーショー差し替え判定 */
+function todaysEntertainment(d){
+  const list=[ENTERTAINMENT.find(e=>e.id==="lulu-jazz"),ENTERTAINMENT.find(e=>e.id==="mallowbrook-story-parade")];
+  if (isChristmasEvent(d)) list.push(ENTERTAINMENT.find(e=>e.id==="christmas-harbor"));
+  else if (isSummerEvent(d)) list.push(ENTERTAINMENT.find(e=>e.id==="summer-matsuri-beat"));
+  else list.push(ENTERTAINMENT.find(e=>e.id==="lantern-mystique"));
+  return list;
+}
+/* 夏イベントの暦日カウントダウン（JSTの年月日に正規化） */
+function summerBannerInfo(now){
+  const y=now.getFullYear();
+  const today=new Date(y,now.getMonth(),now.getDate());
+  const md=mmdd(now);
+  if (md>=801&&md<=831){
+    const last=new Date(y,7,31);
+    const left=Math.round((last-today)/86400000);
+    return {mode:"during",days:left};
+  }
+  if (md>=901&&md<=930) return {mode:"ended"};
+  const ty=md>930?y+1:y;
+  const target=new Date(ty,7,1);
+  return {mode:"before",days:Math.round((target-today)/86400000)};
+}
+
+/* ================= ゲスト向け施設ガイド（紹介文・タグ・代表メニュー） =================
+   pop/waitCapMin/座標などの内部値はゲスト画面に表示しない */
+const GUIDE={
+ chase:{catJa:"屋内ストーリーライド",catEn:"Indoor story ride",tagJa:"暴走した時間を追いかけ、時計塔を元に戻そう！",tagEn:"Chase runaway time and set the clocktower right!",
+  dJa:"マロウのいたずらで、灯台時計塔の時間が大暴走。ゲストは歯車や振り子が動き続ける塔の中へ入り、子どもの時間、大人の時間、逆戻りする時間を駆け抜けます。光と音、時計仕掛けの演出が重なる、マローブルックを代表する屋内アドベンチャーです。",
+  dEn:"Mallow's latest prank has sent the lighthouse clocktower spinning out of control. Race through rooms of runaway gears, reversed time and changing ages in this indoor story adventure filled with light, music and clockwork surprises.",
+  tagsJa:["屋内","ストーリーライド","ほどよいスリル","PP対象"],tagsEn:["Indoor","Story ride","Moderate thrill","Priority Pass"]},
+ rail:{catJa:"ファミリーコースター",catEn:"Family coaster",tagJa:"港の貨物列車が、マロウのいたずらで大暴走！",tagEn:"A harbor freight train has gone wildly off schedule!",
+  dJa:"古い貨物倉庫から出発した列車が、マロウのいたずらで止まらなくなってしまいました。蒸気のトンネル、倉庫街、海沿いの高架レールを駆け抜ける、コークハーバーの中速ファミリーコースターです。",
+  dEn:"A freight train leaves an old harbor warehouse—then Mallow's mischief sends it racing out of control. Speed through steam tunnels, cargo yards and seaside rails on Cork Harbor's family coaster.",
+  tagsJa:["屋外","コースター","中程度のスリル","PP対象"],tagsEn:["Outdoor","Coaster","Medium thrill","Priority Pass"]},
+ dam:{catJa:"協力型インタラクティブ・ウォーターライド",catEn:"Interactive water ride",tagJa:"力を合わせて、ドタバタのダム工事を完成させよう！",tagEn:"Work together and save Viva's wonderfully wobbly dam!",
+  dJa:"ビバが建設中のダムで、マロウが設計図と水門にいたずらをして大混乱。ゲストはダムビルダー見習いとなり、8人乗りの丸太型作業艇（所要約6分30秒）で木材を集め、水車や水門を操作しながら決壊を防ぎます。チームの行動によって結末が変わる、にぎやかな協力型ライドです。",
+  dEn:"Mallow has scrambled Viva's plans and jammed the floodgates. Climb aboard an 8-seat log-shaped workboat (about 6.5 minutes), gather materials and operate wheels and gates to keep the dam from bursting. Your teamwork can lead to different endings.",
+  tagsJa:["水に濡れる場合あり","協力型","一部屋外","PP対象"],tagsEn:["You may get wet","Co-op","Partly outdoor","Priority Pass"]},
+ wheel:{catJa:"大観覧車",catEn:"Observation wheel",tagJa:"巨大な歯車の上から、港町の物語を見渡そう。",tagEn:"See the whole harbor story from Penny's giant gear.",
+  dJa:"ペニーが古い港のクレーン、時計塔の歯車、飛行船の部品を組み合わせて作った巨大観覧車。空飛ぶ修理工場の作業艇を改造したゴンドラから、コークハーバーや灯台時計塔を一望できます（所要約12〜15分）。夜はランタン色の光に包まれます。",
+  dEn:"Penny built this giant observation wheel from harbor cranes, clocktower gears and airship parts. Ride in a gondola inspired by her flying repair craft (about 12–15 minutes) and enjoy sweeping views of Cork Harbor and the lighthouse clocktower.",
+  tagsJa:["眺望","ファミリー向け","夜景","PP対象"],tagsEn:["Views","Family","Night views","Priority Pass"]},
+ factory:{catJa:"屋内メカニカルライド",catEn:"Indoor mechanical ride",tagJa:"空飛ぶ修理艇に乗って、ペニーの緊急作業を手伝おう！",tagEn:"Board a flying repair craft and join Penny's emergency mission!",
+  dJa:"発明家ペニーの工房では、壊れた機械を直すはずが次々とトラブルが発生。ゲストは小型の空飛ぶ修理艇に乗り、歯車、蒸気管、飛行装置が動き回る工場で、ドタバタの修理作業に巻き込まれます。",
+  dEn:"A routine repair inside Penny's workshop quickly becomes a flying emergency. Board a small repair craft and weave through spinning gears, steam pipes and runaway inventions in this indoor mechanical adventure.",
+  tagsJa:["屋内","ファミリー向け","PP対象"],tagsEn:["Indoor","Family","Priority Pass"]},
+ voyage:{catJa:"ボートライド",catEn:"Boat ride",tagJa:"キャプテン・コークと、港に眠る航海の物語へ。",tagEn:"Set sail with Captain Cork into a harbor full of stories.",
+  dJa:"キャプテン・コークの航海日誌を手がかりに、港の入り江や古い船着き場をめぐるボートの旅。潮風、汽笛、船乗りたちの物語に包まれながら、コークハーバーの知られざる一面を楽しめます。",
+  dEn:"Follow Captain Cork's logbook on a gentle voyage through hidden coves and old docks. Harbor bells, sea breezes and sailors' tales reveal another side of Cork Harbor.",
+  tagsJa:["ボートライド","屋外区間あり","PP対象"],tagsEn:["Boat ride","Outdoor sections","Priority Pass"]},
+ train:{catJa:"ミニ蒸気機関車",catEn:"Mini steam train",tagJa:"小さな汽車で、いたずらいっぱいの横丁をひとめぐり。",tagEn:"Take a little train through a street full of big mischief.",
+  dJa:"マロウとビバのいたずら横丁を走る、小さな蒸気機関車。にぎやかな街並みや、窓辺、屋根、路地に隠されたコミカルな仕掛けを眺めながら、ゆったりとエリアを一周します。",
+  dEn:"Ride a little steam train around Mallow and Viva's Mischief Alley. Watch for playful surprises hidden in windows, rooftops and side streets along the way.",
+  tagsJa:["ファミリー向け","ゆったり","屋外"],tagsEn:["Family","Relaxed","Outdoor"]},
+ base:{catJa:"屋内探索型体験",catEn:"Indoor exploration",tagJa:"隠し扉の向こうに、マロウのいたずら作戦がいっぱい。",tagEn:"Behind every hidden door is another Mallow-sized plan.",
+  dJa:"マロウが集めた道具、秘密の地図、まだ試していないいたずらが並ぶ屋内のひみつ基地。隠し扉や小さな仕掛けを探しながら、自分のペースで基地の中を探索します。",
+  dEn:"Explore Mallow's indoor hideout, packed with maps, odd tools and pranks still waiting to be tested. Search for secret doors and playful mechanisms at your own pace.",
+  tagsJa:["屋内","探索型","ファミリー向け"],tagsEn:["Indoor","Exploration","Family"]},
+ canoe:{catJa:"水上体験",catEn:"Paddling experience",tagJa:"パドルを手に、コークハーバーの水辺へ出発。",tagEn:"Take a paddle and explore the waters of Cork Harbor.",
+  dJa:"コークハーバーの穏やかな水辺を、自分たちでパドルを動かして進むカヌー体験。倉庫街、船着き場、灯台時計塔を水面から眺めながら、港町の風と音を全身で感じられます。",
+  dEn:"Paddle across the calm waters of Cork Harbor and see warehouses, docks and the lighthouse clocktower from a new perspective.",
+  tagsJa:["屋外","体験型","水上","日没前まで"],tagsEn:["Outdoor","Hands-on","On the water","Until sunset"]},
+ stardust:{catJa:"ウォークスルー",catEn:"Walkthrough",tagJa:"夕暮れから輝き始める、星屑の森の小道。",tagEn:"A forest path that begins to sparkle after sunset.",
+  dJa:"木々の間に星のような光が浮かび、足元の小道が夕暮れとともに輝き始めます。静かな音楽と月明かりの演出を楽しみながら歩く、夜におすすめの散策体験です。",
+  dEn:"Tiny lights appear among the trees as the path begins to glow at dusk. Walk beneath moonlit branches and enjoy a quiet nighttime experience.",
+  tagsJa:["ウォークスルー","夜がおすすめ","屋外"],tagsEn:["Walkthrough","Best at night","Outdoor"]},
+ moss:{catJa:"裸足体験型トレイル",catEn:"Barefoot trail",tagJa:"靴を脱いで、森のやわらかな感触を歩こう。",tagEn:"Take off your shoes and feel the forest beneath your feet.",
+  dJa:"靴を脱ぎ、苔を思わせるやわらかな道を裸足で歩く体験型トレイル。木漏れ日、森の香り、足元の感触をゆっくり楽しみ、夜は淡く光る胞子のような演出やフォトスポットも現れます。",
+  dEn:"Remove your shoes and follow a soft, moss-inspired trail through the forest, with softly glowing details and photo spots after dark.",
+  tagsJa:["裸足体験","自然体験","ウォークスルー"],tagsEn:["Barefoot","Nature","Walkthrough"]},
+ steam:{catJa:"サウナ＆リラックス施設",catEn:"Sauna & relaxation",tagJa:"蒸気と潮風に包まれる、港町のリラックス航路。",tagEn:"A harbor retreat shaped by steam, lanterns and sea breeze.",
+  dJa:"木造倉庫と蒸気船の機関室を思わせる、港町テーマのサウナ＆リラックス施設。力強い蒸気の「Engine Steam Sauna」、やわらかな霧と灯りの「Lantern Mist Sauna」、潮風を感じる「Sea Breeze Deck」で、パークを歩いた体をゆっくり整えられます。",
+  dEn:"A harbor-themed sauna and relaxation facility inspired by wooden warehouses and steamship engine rooms. Unwind in the Engine Steam Sauna, the softly lit Lantern Mist Sauna and the open-air Sea Breeze Deck.",
+  tagsJa:["サウナ","リラックス","着替えあり"],tagsEn:["Sauna","Relaxation","Changing rooms"],waitLabelJa:"入館待ち",waitLabelEn:"Wait to enter"},
+ footlight:{catJa:"フットケア休憩施設",catEn:"Foot-care rest stop",tagJa:"歩き疲れた足元に、港のやさしい風を。",tagEn:"Give tired feet a gentle harbor breeze.",
+  dJa:"パークを歩き回ったゲストの足元を休める、コークハーバーのフットケア休憩施設。靴を脱いでベンチに座ると、送風装置からやさしい風が足元を包みます。足湯ではなく、短時間のクールダウンと休憩を目的とした施設です。",
+  dEn:"A foot-care rest stop for guests who have spent the day exploring the park. Remove your shoes, sit back and let a gentle airflow cool and refresh your feet. This is an air-based rest facility, not a footbath.",
+  tagsJa:["休憩","フットケア","足湯ではありません"],tagsEn:["Rest","Foot care","Not a footbath"],waitLabelJa:"利用待ち",waitLabelEn:"Wait to use"},
+ hayate:{styleJa:"カフェ／クイックサービス",styleEn:"Café / quick service",cuisineJa:"港町の洋食・カフェ＆ベーカリー",cuisineEn:"Harbor comfort food, café & bakery",
+  tagJa:"朝の一杯から夜の洋食まで、時計塔のそばの定番カフェ。",tagEn:"A clocktower café for breakfast, bakery treats and harbor comfort food.",
+  dJa:"灯台時計塔を望む、マローブルックの定番カフェ＆ベーカリー。朝のパンとドリンク、家族で楽しめる洋食、散策途中のデザートまで、時間帯を問わず立ち寄れます。テイクアウトにも対応する、園内でも特に人気の高い店舗です。",
+  dEn:"A popular café and bakery beside the lighthouse clocktower. Stop in for morning pastries, family-friendly harbor comfort food, desserts or a drink to go.",
+  menus:["はやて特製オムライス","港町のナポリタン","ランタン形クリームパン","マロウのいたずらパンケーキ"]},
+ brasserie:{styleJa:"テーブルサービス",styleEn:"Table service",cuisineJa:"港町の洋食",cuisineEn:"Classic harbor dining",
+  tagJa:"時計塔の灯りを眺めながら楽しむ、少し上品な港町洋食。",tagEn:"Classic harbor dining beneath the glow of the clocktower.",
+  dJa:"灯台時計塔の景色を楽しめる、落ち着いたブラッスリー。昼は家族で楽しめる洋食店、夜はランタンの灯りに包まれるレストランとして、ゆっくり食事をしたいゲストにおすすめです。",
+  dEn:"A relaxed brasserie overlooking the lighthouse clocktower. Family favorites at lunch; warm lantern light for a leisurely dinner.",
+  menus:["港町のビーフシチュー","白身魚のランタンバターソース","ハンバーグ","記念日コース"]},
+ pumpkin:{styleJa:"カジュアルレストラン",styleEn:"Casual restaurant",cuisineJa:"収穫祭料理・家庭料理",cuisineEn:"Harvest & home cooking",
+  tagJa:"一年中、あたたかな収穫祭の食卓へ。",tagEn:"A warm harvest table glowing all year round.",
+  dJa:"港町の収穫祭とかぼちゃランタンをテーマにした、温かな家庭料理のレストラン。深緑の木部と真鍮ランタンに囲まれ、ロースト料理や焼きたてパン、かぼちゃを使ったデザートを楽しめます。",
+  dEn:"A cozy restaurant inspired by Mallowbrook's harvest festival and pumpkin lanterns, serving roasted dishes, fresh bread and pumpkin desserts.",
+  menus:["丸ごとカボチャのクリームシチュー","ローストチキンと収穫野菜","パンプキンブレッド","かぼちゃんのキッズプレート"]},
+ luludining:{styleJa:"テーブルサービス（ショーダイニング）",styleEn:"Table service (show dining)",cuisineJa:"洋食・ショーダイニング",cuisineEn:"Western dining with performances",
+  tagJa:"星明かりと音楽に包まれる、劇場のダイニングルーム。",tagEn:"Dine beneath starlight, music and glowing lanterns.",
+  dJa:"ルルのスターライト劇場に併設されたショーダイニング。星空とランタンの映像、ピアノや小編成バンドの音楽、短いライブ演出とともに食事を楽しめます。誕生日や記念日にも似合う、華やかなレストランです。",
+  dEn:"A theatrical dining room beside Lulu's Starlight Theater with projected stars, glowing lanterns and live music moments.",
+  menus:["星明かりのホワイトオムライス","夜空のチーズハンバーグ","スターランタン・デザートタワー","夕暮れ色のノンアルコールドリンク"]},
+ damkitchen:{styleJa:"クイックサービス",styleEn:"Quick service",cuisineJa:"ファミリー向け洋食・軽食",cuisineEn:"Family meals & snacks",
+  tagJa:"丸太と水車に囲まれた、ダム作業員たちのにぎやか食堂。",tagEn:"A lively builders' kitchen of logs, wheels and hearty food.",
+  dJa:"ビバがダム建設の仲間たちのために作った、丸太と水車の食堂。注文に合わせて水車や木製の仕掛けが動き、ボリュームのある軽食や楽しいデザートを家族で気軽に楽しめます。",
+  dEn:"Viva built this lively log-and-waterwheel kitchen for the dam crew. Wooden mechanisms spring to life while families enjoy hearty handheld meals.",
+  menus:["ダムビルダー・ロングホットドッグ","丸太形ミートローフ","ウッドチップ風フライドポテト","ビバのバケツプリン"]},
+ canteen:{styleJa:"大型クイックサービス",styleEn:"Large quick service",cuisineJa:"工房風洋食・カレー・グリル",cuisineEn:"Workshop grill & curry",
+  tagJa:"歯車と蒸気が動く、発明家たちの工房食堂。",tagEn:"A busy workshop canteen powered by gears, steam and good food.",
+  dJa:"ペニーの工房で働く発明家や整備士が集まる、大型キャンティーン。天井のベルトコンベアや歯車が動き、時折蒸気が上がるにぎやかな店内で、ハンバーガー、鉄板料理、カレーを楽しめます。",
+  dEn:"A large canteen for Penny's inventors and mechanics, serving burgers, griddled dishes and hearty curry among moving gears and bursts of steam.",
+  menus:["ギア型チーズハンバーガー","工房の鉄板チキン","ボイラーポット・カレー","歯車ワッフル"]},
+ wheelcafe:{styleJa:"カフェ",styleEn:"Café",cuisineJa:"カフェ・デザート・軽食",cuisineEn:"Café, desserts & light bites",
+  tagJa:"観覧車と夕景を眺める、ギアワークスの展望カフェ。",tagEn:"A gearworks café made for afternoon treats and sunset views.",
+  dJa:"グランドギア・ホイールの近くにある、眺望を楽しむカフェ。歯車をモチーフにしたデザートや温かなドリンクとともに、午後の休憩や夕暮れのギアワークスをゆっくり眺められます。",
+  dEn:"A scenic café beside the Grand Gear Wheel. Enjoy gear-inspired sweets and warm drinks with sunset views.",
+  menus:["ギア型デザート","焼き菓子","温冷ドリンク"]},
+ grove:{styleJa:"テーブルサービス",styleEn:"Table service",cuisineJa:"森の洋食・ディナー",cuisineEn:"Forest dining",
+  tagJa:"月明かりの木立で味わう、静かな森のディナー。",tagEn:"A peaceful forest dinner beneath the moonlit trees.",
+  dJa:"木立と柔らかなランタンに囲まれた、月明かりの森のレストラン。森の香りや季節の食材を感じる温かな料理を、昼よりも静けさが深まる夕方から夜にかけてゆっくり楽しめます。",
+  dEn:"A tranquil forest restaurant surrounded by trees and soft lantern light, especially magical from dusk into the evening.",
+  menus:["季節の森料理","ロースト料理","デザート"]},
+ stillhouse:{styleJa:"バー／ラウンジ",styleEn:"Bar / lounge",cuisineJa:"ウイスキー・ワイン・燻製料理",cuisineEn:"Whisky, wine & smoked dishes",
+  tagJa:"森の奥で静かに灯る、大人のためのスティルハウス。",tagEn:"A quiet stillhouse glowing deep within the moonlit forest.",
+  dJa:"月明かりの森にひっそりと佇む、大人向けのバー。ウイスキーを中心に、ワイン、ノンアルコールカクテル、チーズや燻製料理を提供します。深緑、黒、ゴールド、樽の質感に包まれた静かな夜の隠れ家です。",
+  dEn:"A secluded bar hidden in the Moonlight Forest. Whisky leads the menu, joined by wine, non-alcoholic cocktails, cheese and smoked dishes.",
+  menus:["Moonlit Cask Highball","Crescent Leaf Old Fashioned","Mallowbrook Night Dram","燻製ナッツとチーズ"],
+  alcohol:true},
+ wharfgrill:{styleJa:"カジュアルレストラン",styleEn:"Casual restaurant",cuisineJa:"シーフード・波止場のグリル料理",cuisineEn:"Seafood & wharf grill",
+  tagJa:"海風の波止場で楽しむ、キャプテン自慢のシーフード。",tagEn:"Captain Cork's favorite seafood, served by the wharf.",
+  dJa:"船乗りたちが集まる波止場をイメージしたシーフードレストラン。香ばしく焼いた魚料理、揚げたてのフィッシュ＆チップス、みんなで分けられる海の料理を、コークハーバーらしい活気の中で楽しめます。",
+  dEn:"A lively seafood restaurant inspired by the wharf. Enjoy grilled fish, fresh fish and chips and generous dishes made for sharing.",
+  menus:["白身魚のグリル","フィッシュ＆チップス","シーフードパエリア"]},
+ cargohall:{styleJa:"大型フードホール",styleEn:"Food hall",cuisineJa:"複数ジャンルのフードホール",cuisineEn:"Multi-cuisine food hall",
+  tagJa:"貨物倉庫を改装した、港最大級のフードホール。",tagEn:"Cork Harbor's largest food hall, built inside an old cargo warehouse.",
+  dJa:"古い貨物倉庫を改装した、コークハーバーの大型フードホール。複数のカウンターから好みの料理を選べるため、家族やグループで別々のメニューを楽しみたい時、雨の日にゆっくり休みたい時にも便利です。",
+  dEn:"A large food hall inside a converted cargo warehouse. Multiple counters make it easy for groups to choose different meals.",
+  menus:[]},
+ lulus:{styleJa:"カフェ／テイクアウト",styleEn:"Café / takeout",cuisineJa:"カフェ・デザート・軽食",cuisineEn:"Café, desserts & light bites",
+  tagJa:"ショーの前後に立ち寄れる、ルルの小さなスターカフェ。",tagEn:"A little starlit café for before and after the show.",
+  dJa:"ルルのスターライト劇場そばにある、明るく華やかなカフェ。ショーの前後に楽しめるデザート、焼き菓子、軽食、ドリンクを扱い、短い休憩やテイクアウトにも利用できます。",
+  dEn:"A bright café beside Lulu's Starlight Theater, serving desserts, baked treats and drinks for a quick stop around showtimes.",
+  menus:[]},
+ icecream:{styleJa:"カウンターサービス",styleEn:"Counter service",cuisineJa:"アイスクリーム・冷たいデザート",cuisineEn:"Ice cream & cold desserts",
+  tagJa:"メインストリートで楽しむ、昔ながらのアイスクリーム。",tagEn:"Classic ice cream on Mallowbrook Main Street.",
+  dJa:"港町のメインストリートにある、クラシックなアイスクリームパーラー。散策の途中に気軽に立ち寄れ、暑い日のクールダウンや午後のデザートにおすすめです。",
+  dEn:"A classic ice cream parlor on Mallowbrook Main Street, perfect for an easy afternoon treat.",
+  menus:[]},
+ tearoom:{styleJa:"ティールーム",styleEn:"Tearoom",cuisineJa:"紅茶・焼き菓子・アフタヌーンティー",cuisineEn:"Tea, baked treats & afternoon tea",
+  tagJa:"星形の葉が揺れる森で、ゆっくりティータイム。",tagEn:"A quiet tea break beneath the forest's star-shaped leaves.",
+  dJa:"月明かりの森の散策途中に立ち寄れる、小さなティールーム。紅茶、焼き菓子、軽いデザートを楽しみながら、木々の音と柔らかな光に包まれてゆっくり休めます。",
+  dEn:"A small tearoom along the Moonlight Forest paths with tea, baked treats and light desserts.",
+  menus:[]},
+ "lulu-jazz":{catJa:"屋内シアターショー（30分・完全入替制）",catEn:"Indoor theater show (30 min)",
+  tagJa:"ルルの歌声と星明かりが出会う、30分のジャズレビュー。",tagEn:"Thirty minutes where Lulu's voice meets the starlight.",
+  dJa:"1932年の短編「Lulu Sings at Dawn」をモチーフに、ルルが歌と音楽でマローブルックに希望を灯す屋内レビュー。ジャズ、ダンス、ランタン、星空の光が重なるステージを、天候を気にせず楽しめます。9:30から30分おきの完全入れ替え制です。",
+  dEn:"An indoor jazz revue inspired by the 1932 short \"Lulu Sings at Dawn.\" Lulu brings hope to Mallowbrook through song, dance and lantern light. Performances every 30 minutes from 9:30.",
+  tagsJa:["屋内","雨天対応","30分おき"],tagsEn:["Indoor","Rain-safe","Every 30 min"]},
+ "mallowbrook-story-parade":{catJa:"デイパレード（開業記念）",catEn:"Anniversary day parade",
+  tagJa:"マローブルックの物語が、目の前のストリートを進み出す。",tagEn:"The stories of Mallowbrook march right past you.",
+  dJa:"マロウと仲間たち、港町のポーターやダンサーが、それぞれの物語を乗せて進む開業記念デイパレード。昼のパークを音楽と笑顔でつなぎ、ゲストをマローブルックの物語へ招きます。",
+  dEn:"Mallow, friends, porters and dancers carry the stories of Mallowbrook through the park in this anniversary daytime parade.",
+  tagsJa:["屋外","パレード"],tagsEn:["Outdoor","Parade"]},
+ "lantern-mystique":{catJa:"ナイトハーバーショー",catEn:"Night harbor show",
+  tagJa:"港のランタンが目覚める、マローブルックの夜の祝祭。",tagEn:"The harbor lanterns awaken for Mallowbrook's night festival.",
+  dJa:"静まり返ったコークハーバーに、ランタン、仮面、太鼓、ブラス、歌声が広がる夜のハーバーショー。マロウのいたずらで消えかけた港の灯りを、ゲストの声と「Sparks of Delight」で再び輝かせます。",
+  dEn:"A nighttime harbor celebration of lanterns, masks, drums, brass and voices. The audience helps awaken the festival through their own Sparks of Delight.",
+  tagsJa:["屋外","夜"],tagsEn:["Outdoor","Night"]},
+ "summer-matsuri-beat":{catJa:"夏季ナイトハーバーショー",catEn:"Summer night harbor show",
+  tagJa:"太鼓とランタンで踊る、マローブルックの熱い夏の夜。",tagEn:"Drums and lanterns light up Mallowbrook's summer night.",
+  dJa:"和太鼓、祭りばやし、ブラス、男女ボーカルがコークハーバーを熱く包む参加型ハーバーショー。掛け声やダンスでゲストも祭りに加わり、最後は「Sparks of Delight」が夏の港を輝かせます。",
+  dEn:"A participatory summer harbor show driven by taiko, festival rhythms, brass and live vocals, ending as Sparks of Delight illuminate the harbor.",
+  tagsJa:["屋外","夏季限定","参加型"],tagsEn:["Outdoor","Summer only","Participatory"]},
+ "christmas-harbor":{catJa:"冬季ハーバーショー",catEn:"Christmas harbor show",
+  tagJa:"みんなの光が、クリスマスのランタン船を港へ導く。",tagEn:"Everyone's light guides the Christmas lantern ship home.",
+  dJa:"冬のコークハーバーを舞台に、キャロル、港の鐘、ランタンの光が広がるクリスマスハーバーショー。ゲストの「Sparks of Delight」が海を照らし、クリスマスランタン船を港へ迎えます。",
+  dEn:"A Christmas harbor show of carols, bells and glowing lanterns. The audience's Sparks of Delight guide the lantern ship into Cork Harbor.",
+  tagsJa:["屋外","冬季限定"],tagsEn:["Outdoor","Christmas only"]},
 };
 const OPEN_H=9, CLOSE_H=22, MAX_CAP=75000;
 const TOKYO_LAT=35.6895, TOKYO_LON=139.6917;
@@ -290,14 +583,14 @@ const TOKYO_LAT=35.6895, TOKYO_LON=139.6917;
 /* ================= i18n ================= */
 let LANG="ja";
 const T={
- ja:{sub:"リアルタイム待ち時間",crowdNow:"現在の園内来場者数",crowdFc:"本日の混雑予測",attr:"アトラクション",rest:"レストラン",
+ ja:{sub:"リアルタイム運営情報｜待ち時間・ショー・施設ガイド",crowdNow:"現在の園内来場者数",crowdFc:"本日の混雑予測",attr:"アトラクション",rest:"レストラン",
    sortNow:"待ち時間順",sortFc:"ピーク時(14時)予測",refresh:"今すぐ更新",next:"次回更新まで",sec:"秒",min:"分",
    wait:"待ち時間 約",waitFc:"ピーク時予測 約",open:"営業中 9:00-22:00",before:"開園前（9:00開園）",closed:"本日の営業は終了しました",
    restrict:"入場制限中",restrictBanner:"⚠ ただいま入場制限を実施しています（最大収容 75,000人）",
    restrictFc:"⚠ 本日は入場制限が予想されます",
    est:"想定来場者数",dom:"国内",inb:"インバウンド",basis:"（日本の暦・天候・訪日客動向に基づく推定）",
    wFail:"天候取得不可",wPlace:"東京エリア実況",wEffPre:"来場影響 ×",
-   lg:["〜30分","35〜60分","65分〜","休止・調整","レストラン","PP=プライオリティパス(30分枠優先入場)"],
+   lg:["〜30分","35〜60分","65分〜","休止・調整","レストラン","PP=プライオリティパス(30分枠優先入場)","ショー","施設"],
    foot:"営業時間 9:00–22:00 ｜ 待ち時間1分毎・天候10分毎・地震情報5分毎に更新 ｜ 最終更新 ",
    demo:"※架空パークのデモです。天候(Open-Meteo)と地震情報(P2P地震情報)は実データ、待ち時間・来場者数はシミュレーションです。",
    people:"人",attrType:"アトラクション",restType:"レストラン",
@@ -307,15 +600,20 @@ const T={
    quakeTitle:"地震情報",quakeAll:"安全確認のため全アトラクションを一時休止しています",
    quakeBig:"安全確認のため大型アトラクションを一時休止しています（",quakeBig2:"頃まで）",
    maxInt:"最大震度",tokyoInt:"都内震度",
+   shows:"本日のショー＆パレード",fac:"施設・サービス",restTitle:"レストラン＆カフェ",
+   nextShow:"次回 ",liveShow:"公演中",soonShow:"まもなく開始 ",doneShow:"本日終了",darkShow:"本日休演",maintShow:"休演期間",cancelShow:"中止",
+   minTo:"あと",useWait:"利用待ち",menuTitle:"代表メニュー",alcoholNote:"アルコールを提供します。入店・酒類注文の年齢条件は運営規定に従います。",
+   footNote2:"足湯ではありません（送風式のフットケア休憩施設です）",
+   ebBefore1:"開催まであと",ebBefore2:"日",ebDuring1:"開催中｜8月31日まであと",ebDuring2:"日",ebLast:"本日最終日",ebEnded:"は終了しました",
    cond:{clear:"快晴",sunny:"晴れ",cloudy:"くもり",fog:"霧",drizzle:"霧雨",rain:"雨",heavyrain:"大雨",snow:"雪",storm:"雷雨"}},
- en:{sub:"Real-time wait times",crowdNow:"Guests in park now",crowdFc:"Today's crowd forecast",attr:"Attractions",rest:"Restaurants",
+ en:{sub:"Live park info: waits, shows & guide",crowdNow:"Guests in park now",crowdFc:"Today's crowd forecast",attr:"Attractions",rest:"Restaurants",
    sortNow:"by wait time",sortFc:"peak (2pm) forecast",refresh:"Refresh now",next:"Next update in",sec:"s",min:"min",
    wait:"Approx. wait ",waitFc:"Peak forecast ",open:"Open 9:00-22:00",before:"Opens at 9:00",closed:"Closed for today",
    restrict:"Entry restricted",restrictBanner:"⚠ Park entry is currently restricted (capacity 75,000)",
    restrictFc:"⚠ Entry restrictions are expected today",
    est:"Estimated attendance",dom:"Domestic",inb:"International",basis:"(Japanese calendar, weather & inbound trends)",
    wFail:"Weather unavailable",wPlace:"Tokyo area, live",wEffPre:"Attendance ×",
-   lg:["≤30 min","35–60 min","65+ min","Closed / adjusting","Restaurant","PP = Priority Pass (30-min slots)"],
+   lg:["≤30 min","35–60 min","65+ min","Closed / adjusting","Restaurant","PP = Priority Pass (30-min slots)","Show","Facility"],
    foot:"Hours 9:00–22:00 | Waits: 1 min, weather: 10 min, quake feed: 5 min | Updated ",
    demo:"Fictional park demo. Weather (Open-Meteo) & quake feed (P2P) are real data; waits & attendance are simulated.",
    people:"",attrType:"Attraction",restType:"Restaurant",
@@ -325,6 +623,11 @@ const T={
    quakeTitle:"Earthquake info",quakeAll:"All attractions temporarily suspended for safety checks",
    quakeBig:"Major attractions suspended for safety checks (until ~",quakeBig2:")",
    maxInt:"Max intensity",tokyoInt:"Tokyo",
+   shows:"Today's Shows & Parades",fac:"Facilities & Services",restTitle:"Restaurants & Cafés",
+   nextShow:"Next ",liveShow:"Performing now",soonShow:"Starting soon ",doneShow:"Done for today",darkShow:"No performances today",maintShow:"Seasonal closure",cancelShow:"Cancelled",
+   minTo:"in ",useWait:"Wait to use",menuTitle:"Signature items",alcoholNote:"Alcohol is served. Age requirements for entry and alcohol orders follow park regulations.",
+   footNote2:"Not a footbath (air-based foot-care rest facility)",
+   ebBefore1:"",ebBefore2:" days until",ebDuring1:"Now on | ",ebDuring2:" days left (until Aug 31)",ebLast:"Final day today",ebEnded:" has ended",
    cond:{clear:"Clear",sunny:"Sunny",cloudy:"Cloudy",fog:"Fog",drizzle:"Drizzle",rain:"Rain",heavyrain:"Heavy rain",snow:"Snow",storm:"Thunderstorm"}}
 };
 const t=k=>T[LANG][k];
@@ -669,7 +972,6 @@ const PROFILE={
   dam:(tt,c)=>0.35+g(tt,11.5,2.6)+(c.temp>=30?0.25:0),
   wheel:(tt,c)=>0.35+0.55*g(tt,13.0,3.0)+0.85*g(tt,c.sunset+1.2,1.9),
   factory:(tt,c)=>0.40+0.80*g(tt,10.5,2.0)+0.55*g(tt,15.5,2.5),
-  jazz:(tt,c)=>{let v=0.35;[11,14,17,20].forEach(s0=>{v+=1.05*g(tt,s0-0.4,0.38);});return v;},
   voyage:(tt,c)=>0.45+g(tt,13.5,3.0),
   steam:(tt,c)=>0.55+0.50*g(tt,14.0,4.5),
   train:(tt,c)=>0.40+0.95*g(tt,11.0,2.4),
@@ -679,7 +981,7 @@ const PROFILE={
   moss:(tt,c)=>0.50+0.50*g(tt,14.0,4.5),
 };
 /* 悪天候時：屋内型は待ちが増え、屋外型は減る */
-const INDOOR=new Set(["jazz","factory","base","chase"]);
+const INDOOR=new Set(["factory","base","chase"]);
 function wxSpotMul(id){
   if (!WX.ok||WX.mul>=0.9) return 1;
   return INDOOR.has(id)?1.18:0.85;
@@ -695,7 +997,7 @@ const RPROFILE={
   hayate:(tt,c)=>0.50+0.9*g(tt,9.8,0.8)+1.4*g(tt,12.4,0.9)+1.0*g(tt,15.0,1.2)+1.1*g(tt,18.4,1.0),
   brasserie:(tt,c)=>0.30+1.8*g(tt,12.6,0.8)+1.7*g(tt,18.6,1.0),
   pumpkin:(tt,c)=>0.30+2.0*g(tt,12.2,0.9)+1.0*g(tt,18.2,0.9),
-  luludining:(tt,c)=>{let v=0.30;[[11,1.1],[14,1.1],[17,1.5],[20,1.5]].forEach(([s0,a])=>{v+=a*g(tt,s0-0.5,0.5);});return v;},
+  luludining:(tt,c)=>0.55+1.5*g(tt,12.5,0.9)+1.6*g(tt,18.6,1.0),  /* 連続ショー化に伴い二山+底上げへ再設計 */
   damkitchen:(tt,c)=>0.35+1.9*g(tt,12.0,0.8)+0.9*g(tt,17.8,0.9),
   canteen:(tt,c)=>0.35+1.7*g(tt,12.3,1.1)+1.1*g(tt,18.2,1.0),
   wheelcafe:(tt,c)=>0.40+1.0*g(tt,14.8,1.4)+0.9*g(tt,c.sunset+0.5,1.0),
@@ -715,15 +1017,15 @@ function calcWait(spot,d,tt,inPark,redist){
   let w;
   if (spot.type==="a"){
     const prof=(PROFILE[spot.id]||((x)=>0.45+g(x,13.8,3.0)))(tt,ctx);
-    w=spot.pop*spot.cap*crowd*prof*redist*wxSpotMul(spot.id);
+    w=spot.pop*spot.waitCapMin*crowd*prof*redist*wxSpotMul(spot.id);
   }
   else {
     const rprof=(RPROFILE[spot.id]||mealFactor)(tt,ctx);
-    w=spot.pop*spot.cap*(0.35+0.65*crowd)*rprof*0.62;
+    w=spot.pop*spot.waitCapMin*(0.35+0.65*crowd)*rprof*0.62;
   }
   const mKey=dateKey(d)+"-"+Math.floor(tt)+"-"+Math.round((tt%1)*60)+"-"+spot.id;
   w*=0.88+rand01(mKey)*0.24;
-  return Math.round(Math.min(spot.cap,Math.max(5,w))/5)*5;
+  return Math.round(Math.min(spot.waitCapMin,Math.max(5,w))/5)*5;
 }
 
 /* ================= 描画 ================= */
@@ -753,12 +1055,25 @@ function buildPins(){
     el.className="pin";el.id="pin-"+s.id;
     el.style.left=s.x+"%";el.style.top=s.y+"%";
     el.setAttribute("aria-label",s.ja);
+    const cat=catOf(s);
+    const ic=cat==="wellness"?["ico-well","♨"]:cat==="service"?["ico-svc","🧺"]:cat==="dining"?["ico-rest","🍴"]:["ico-attr","◆"];
     el.innerHTML=`<span class="chip" id="chip-${s.id}">
-      <span class="ico ${s.type==="a"?"ico-attr":"ico-rest"}">${s.type==="a"?"◆":"🍴"}</span>
+      <span class="ico ${ic[0]}">${ic[1]}</span>
       <span class="min" id="min-${s.id}">--</span></span><span class="pin-stem"></span>`;
-    el.addEventListener("click",e=>{e.stopPropagation();showTip(s);});
+    el.addEventListener("mouseenter",()=>showTip(s));
+    el.addEventListener("mouseleave",hideTip);
+    el.addEventListener("click",e=>{e.stopPropagation();openDetail(s.id);});
     mapInner.appendChild(el);
   });
+  /* 劇場ショーピン（旧jazz座標を再利用） */
+  const jz=ENTERTAINMENT.find(e=>e.id==="lulu-jazz");
+  const el=document.createElement("button");
+  el.className="pin";el.id="pin-lulu-jazz";
+  el.style.left=jz.x+"%";el.style.top=jz.y+"%";
+  el.setAttribute("aria-label",jz.ja);
+  el.innerHTML=`<span class="chip" id="chip-lulu-jazz"><span class="ico ico-show">♪</span><span class="min" id="min-lulu-jazz">--</span></span><span class="pin-stem"></span>`;
+  el.addEventListener("click",e=>{e.stopPropagation();openDetail("lulu-jazz");});
+  mapInner.appendChild(el);
   document.addEventListener("click",hideTip);
 }
 function showTip(s){
@@ -794,6 +1109,7 @@ function pulsePin(id){
 }
 function hideTip(){tip.classList.remove("show");activeId=null;document.querySelectorAll(".pin").forEach(p=>p.classList.remove("active"));}
 
+function catOf(s){return s.cat?s.cat:(s.type==="a"?"attraction":"dining");}
 function renderLists(){
   const mk=(list,panel,cls)=>{
     const sorted=[...list].sort((a,b)=>(currentWaits[b.id]??-1)-(currentWaits[a.id]??-1));
@@ -812,14 +1128,130 @@ function renderLists(){
     }).join("");
     panel.querySelectorAll(".row").forEach(r=>{
       const go=()=>{const s=SPOTS.find(x=>x.id===r.dataset.id);
-        document.querySelector(".map-card").scrollIntoView({behavior:"smooth",block:"nearest"});
-        showTip(s); pulsePin(s.id);};
+        pulsePin(s.id); openDetail(s.id);};
       r.addEventListener("click",go);
       r.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}});
     });
   };
-  mk(SPOTS.filter(s=>s.type==="a"),document.getElementById("panelAttr"),"");
-  mk(SPOTS.filter(s=>s.type==="r"),document.getElementById("panelRest"),"rest");
+  mk(SPOTS.filter(s=>catOf(s)==="attraction"),document.getElementById("panelAttr"),"");
+  mk(SPOTS.filter(s=>catOf(s)!=="attraction"&&catOf(s)!=="dining"),document.getElementById("panelFac"),"fac");
+  mk(SPOTS.filter(s=>catOf(s)==="dining"),document.getElementById("panelRest"),"rest");
+}
+
+/* ================= ショー＆パレード描画 ================= */
+function showStatusText(e,st){
+  if (st.st==="dark") return {cls:"sc-done",txt:t("darkShow")};
+  if (st.st==="maint") return {cls:"sc-maint",txt:t("maintShow")+" "+rangeStr(st.range)};
+  if (st.st==="cancel") return {cls:"sc-maint",txt:t("cancelShow")};
+  if (st.st==="live") return {cls:"sc-live",txt:t("liveShow")+"｜"+fmtT(st.start)+"–"+fmtT(st.end)};
+  if (st.st==="soon") return {cls:"sc-soon",txt:t("soonShow")+fmtT(st.start)+"（"+t("minTo")+st.minutesTo+(LANG==="ja"?"分":" min")+"）"};
+  if (st.st==="done") return {cls:"sc-done",txt:t("doneShow")};
+  return {cls:"sc-up",txt:t("nextShow")+fmtT(st.start)+"–"+fmtT(st.end)};
+}
+function renderShows(){
+  const now=new Date();
+  const tt=now.getHours()+now.getMinutes()/60;
+  const list=todaysEntertainment(now);
+  const panel=document.getElementById("panelShows");
+  panel.innerHTML=list.map(e=>{
+    const st=showStatus(e,now,tt);
+    const x=showStatusText(e,st);
+    const times=showTimes(e,now);
+    const timeLine=e.timeGen
+      ?(LANG==="ja"?"9:30〜21:30・30分おき":"9:30–21:30, every 30 min")
+      :times.map(fmtT).join(" / ");
+    return `<div class="show-card" data-eid="${e.id}" tabindex="0" role="button">
+      <div class="sc-name">${LANG==="ja"?e.ja:e.en}</div>
+      <div class="sc-venue">${LANG==="ja"?e.venueJa:e.venueEn}・${timeLine}</div>
+      <div class="sc-status ${x.cls}">${x.txt}</div></div>`;
+  }).join("");
+  panel.querySelectorAll(".show-card").forEach(c=>{
+    const go=()=>openDetail(c.dataset.eid);
+    c.addEventListener("click",go);
+    c.addEventListener("keydown",ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();go();}});
+  });
+  /* 劇場ピンの更新 */
+  const min=document.getElementById("min-lulu-jazz");
+  if (min){
+    const jz=ENTERTAINMENT.find(e=>e.id==="lulu-jazz");
+    const st=showStatus(jz,now,tt);
+    const chip=document.getElementById("chip-lulu-jazz");
+    if (st.st==="live"){min.textContent=t("liveShow");chip.className="chip w-ok";}
+    else if (st.st==="upcoming"||st.st==="soon"){min.textContent="♪"+fmtT(st.start);chip.className="chip";}
+    else {min.textContent=st.st==="maint"?t("maintShow"):t("doneShow");chip.className="chip w-maint";}
+  }
+}
+/* ================= 夏イベント・カウントダウンバナー ================= */
+function renderBanner(){
+  const b=document.getElementById("eventBanner");
+  const info=summerBannerInfo(new Date());
+  const nameJ="マローブルック・サマーランタン祭り", nameE="MALLOWBROOK SUMMER LANTERN MATSURI";
+  let html;
+  if (info.mode==="before"){
+    html=LANG==="ja"
+      ?`🏮 ${nameJ} ${t("ebBefore1")}<span class="eb-days">${info.days}</span>${t("ebBefore2")}`
+      :`🏮 <span class="eb-days">${info.days}</span>${t("ebBefore2")} ${nameE}`;
+  } else if (info.mode==="during"){
+    html=info.days===0
+      ?`🏮 ${LANG==="ja"?nameJ:nameE}｜<span class="eb-days">${t("ebLast")}</span>`
+      :(LANG==="ja"
+        ?`🏮 ${nameJ} ${t("ebDuring1")}<span class="eb-days">${info.days}</span>${t("ebDuring2")}`
+        :`🏮 ${t("ebDuring1")}${nameE}｜<span class="eb-days">${info.days}</span>${t("ebDuring2")}`);
+  } else {
+    html=`🏮 ${LANG==="ja"?nameJ:nameE}${t("ebEnded")}`;
+  }
+  b.innerHTML=html;
+}
+/* ================= 施設詳細シート ================= */
+const backdrop=document.getElementById("sheetBackdrop");
+function closeDetail(){backdrop.classList.remove("show");}
+document.getElementById("sheetClose").addEventListener("click",closeDetail);
+backdrop.addEventListener("click",e=>{if(e.target===backdrop)closeDetail();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDetail();});
+function openDetail(id){
+  const now=new Date();
+  const tt=now.getHours()+now.getMinutes()/60;
+  const g=GUIDE[id]||{};
+  const spot=SPOTS.find(s=>s.id===id);
+  const ent=ENTERTAINMENT.find(e=>e.id===id);
+  let catLabel,nm,ar,live="";
+  if (spot){
+    const cat=catOf(spot);
+    catLabel=(LANG==="ja"?g.catJa:g.catEn)||({attraction:t("attr"),dining:t("restTitle"),wellness:LANG==="ja"?"リラックス施設":"Wellness",service:LANG==="ja"?"サービス・休憩":"Service"})[cat];
+    nm=name(spot); ar=area(spot);
+    const w=currentWaits[id],st=currentStatus[id];
+    const wl=(cat==="wellness"||cat==="service")?(LANG==="ja"?(g.waitLabelJa||t("useWait")):(g.waitLabelEn||t("useWait"))):(LANG==="ja"?"待ち時間":"Wait time");
+    let line;
+    if (st&&st.st!=="open") line=statusLong(st);
+    else if (w==null) line=now.getHours()<OPEN_H?t("before"):t("closed");
+    else line=`${wl} <b>${fcMode?"約"+w+t("min")+(LANG==="ja"?"（ピーク予測）":" (peak est.)"):"約"+w+t("min")}</b>`;
+    const pp=ppText(id,now,currentSimT,currentAtt,st,fcMode);
+    live=`<div class="sh-live">${line}${pp?`<br><span class="ppb2">🎫 ${pp}</span>`:""}</div>`;
+  } else if (ent){
+    catLabel=(LANG==="ja"?g.catJa:g.catEn)||"";
+    nm=LANG==="ja"?ent.ja:ent.en; ar=LANG==="ja"?ent.venueJa:ent.venueEn;
+    const st=showStatus(ent,now,tt);
+    const x=showStatusText(ent,st);
+    const times=showTimes(ent,now);
+    const timeLine=ent.timeGen?(LANG==="ja"?"9:30〜21:30・30分おき（各30分・完全入替制）":"9:30–21:30, every 30 min"):times.map(fmtT).join(" / ");
+    live=`<div class="sh-live"><b>${x.txt}</b><br>${timeLine}</div>`;
+  } else return;
+  const tags=(LANG==="ja"?g.tagsJa:g.tagsEn)||[];
+  const tagHtml=tags.length?`<div class="sh-tags">${tags.map(x=>`<span class="sh-tag${x.includes("足湯")||x.includes("footbath")?" warn":""}">${x}</span>`).join("")}</div>`:"";
+  const meta=(g.styleJa)?`<div class="sh-meta">${LANG==="ja"?g.styleJa:g.styleEn}｜${LANG==="ja"?g.cuisineJa:g.cuisineEn}</div>`:"";
+  const menus=(g.menus&&g.menus.length)?`<div class="sh-menus"><div class="m-title">${t("menuTitle")}</div><ul>${g.menus.slice(0,4).map(m=>`<li>${m}</li>`).join("")}</ul></div>`:"";
+  let notes="";
+  if (id==="footlight") notes=`<div class="sh-note">⚠ ${t("footNote2")}</div>`;
+  if (g.alcohol) notes+=`<div class="sh-note">🍸 ${t("alcoholNote")}</div>`;
+  document.getElementById("sheetBody").innerHTML=`
+    <div class="sh-cat">${catLabel||""}</div>
+    <div class="sh-name">${nm}</div>
+    <div class="sh-area">${ar}</div>
+    ${live}${tagHtml}
+    ${g.tagJa?`<div class="sh-tagline">${LANG==="ja"?g.tagJa:g.tagEn}</div>`:""}
+    ${g.dJa?`<div class="sh-desc">${LANG==="ja"?g.dJa:g.dEn}</div>`:""}
+    ${meta}${menus}${notes}`;
+  backdrop.classList.add("show");
 }
 
 function refresh(){
@@ -868,12 +1300,16 @@ function refresh(){
 
   document.getElementById("tSort").textContent=fcMode?t("sortFc"):t("sortNow");
   {
-    const attrs=SPOTS.filter(s=>s.type==="a");
+    const attrs=SPOTS.filter(s=>catOf(s)==="attraction");
     const openN=attrs.filter(s=>spotStatus(s,now,simT).st==="open").length;
     document.getElementById("tOpenCnt").textContent=(LANG==="ja"?`稼働 ${openN}/${attrs.length}・`:`${openN}/${attrs.length} running・`);
-    const rn=SPOTS.filter(s=>s.type==="r").length;
+    const rn=SPOTS.filter(s=>catOf(s)==="dining").length;
     document.getElementById("tRestCnt").textContent=(LANG==="ja"?`${rn}店舗`:`${rn} locations`);
+    const fn=SPOTS.filter(s=>catOf(s)!=="attraction"&&catOf(s)!=="dining").length;
+    document.getElementById("tFacCnt").textContent=(LANG==="ja"?`${fn}施設`:`${fn} facilities`);
   }
+  renderShows();
+  renderBanner();
 
   currentWaits={};currentStatus={};currentAtt=att.total;currentSimT=simT;
   SPOTS.forEach(s=>{
@@ -897,7 +1333,9 @@ function applyLang(){
   document.documentElement.lang=LANG;
   document.getElementById("hSub").textContent=t("sub");
   document.getElementById("tAttr").textContent=t("attr");
-  document.getElementById("tRest").textContent=t("rest");
+  document.getElementById("tRest").textContent=t("restTitle");
+  document.getElementById("tShows").textContent=t("shows");
+  document.getElementById("tFac").textContent=t("fac");
   document.getElementById("tRefresh").textContent=t("refresh");
   document.getElementById("tNext").textContent=t("next");
   document.getElementById("tSec").textContent=t("sec");
