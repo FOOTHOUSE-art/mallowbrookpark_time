@@ -15,14 +15,14 @@
   --ok:#2e6b45; --warn:#b07514; --bad:#a83a24; --maint:#5a6b8c;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%}
+html,body{height:100%;overflow:hidden}
 body{
   font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN",sans-serif;
   background:var(--navy-deep);
   background-image:radial-gradient(ellipse at 50% -10%, #24365c 0%, var(--navy-deep) 60%);
   color:var(--ink);
 }
-.app{height:100vh;display:flex;flex-direction:column;padding:80px 6px 6px;gap:6px;max-width:1720px;margin:0 auto}
+.app{height:100vh;display:flex;flex-direction:column;padding:54px 6px 6px;gap:6px;max-width:1720px;margin:0 auto}
 header{
   flex:0 0 auto;display:flex;align-items:center;gap:10px;
   padding:5px 10px;border-radius:10px;
@@ -98,12 +98,12 @@ main{flex:1 1 auto;min-height:0;display:flex;gap:6px}
 .tip .t-wait{font-weight:700;color:#f0c14b}
 .tip .t-area{color:#9fb0d0;font-size:11px;margin-top:1px}
 
-.side{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:8px}
+.side{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:6px;min-height:0;overflow:auto}
 .quake-banner{display:none;flex:0 0 auto;padding:7px 12px;border-radius:10px;
   background:#7a2a1a;border:1px solid #e08560;color:#ffe9dd;font-size:11.5px;line-height:1.5}
 .quake-banner.show{display:block;animation:pulse 2.4s ease-in-out infinite}
 .quake-banner b{color:#ffd75e}
-.gauge-card{flex:0 0 auto;background:linear-gradient(180deg,var(--card),var(--parchment));
+.gauge-card{flex-shrink:0;flex:0 0 auto;background:linear-gradient(180deg,var(--card),var(--parchment));
   border:1px solid var(--brass);border-radius:12px;padding:8px 14px}
 .gauge-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px}
 .gauge-label{font-family:"Shippori Mincho",serif;font-weight:700;font-size:12.5px;color:var(--navy)}
@@ -205,7 +205,7 @@ main{flex:1 1 auto;min-height:0;display:flex;gap:6px}
 .sh-menus ul{list-style:none;display:flex;flex-wrap:wrap;gap:5px}
 .sh-menus li{font-size:12px;background:#fff8e8;border:1px solid #d8c896;border-radius:8px;padding:3px 10px;color:var(--navy)}
 .sh-note{margin-top:10px;font-size:11.5px;color:#8a5a2a;background:#f7ecd2;border-left:3px solid var(--brass);padding:6px 10px;border-radius:0 8px 8px 0}
-body.m-sp .app{padding-top:58px}
+body.m-sp .app{padding-top:54px}
 body.m-sp .cmt-in input{width:74px}
 body.m-sp .ticker2 .lbl2{font-size:0;padding:0 8px}
 body.m-sp .ticker2 .lbl2::before{content:"💬";font-size:13px}
@@ -221,7 +221,7 @@ body.m-sp .map-inner{height:auto}
 body.m-sp .map-inner img{height:auto;object-fit:contain}
 body.m-sp .side{display:block}
 body.m-sp .quake-banner{margin-bottom:8px}
-body.m-sp .gauge-card{margin-bottom:8px}
+body.m-sp .gauge-card{flex-shrink:0;margin-bottom:8px}
 body.m-sp .lists{display:block}
 body.m-sp .col{margin-bottom:8px}
 body.m-sp .rows{overflow:visible}
@@ -233,19 +233,20 @@ body.m-sp .clock-plate{order:5}
   font-weight:700;font-size:10.5px;letter-spacing:.06em;color:#f0c14b;background:rgba(201,162,39,.15);
   border-right:1px solid rgba(201,162,39,.5);white-space:nowrap}
 .ticker-view{flex:1;overflow:hidden;position:relative;display:flex;align-items:center}
-.ticker-text{display:inline-block;white-space:nowrap;padding-left:100%;color:#dfe7f7;font-size:12px;font-weight:500;
+.ticker-text{display:inline-block;white-space:nowrap;padding-left:100%;color:#dfe7f7;font-size:11.5px;font-weight:500;
   animation:tickerMove 120s linear infinite}
-.cum-bar{position:fixed;left:0;right:0;top:54px;z-index:49;height:20px;line-height:20px;text-align:center;
-  font-size:11px;font-weight:600;color:#e8d9a8;background:linear-gradient(180deg,#241c0c,#1a1408);
-  border-bottom:1px solid #4a3c1a;letter-spacing:.02em}
-.cum-bar b{color:#ffd75e;font-variant-numeric:tabular-nums}
-.cum-bar.mile{animation:milepulse 1.2s ease 3}
-@keyframes milepulse{0%,100%{background:linear-gradient(180deg,#241c0c,#1a1408)}50%{background:linear-gradient(180deg,#4a3810,#2a2008)}}
-.ticker2{top:28px;height:26px;background:linear-gradient(180deg,#1d2b1e,#141f16);border-bottom:1px solid #4a7a52}
+.cum-mini{display:flex;flex-direction:column;justify-content:center;gap:1px;padding:2px 10px;margin-left:auto;
+  background:rgba(20,16,6,.45);border:1px solid #4a3c1a;border-radius:9px;line-height:1.25;white-space:nowrap}
+.cum-mini .cm-l{font-size:10px;font-weight:700;color:#e8d9a8}
+.cum-mini .cm-l b{color:#ffd75e;font-variant-numeric:tabular-nums;font-size:11.5px}
+.cum-mini.mile{animation:milepulse 1.2s ease 3;border-radius:9px}
+@keyframes milepulse{0%,100%{background:rgba(20,16,6,.45)}50%{background:rgba(90,64,16,.7)}}
+body.m-sp .cum-mini{margin-left:0}
+.ticker2{top:24px;height:24px;background:linear-gradient(180deg,#1d2b1e,#141f16);border-bottom:1px solid #4a7a52}
 .ticker2 .lbl2{color:#9fe0a8;background:rgba(90,200,120,.12);border-right-color:rgba(90,200,120,.4)}
 .cmt-view{position:relative;overflow:hidden;flex:1;min-width:110px;display:flex}
 .cmsg{position:absolute;left:100%;top:50%;transform:translateY(-50%);white-space:nowrap;
-  font-size:12px;font-weight:600;color:#dfe7f7;will-change:transform;
+  font-size:11.5px;font-weight:600;color:#dfe7f7;will-change:transform;
   animation:cmove linear forwards}
 @keyframes cmove{from{transform:translate(0,-50%)}to{transform:translate(var(--cdist),-50%)}}
 .cmsg .cm-name{font-weight:700;margin-right:2px}
@@ -412,6 +413,10 @@ body.sky-late{background-image:radial-gradient(ellipse at 50% -10%,#131d38 0%,#0
         <div class="wsub"><span id="wPlace">東京エリア実況</span> ・ <span class="weff" id="wEff"></span></div>
       </div>
     </div>
+    <div class="cum-mini" id="cumBar">
+      <span class="cm-l">🎫 <span id="tCumT">本日</span> <b id="cumToday">--</b></span>
+      <span class="cm-l"><span id="tCumG">開園来(6/13〜)</span> <b id="cumGrand">--</b></span>
+    </div>
     <div class="clock-plate">
       <div class="clock-line"><span class="clock-time" id="clock">--:--:--</span><span class="cd-inline">(<b id="cd">60</b>s)</span></div>
       <div class="clock-line2"><span class="clock-date" id="dateline">----</span><span class="status-chip" id="parkStatus">--</span></div>
@@ -494,7 +499,6 @@ body.sky-late{background-image:radial-gradient(ellipse at 50% -10%,#131d38 0%,#0
   </main>
 </div>
 
-<div class="cum-bar" id="cumBar"></div>
 <div class="ticker ticker2">
   <div class="ticker-label lbl2">💬 GUEST VOICES</div>
   <div class="ticker-view cmt-view" id="cmtView"></div>
@@ -2434,9 +2438,12 @@ function desiredBgm(){
   });
   if (live) return {key:live.id==="summer-muscle"?"matsuri":harborTrack(now),vol:BGM_VOL};
   if (pre) return {key:"lmOrch",vol:BGM_VOL*0.9};
-  /* ジャズ公演中はルルのスターライト劇場BGM */
+  /* ジャズは公演開始の3分間のみ劇場BGM(開演の合図)、以降は通常曲へ復帰 */
   const jz2=ENTERTAINMENT.find(e=>e.id==="lulu-jazz");
-  if (jz2&&showStatus(jz2,now,tt).st==="live") return {key:"luluBgm",vol:BGM_VOL*0.95};
+  if (jz2&&showStatus(jz2,now,tt).st==="live"){
+    const st2=showTimes(jz2,now).find(s=>tt>=s&&tt<s+0.05);
+    if (st2!=null) return {key:"luluBgm",vol:BGM_VOL*0.95};
+  }
   if (tt>=21.4) return {key:"nightEnt",vol:BGM_VOL*0.9};      /* 閉園間際は夜エントランス版 */
   if (tt>=18) return {key:"sparks",vol:BGM_VOL};
   if (tt<9.5) return {key:"morn",vol:BGM_VOL};                /* 開園直後の朝 */
@@ -3351,9 +3358,10 @@ function updateCumBanner(now,tt,att,rw,inPark){
     el.classList.add("mile");setTimeout(()=>el.classList.remove("mile"),4000);
   }
   _lastGrandMil=gm;
-  el.innerHTML=J
-    ?`🎫 本日の累計入園 <b>${todayCum.toLocaleString()}</b>人　｜　開園（2026/6/13）からの累計 <b>${grand.toLocaleString()}</b>人`
-    :`🎫 Today's entries <b>${todayCum.toLocaleString()}</b> | Since opening (2026/6/13) <b>${grand.toLocaleString()}</b>`;
+  document.getElementById("tCumT").textContent=J?"本日":"Today";
+  document.getElementById("tCumG").textContent=J?"開園来(2026/6/13〜)":"Since 2026/6/13";
+  document.getElementById("cumToday").textContent=todayCum.toLocaleString()+(J?"人":"");
+  document.getElementById("cumGrand").textContent=grand.toLocaleString()+(J?"人":"");
 }
 
 /* ================= 当日実績ログ(5分毎に園内人数と各待ち時間を記録) ================= */
