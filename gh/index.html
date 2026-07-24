@@ -2088,6 +2088,7 @@ function renderShows(){
       ?(LANG==="ja"?"9:30〜21:30・30分おき":"9:30–21:30, every 30 min")
       :times.map(fmtT).join(" / ");
     let jt="";
+    if (e.id==="lulu-jazz") jt+=`<div class="jazz-tk tk-allwx">☔ ${LANG==="ja"?"全天候型（雨の日も公演）":"All-weather (rain or shine)"}</div>`;
     if (e.id==="lulu-jazz"&&!fcMode){
       const nxt=times.find(s2=>tt<s2);
       if (nxt!=null){
