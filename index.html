@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>const APP_VERSION="v25",APP_DATE="2026-07-24";</script>
 <title>MALLOWBROOK PARK｜リアルタイム運営情報</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Cinzel:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -56,6 +57,7 @@ header{
 .status-closed{background:rgba(120,60,50,.3);color:#f0b3a3;border:1px solid #8f4a38}
 .status-before{background:rgba(176,117,20,.22);color:#f0c97b;border:1px solid #a5822d}
 .hbtns{display:grid;grid-template-columns:auto auto auto;gap:3px 4px;align-items:center}
+.ver-stamp{grid-column:1/-1;font-size:9px;color:var(--brass);opacity:.6;text-align:right;letter-spacing:.04em}
 .btn{font-family:inherit;font-weight:700;font-size:10.5px;cursor:pointer;white-space:nowrap;
   padding:3px 9px;border-radius:7px;border:1px solid var(--brass);
   background:linear-gradient(180deg,#fbf3dd,#eadfbd);color:var(--navy);transition:transform .1s ease}
@@ -191,6 +193,8 @@ main{flex:1 1 auto;min-height:0;display:flex;gap:6px}
 .db-col{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;position:relative}
 .db-bar{width:100%;border-radius:2px 2px 0 0}
 .db-lo{background:#4f9968}.db-mid{background:#cf9c2c}.db-hi{background:#bf4a2e}.db-off{background:#c9bfa8}
+.db-col.db-fut .db-bar{opacity:.45}
+.db-col.db-fut .db-val{opacity:.55}
 .db-col.db-now::after{content:"▼";position:absolute;top:-11px;font-size:8px;color:var(--navy)}
 .db-val{display:block;height:11px;line-height:11px;font-size:8px;font-weight:800;font-variant-numeric:tabular-nums;text-align:center}
 .dv-lo{color:#3d7a52}.dv-mid{color:#a37a1e}.dv-hi{color:#a03a20}
@@ -432,6 +436,7 @@ body.sky-late{background-image:radial-gradient(ellipse at 50% -10%,#131d38 0%,#0
       <button class="btn" id="btnCal" title="混雑予想カレンダー">📅 カレンダー</button>
       <button class="btn" id="btnDist" title="入園者分布">🔥 分布</button>
       <button class="btn" id="btnView" title="表示切替">📱 表示</button>
+      <span class="ver-stamp" id="verStamp"></span>
     </div>
   </header>
 
@@ -563,6 +568,11 @@ body.sky-late{background-image:radial-gradient(ellipse at 50% -10%,#131d38 0%,#0
     <div class="sh-area" id="calNote">※日本の暦に基づく予想です。当日の天候により変動します。⏰=8:30アーリーオープン　🔥=特異日　🛠=大型メンテ休止あり</div>
     <div id="calBody"></div>
     <div class="sh-meta" id="calDetail" style="margin-top:8px;min-height:18px"></div>
+    <div id="calChartWrap" style="display:none;position:relative;margin-top:6px">
+      <canvas id="calChart" style="width:100%;height:180px"></canvas>
+      <div id="calTip" class="chart-tip"></div>
+      <div id="calChartNote" style="font-size:10px;color:#8a7a55;margin-top:2px"></div>
+    </div>
   </div>
 </div>
 
@@ -633,7 +643,7 @@ const EVENTS=[
 const isSummerEvent=d=>{const md=mmdd(d);return md>=801&&md<=831;};
 const isChristmasEvent=d=>{const md=mmdd(d);return md>=1201&&md<=1225;};
 const ENTERTAINMENT=[
-  {id:"lulu-jazz",category:"indoor_show",ja:"ルルのジャズ・ドリームレビュー",en:"Lulu's Jazz Dream Revue",
+  {id:"lulu-jazz",category:"indoor_show",ja:"ルルのジャズ・ドリームレビュー",en:"Lulu's Jazz Dream Revue",noteJa:"屋内公演のため天候による中止はありません",
    venueJa:"ルルのスターライト劇場",venueEn:"Lulu's Starlight Theater",
    timeGen:{start:9.5,intervalMin:30,durationMin:30},indoor:true,x:52.0,y:21.0,activeRule:"daily"},
   {id:"mallowbrook-story-parade",category:"parade",ja:"マローブルック・ストーリー・パレード",en:"MALLOWBROOK STORY PARADE",
@@ -669,11 +679,99 @@ function showMaintOf(id,d){
   const md=mmdd(d);return (md>=r[0]&&md<=r[1])?r:null;
 }
 /* 悪天候による屋外公演の中止判定。開始60分前以降の東京実況で判定 */
+/* ================= 大規模トラブル(停電・水道・小規模ボヤ。極めて低確率・日付シード決定) =================
+   ※システム調整(公演ごとの小規模事由)とは別系統。火災は常に小規模なボヤ(けが人なし)で全園延焼はしない */
+const TROUBLE_KINDS={
+  spot:[
+    {k:"sensor",  ja:"設備センサー異常",     min:40, max:90,  unit:"m"},
+    {k:"plumb",   ja:"給排水設備のトラブル", min:60, max:180, unit:"m"},
+    {k:"parts",   ja:"部品交換対応",         min:90, max:180, unit:"m"},
+    {k:"fire",    ja:"小規模なボヤ（けが人なし）", min:30, max:30, unit:"m", restDay:true},
+  ],
+  area:[
+    {k:"powerA",  ja:"配電系統の部分停電",   min:60, max:150, unit:"m"},
+    {k:"waterA",  ja:"上水系統のトラブル",   min:120,max:300, unit:"m"},
+  ],
+  park:[
+    {k:"powerW",  ja:"広域停電（受電設備）", min:30, max:120, unit:"m", tail:60},
+    {k:"waterW",  ja:"広域断水",             min:180,max:360, unit:"m"},
+  ],
+};
+let _drill=null;
+try{const q=new URLSearchParams(location.search).get("drill");
+  if(q) _drill={power:"powerW",water:"waterW",fire:"fire",spot:"sensor"}[q]||null;}catch(e){}
+const _troubleCache={};
+function troubleOf(d){
+  const key=dateKey(d);
+  if (key in _troubleCache) return _troubleCache[key];
+  let out=null;
+  const isToday=key===dateKey(new Date());
+  if (_drill&&isToday){
+    const kind=[..._TK_ALL()].find(x=>x.def.k===_drill);
+    const nowTT=new Date().getHours()+new Date().getMinutes()/60;
+    out=_mkTrouble(d,kind.scale,kind.def,Math.max(openH(d)+0.2,nowTT-0.17));
+  } else {
+    const r=rand01("trouble-"+key);
+    let scale=null;
+    if (r<0.0008) scale="park";                    /* 全園級: 約3年に1回 */
+    else if (r<0.0063) scale="area";               /* 大規模: 年2回程度 */
+    else if (r<0.0393) scale="spot";               /* 一施設: 月1回程度 */
+    if (scale){
+      const kinds=TROUBLE_KINDS[scale];
+      const def=kinds[Math.floor(rand01("tk-"+key)*kinds.length)];
+      const oh=openH(d);
+      const start=oh+0.5+rand01("tt-"+key)*(19-oh-0.5);
+      out=_mkTrouble(d,scale,def,start);
+    }
+  }
+  _troubleCache[key]=out;
+  return out;
+}
+function _TK_ALL(){return Object.entries(TROUBLE_KINDS).flatMap(([scale,arr])=>arr.map(def=>({scale,def})));}
+function _mkTrouble(d,scale,def,start){
+  const key=dateKey(d);
+  const durM=def.min+rand01("dur-"+key)*(def.max-def.min);
+  const annEnd=start+durM/60;                                     /* 発表される復旧見込み */
+  const actEnd=Math.min(CLOSE_H,annEnd+(rand01("act-"+key)-0.5)*(40/60));  /* 実復旧は±20分ぶれる */
+  const tailEnd=def.tail?actEnd+def.tail/60:actEnd;               /* 広域停電は順次再開の尾 */
+  /* 対象: 一施設=シードで選んだアトラクション / エリア=シードで選んだエリア */
+  let spotId=null,areaJa=null;
+  const attractions=SPOTS.filter(s=>s.type==="a");
+  if (scale==="spot"){spotId=attractions[Math.floor(rand01("ts-"+key)*attractions.length)].id;}
+  if (scale==="area"){
+    const areas=[...new Set(SPOTS.map(s=>s.areaJa))];
+    areaJa=areas[Math.floor(rand01("ta-"+key)*areas.length)];
+  }
+  return {scale,kind:def.k,labelJa:def.ja,start,annEnd,actEnd,tailEnd,restDay:!!def.restDay,spotId,areaJa};
+}
+function troubleActive(d,tt){
+  const tr=troubleOf(d);
+  if (!tr) return null;
+  if (tt>=tr.start&&tt<tr.actEnd) return tr;
+  return null;
+}
+function troubleAffects(tr,spot,d,tt){
+  if (!tr) return false;
+  if (tr.scale==="park") return spot.type==="a"&&tt<tr.tailEnd;   /* 全園: 全アトラクション(順次再開の尾含む) */
+  if (tr.scale==="area") return spot.areaJa===tr.areaJa&&spot.type==="a";
+  if (tr.scale==="spot"){
+    if (spot.id!==tr.spotId) return false;
+    if (tr.restDay) return tt>=tr.start;                          /* ボヤ: 当該施設は終日休止 */
+    return true;
+  }
+  return false;
+}
+
+
 function sysCancelled(e,startT,d){
   /* システム調整による中止(約4%/公演・日付シードで決定的。屋内ショーも対象) */
   return rand01("sys-"+e.id+"-"+startT+"-"+dateKey(d||new Date()))<0.04;
 }
 function weatherCancelled(e,startT,tt,d){
+  {
+    const tr=troubleOf(d||new Date());
+    if (tr&&tr.scale==="park"&&startT>=tr.start&&startT<tr.actEnd&&tt>=startT-1) return true;   /* 全園級トラブル中は中止 */
+  }
   if (sysCancelled(e,startT,d)&&tt>=startT-1) return true;   /* 判定は60分前から公表 */
   if (e.indoor) return false;                                 /* 屋内公演は天候中止なし(構造保証) */
   if (tt<startT-1) return false;
@@ -684,6 +782,9 @@ function weatherCancelled(e,startT,tt,d){
   return windy||severe;
 }
 function cancelReason(e,startT,tt,d){
+  const tr=troubleOf(d||new Date());
+  if (tr&&tr.scale==="park"&&startT>=tr.start&&startT<tr.actEnd)
+    return LANG==="ja"?`${tr.labelJa}のため中止`:"Cancelled (facility incident)";   /* トラブルはシステム調整と別事由 */
   /* 屋内公演の中止は常にシステム調整(悪天候表示は構造的にあり得ない) */
   if (e.indoor||sysCancelled(e,startT,d)) return LANG==="ja"?"システム調整のため中止":"Cancelled (system adjustment)";
   return LANG==="ja"?"悪天候のため中止":"Cancelled (weather)";
@@ -1421,6 +1522,14 @@ function inspectionsOf(id,d){
   return wins;
 }
 function spotStatus(s,d,tt){
+  {
+    const tr0=troubleOf(d);
+    if (tr0){
+      const endT=tr0.scale==="park"?tr0.tailEnd:tr0.actEnd;
+      const within=(tt>=tr0.start&&tt<endT)||(tr0.restDay&&tr0.spotId===s.id&&tt>=tr0.start);
+      if (within&&troubleAffects(tr0,s,d,tt)) return {st:"trouble",tr:tr0};
+    }
+  }
   /* アーリー時間帯は先行オープン組以外「準備中」 */
   if (tt<9&&tt>=openH(d)&&!EARLY_SPOTS.has(s.id)) return {st:"prep"};
   if (s.type!=="a"){
@@ -1805,6 +1914,15 @@ function newsItems(now,att,rw,residual){
   const tt=now.getHours()+now.getMinutes()/60;
   const oh=openH(now), J=LANG==="ja";
   const items=[], urgent=[];
+  {
+    const trT=troubleOf(now);
+    if (trT&&tt>=trT.start-0.1){
+      const J3=LANG==="ja";
+      if (troubleActive(now,tt)) urgent.push(J3?`⚠ ${trT.labelJa}のため${trT.scale==="park"?"全域の":trT.scale==="area"?trT.areaJa+"エリアの":""}一部施設を休止しています（復旧見込み ${fmtT(trT.annEnd)}頃）`
+                                             :`⚠ Incident: facilities paused (ETA ${fmtT(trT.annEnd)})`);
+      else if (tt>=trT.actEnd&&tt<trT.actEnd+0.34) urgent.push(J3?`✅ ${trT.labelJa}への対応が完了し、順次運営を再開しています`:`✅ Recovering, reopening`);
+    }
+  }
   const night=currentNight||nightEventsOf(now);
   const tomorrow=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
   const isMuscleDay=dateKey(now)==="2026-08-01";
@@ -1958,6 +2076,11 @@ function statusShort(st){
   return st.st==="maint"?t("stMaintS"):st.st==="insp"?t("stInspS"):st.st==="quake"?t("stQuakeS"):st.st==="sunset"?t("stSunsetS"):null;
 }
 function statusLong(st){
+  if (st.st==="trouble"){
+    const J2=LANG==="ja";
+    const eta=st.tr.restDay&&st.tr.spotId? (J2?"本日休止":"closed today") : (J2?`復旧見込み ${fmtT(st.tr.annEnd)}頃`:`ETA ${fmtT(st.tr.annEnd)}`);
+    return {s:J2?`${st.tr.labelJa}のため休止（${eta}）`:`Paused: incident (${eta})`,shortS:J2?"休止":"Paused",cls:"w-maint"};
+  }
   if (st.st==="maint") return t("stMaint")+"（"+t("period")+" "+rangeStr(st.range)+"）";
   if (st.st==="insp"){
     let s=t("stInsp");
@@ -2067,6 +2190,11 @@ function renderLists(){
 /* ================= ショー＆パレード描画 ================= */
 function showStatusText(e,st){
   if (st.st==="dark") return {cls:"sc-done",txt:t("darkShow")};
+  if (st.st==="trouble"){
+    const J2=LANG==="ja";
+    const eta=st.tr.restDay&&st.tr.spotId? (J2?"本日休止":"closed today") : (J2?`復旧見込み ${fmtT(st.tr.annEnd)}頃`:`ETA ${fmtT(st.tr.annEnd)}`);
+    return {s:J2?`${st.tr.labelJa}のため休止（${eta}）`:`Paused: incident (${eta})`,shortS:J2?"休止":"Paused",cls:"w-maint"};
+  }
   if (st.st==="maint") return {cls:"sc-maint",txt:t("maintShow")+" "+rangeStr(st.range)};
   if (st.st==="cancel") return {cls:"sc-maint",txt:t("cancelShow")};
   if (st.st==="wxcancel") return {cls:"sc-maint",txt:(LANG==="ja"?"中止（悪天候）":"Cancelled (weather)")+"｜"+fmtT(st.start)};
@@ -2187,7 +2315,7 @@ function openDetail(id){
     const nowTT=d0.getHours()+d0.getMinutes()/60;
     let bars="",maxW=10;
     const series=[];
-    const log0=actualSeries(d0);
+    const log0=loadTodayLog(d0);          /* 待ち時間実績は5分毎の生記録から参照(v24デグレ修正) */
     for (let x=oh0;x<=21.75;x+=0.5){
       const stx=spotStatus(spot,d0,x+0.01);
       let wv=null,act=false;
@@ -2205,9 +2333,10 @@ function openDetail(id){
       const cur=Math.abs(p.x-Math.floor(nowTT*2)/2)<0.01?" db-now":"";
       const isHour=Math.abs(p.x-Math.round(p.x))<0.01;
       /* 全列に数値スロット・時刻スロットを常設して高さを揃える(整時のみ表示) */
+      const fut=p.x>=nowTT?" db-fut":"";
       const val=isHour&&p.wv!=null?`<span class="db-val ${cls.replace("db-","dv-")}">${p.wv}</span>`:`<span class="db-val"></span>`;
       const lbl=isHour?`<span class="db-lbl">${Math.round(p.x)}</span>`:`<span class="db-lbl"></span>`;
-      return `<div class="db-col${cur}" title="${fmtT(p.x)} ${p.wv!=null?"約"+p.wv+"分":"休止/終了"}">${val}<div class="db-bar ${cls}" style="height:${hpx}px"></div>${lbl}</div>`;
+      return `<div class="db-col${cur}${fut}" title="${fmtT(p.x)} ${p.wv!=null?"約"+p.wv+"分":"休止/終了"}${p.x>=nowTT?"（予測）":"（実績）"}">${val}<div class="db-bar ${cls}" style="height:${hpx}px"></div>${lbl}</div>`;
     }).join("");
     dayBars=`<div class="db-wrap"><div class="db-title">${LANG==="ja"?"本日の待ち時間（〜現在は実績・以降は予測／数字は各正時の分数）":"Today's waits (actual until now, forecast after)"}</div><div class="db-row">${bars}</div></div>`;
   }
@@ -2218,6 +2347,7 @@ function openDetail(id){
     ${live}${dayBars}${tagHtml}
     ${g.tagJa?`<div class="sh-tagline">${LANG==="ja"?g.tagJa:g.tagEn}</div>`:""}
     ${g.dJa?`<div class="sh-desc">${LANG==="ja"?g.dJa:g.dEn}</div>`:""}
+    ${(ENTERTAINMENT.find(x=>x.id===id)||{}).noteJa?`<div class="sh-area" style="margin-top:-4px;margin-bottom:8px">※ ${LANG==="ja"?ENTERTAINMENT.find(x=>x.id===id).noteJa:"Indoor show: never cancelled due to weather"}</div>`:""}
     ${meta}${menus}${notes}`;
   backdrop.classList.add("show");
 }
@@ -2544,6 +2674,7 @@ document.addEventListener("pointerdown",function once(){
 },{capture:true});
 if (stGet("mb_bgm")!=="off") bgmStart();
 setInterval(bgmTick,3000);
+document.getElementById("verStamp").textContent=`${APP_VERSION} (${APP_DATE})`;
 
 /* ================= アンビエント(空・夜マップ・時報) ================= */
 function ambientTick(){
@@ -2948,7 +3079,10 @@ function genSituation(c){
   todaysEntertainment(c.now).forEach(e=>{const st=showStatus(e,c.now,c.tt);
     if(st.st==="live")p.push(`${e.ja.split("〜")[0]}見てる、${R(["最高","泣く","鳥肌"])}${R(EMO)}`,`🏮🏮🏮`,`この瞬間のために来てる`,`隣の知らない人と一緒に手拍子してる`);
     if(st.st==="soon")p.push(`${fmtT(st.start)}の${e.category==="parade"?"パレード":"ショー"}、場所取り完了${R(EMO)}`,`開演${t("minTo")}${st.minutesTo}分、そわそわ`);
-    if(st.st==="wxcancel")p.push(`ショー中止かぁ…天気ばかりはね`,`中止残念、でも安全第一よ`,`中止の分、屋内ショー2回見る`,`システム調整での中止、機材も生き物だからね`,`中止アナウンスのお姉さんの声が申し訳なさすぎて逆に和んだ`);});
+    if(st.st==="wxcancel"){
+      if (e.indoor) p.push(`ドリームレビュー、システム調整で中止かぁ。機材も生き物だからね`,`屋内公演の中止は珍しい。次の回に期待`,`中止アナウンスのお姉さんの声が申し訳なさすぎて逆に和んだ`);
+      else p.push(`ショー中止かぁ…天気ばかりはね`,`中止残念、でも安全第一よ`,`中止の分、屋内ショー2回見る`);
+    }});
   if (c.muscle&&c.tt>=15&&c.tt<19) p.push(`マッスル・コンテスト盛り上がってる💪`,`推しの筋肉にいいね押してきた`,`Xのいいねで優勝決まるのおもろい`,`ポージングのたびに歓声すごい`);
   const lo1=c.tt>=20.25&&c.tt<21, lo2=c.tt>=20.75&&c.tt<21.5;
   if (lo1) p.push(`ブラッスリーL.O.まであと${Math.max(1,Math.round((21-c.tt)*60))}分、走る`,`ギリギリでテーブル席滑り込んだ、勝ち`,`ディナー難民になりかけたけどワーフ・グリル間に合った`);
@@ -3159,9 +3293,28 @@ function emitCmt(){
   el.addEventListener("animationend",()=>{el.remove();cmtActive=cmtActive.filter(x=>x!==rec);});
 }
 setInterval(emitCmt,500);
+function genTroubleCmt(tr){
+  const kindLines={
+    powerW:[`非常灯のパーク、逆にレアな景色`,`広域停電でも誘導が手慣れてて安心感すごい`,`復旧して照明が戻った瞬間の拍手、良いもの見た`],
+    powerA:[`一角だけ停電中。クルーさんの誘導が完璧`,`部分停電、復旧作業のお兄さんたち頑張って`],
+    waterW:[`断水対応で給水車来てる。運営の本気を見た`,`水回り復旧待ち。ドリンク配布ありがたい`],
+    waterA:[`エリアの水道トラブルだって。トイレは別エリアへ案内中`],
+    fire:[`ボヤがあったみたいだけど、けが人なしとのこと。よかった`,`消防点検で1施設お休み。安全第一`],
+    sensor:[`センサー調整で休止中。再開したら空いてるチャンスでは`],
+    plumb:[`配管トラブルらしい。裏方さんの仕事に感謝しかない`],
+    parts:[`部品交換で休止中。メンテ大事`],
+  };
+  const base=[`⚠対応中でも他エリアは平常運転。切替早い`,`復旧見込み時刻がアプリに出るの、地味に助かる`];
+  return R([...(kindLines[tr.kind]||[]),...base]);
+}
 function pushComment(){
   const c=cctx();
   const roll=crNext();
+  {
+    const nowT=new Date();
+    const trA=troubleActive(nowT,nowT.getHours()+nowT.getMinutes()/60);
+    if (trA&&crNext()<0.45){emitCmt({text:genTroubleCmt(trA),icon:R(["🦝","🎩","⚙"]),col:"#ffd9a8"});return;}
+  }
   let out=null;
   const closed=c.tt<openH(c.now)||c.tt>=CLOSE_H;
   /* ---- 災害時は災害コメントを最優先で混ぜる ---- */
@@ -3505,7 +3658,7 @@ function actualSeries(d){
   return det;
 }
 function actualWaitNear(log,spotId,tt){
-  if (!log||!log.w[spotId]) return null;
+  if (!log||!log.w||!log.w[spotId]) return null;
   let best=-1,bd=1;
   log.t.forEach((x,i)=>{const dd=Math.abs(x-tt);if(dd<bd){bd=dd;best=i;}});
   if (best<0||bd>0.3) return null;
@@ -3517,9 +3670,81 @@ function actualWaitNear(log,spotId,tt){
 const attBackdrop=document.getElementById("attBackdrop");
 document.getElementById("attClose").addEventListener("click",()=>attBackdrop.classList.remove("show"));
 attBackdrop.addEventListener("click",e=>{if(e.target===attBackdrop)attBackdrop.classList.remove("show");});
+/* 共通: 任意のcanvasへ日付・モード別のグラフを描画し、ホバー状態を返す */
+async function drawDayChart(cv,target,mode){
+  const tl=(mode!=="future")?await loadDayArchive(dateKey(target)):null;
+  const J=LANG==="ja";
+  const now=target,att=dailyAttendance(now),oh=openH(now);
+  cv.width=(cv.clientWidth||500)*2;cv.height=360;
+  const ctx=cv.getContext("2d");
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const W=cv.width,H=cv.height,L=70,B=H-40,T=16,Rr=W-14;
+  const t0=oh-0.5,t1=22.7;
+  const xx=t=>L+(t-t0)/(t1-t0)*(Rr-L);
+  const ymax=Math.max(80000,att.total*1.08);
+  const yy=v=>B-(v/ymax)*(B-T);
+  const rwG=restrictionWindow(now,att);
+  if (rwG&&rwG.release){ctx.fillStyle="rgba(200,60,40,.12)";ctx.fillRect(xx(rwG.start),T,xx(rwG.release)-xx(rwG.start),B-T);}
+  const tr=troubleOf(now);
+  if (tr){ctx.fillStyle="rgba(120,120,120,.20)";ctx.fillRect(xx(Math.max(tr.start,t0)),T,xx(Math.min(tr.actEnd,t1))-xx(Math.max(tr.start,t0)),B-T);}
+  if (tl){
+    ctx.fillStyle="rgba(90,150,220,.14)";
+    for (const hk of Object.keys(tl)){
+      const hh2=+hk,hw=tl[hk];
+      const rainy=hw&&(["rain","heavyrain","storm","snow"].includes(hw.cond)||(hw.mul!=null&&hw.mul<0.92));
+      if (rainy&&hh2+1>t0&&hh2<t1) ctx.fillRect(xx(Math.max(hh2,t0)),T,xx(Math.min(hh2+1,t1))-xx(Math.max(hh2,t0)),B-T);
+    }
+  }
+  ctx.strokeStyle="#b08a2a";ctx.setLineDash([6,5]);ctx.beginPath();ctx.moveTo(L,yy(MAX_CAP));ctx.lineTo(Rr,yy(MAX_CAP));ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle="#8a6a1a";ctx.font="20px sans-serif";ctx.fillText("75,000",L+4,yy(MAX_CAP)-6);
+  ctx.strokeStyle="#8fa0c4";ctx.lineWidth=2;
+  const steps=ymax>90000?[0,25000,50000,75000,100000]:[0,20000,40000,60000];
+  steps.forEach(v=>{ctx.globalAlpha=.25;ctx.beginPath();ctx.moveTo(L,yy(v));ctx.lineTo(Rr,yy(v));ctx.stroke();ctx.globalAlpha=1;
+    ctx.fillStyle="#6b7a9c";ctx.fillText((v/10000)+"万",8,yy(v)+7);});
+  for(let hh3=Math.ceil(t0);hh3<=22;hh3+=2){ctx.fillStyle="#6b7a9c";ctx.fillText(hh3+":00",xx(hh3)-18,B+26);}
+  /* 累計(緑) */
+  ctx.strokeStyle="#7c9c6a";ctx.lineWidth=3;
+  if (mode==="future") ctx.globalAlpha=0.5;
+  ctx.beginPath();
+  for(let t=t0;t<=22;t+=1/12){const v=cumEntriesModel(now,Math.max(t,oh+0.001),att,rwG,1);t===t0?ctx.moveTo(xx(t),yy(v)):ctx.lineTo(xx(t),yy(v));}
+  ctx.stroke();ctx.globalAlpha=1;
+  /* 在園(青) */
+  const realNow=new Date();
+  const nowTT=realNow.getHours()+realNow.getMinutes()/60;
+  ctx.strokeStyle="#2a4a86";ctx.lineWidth=4;
+  let started=false;
+  if (mode==="future"){
+    ctx.globalAlpha=0.45;ctx.lineWidth=3;ctx.setLineDash([7,6]);ctx.beginPath();
+    for(let x=t0;x<=t1;x+=1/12){const v=inParkOf(now,x,att);started?ctx.lineTo(xx(x),yy(v)):ctx.moveTo(xx(x),yy(v));started=true;}
+    ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;ctx.lineWidth=4;
+  } else if (mode==="past"){
+    const det=detSeries(now,CLOSE_H+0.67,tl);
+    ctx.beginPath();
+    det.t.forEach((x,i)=>{if(x<t0||x>t1)return;started?ctx.lineTo(xx(x),yy(det.p[i])):ctx.moveTo(xx(x),yy(det.p[i]));started=true;});
+    ctx.stroke();
+  } else {
+    const log=actualSeries(now);
+    ctx.beginPath();
+    if (log) log.t.forEach((x,i)=>{if(x>nowTT+0.01)return;started?ctx.lineTo(xx(x),yy(log.p[i])):ctx.moveTo(xx(x),yy(log.p[i]));started=true;});
+    ctx.stroke();
+    ctx.globalAlpha=0.45;ctx.lineWidth=3;ctx.setLineDash([7,6]);ctx.beginPath();started=false;
+    for(let x=Math.max(t0,nowTT);x<=t1;x+=1/12){const v=inParkOf(now,x,att);started?ctx.lineTo(xx(x),yy(v)):ctx.moveTo(xx(x),yy(v));started=true;}
+    ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;ctx.lineWidth=4;
+  }
+  if (mode==="today"&&nowTT>=t0&&nowTT<=t1){ctx.strokeStyle="#bf4a2e";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(xx(nowTT),T);ctx.lineTo(xx(nowTT),B);ctx.stroke();}
+  let wxSum="";
+  if (tl){
+    const hrs=Object.keys(tl).map(Number).sort((a,b)=>a-b);
+    const rainH=hrs.find(x=>{const w=tl[x];return w&&(["rain","heavyrain","storm","snow"].includes(w.cond)||(w.mul!=null&&w.mul<0.92));});
+    const tmax=Math.max(...hrs.map(x=>tl[x]&&tl[x].temp!=null?tl[x].temp:-99));
+    wxSum=(J?"　天候: ":"  Wx: ")+(rainH!=null?(J?`☔ ${rainH}時頃から雨`:`rain ~${rainH}:00`):"☀")+(tmax>-50?(J?`・最高${Math.round(tmax)}℃`:``):"");
+  }
+  if (tr) wxSum+=(J?`　⚠ ${tr.labelJa}（${fmtT(tr.start)}〜${fmtT(tr.actEnd)}対応）`:"");
+  return {t0,t1,L,Rr,W,att,now,rwG,mode,wxSum,
+    log:mode==="past"?detSeries(now,CLOSE_H+0.67,tl):(mode==="today"?actualSeries(now):null)};
+}
 async function openAttendanceDetail(target,mode){
   target=target||new Date();mode=mode||"today";
-  const tl=(mode!=="future")?await loadDayArchive(dateKey(target)):null;
   const J=LANG==="ja";
   const now=target,att=dailyAttendance(now),oh=openH(now);
   const dow=now.getDay(),hol=holidayOf(now);
@@ -3539,7 +3764,6 @@ async function openAttendanceDetail(target,mode){
       (NEWS_STATUS.ok?`✓ ${NEWS_STATUS.at?fmtT(NEWS_STATUS.at.getHours()+NEWS_STATUS.at.getMinutes()/60):""}（${NEWS_STATUS.src}）`
         :NEWS_STATUS.stale?(J?`キャッシュ利用（${NEWS_STATUS.at?Math.round((Date.now()-NEWS_STATUS.at)/3600000)+"時間前":""}）`:"cached")
         :(J?"✗ 再試行中":"✗ retrying"))],
-
     ...(att.nightAdd?[[J?"🌙ナイトチケット層":"Night tickets", `+${att.nightAdd.toLocaleString()}`, ATT_SOURCES.night]]:[]),
     [J?"日次ゆらぎ":"Daily variance", "±8%", J?"乱数(日付シード)":"Seeded random"],
     [J?"想定来場者数（日計）":"Expected total (daily)", att.total.toLocaleString()+(att.raw>PROC_CAP?(J?"（処理能力上限）":" (capped)"):""), ""],
@@ -3550,78 +3774,14 @@ async function openAttendanceDetail(target,mode){
     <table class="att-tbl">${cs.map(c=>`<tr><td>${c.ja}</td><td>${(c.share*100).toFixed(0)}%・${(Math.round(att.total*c.share/100)*100).toLocaleString()}人</td><td class="src">${J?"入園"+fmtT(c.inC)+"頃→退園"+fmtT(Math.min(c.outC,22))+"頃":fmtT(c.inC)+"→"+fmtT(Math.min(c.outC,22))}</td></tr>`).join("")}<tr><td>${J?"合計":"Total"}</td><td>100%・${att.total.toLocaleString()}${J?"人":""}</td><td class="src"></td></tr></table>`;
   document.getElementById("attBody").innerHTML=
     `<table class="att-tbl">${rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="src">${r[2]}</td></tr>`).join("")}</table>`+cohortTbl;
-  attBackdrop.classList.add("show");           /* 先に表示してから採寸 */
-  window.__attHover={t0:null};
-  /* 折れ線: 園内人数+累計入場 */
-  const cv=document.getElementById("attChart");
-  cv.width=cv.clientWidth*2;cv.height=420;
-  const ctx=cv.getContext("2d");
-  ctx.clearRect(0,0,cv.width,cv.height);
-  const W=cv.width,H=cv.height,L=70,B=H-40,T=16,Rr=W-14;
-  const t0=oh-0.5,t1=22.7;
-  const xx=t=>L+(t-t0)/(t1-t0)*(Rr-L);
-  const ymax=Math.max(80000,att.total*1.08);
-  const yy=v=>B-(v/ymax)*(B-T);
-  const rw=restrictionWindow(now,att);
-  if (rw&&rw.release){ctx.fillStyle="rgba(200,60,40,.12)";ctx.fillRect(xx(rw.start),T,xx(rw.release)-xx(rw.start),B-T);}
-  ctx.strokeStyle="#b08a2a";ctx.setLineDash([6,5]);ctx.beginPath();ctx.moveTo(L,yy(MAX_CAP));ctx.lineTo(Rr,yy(MAX_CAP));ctx.stroke();ctx.setLineDash([]);
-  ctx.fillStyle="#8a6a1a";ctx.font="20px sans-serif";ctx.fillText("75,000",L+4,yy(MAX_CAP)-6);
-  ctx.strokeStyle="#8fa0c4";ctx.lineWidth=2;
-  const steps=ymax>90000?[0,25000,50000,75000,100000]:[0,20000,40000,60000];
-  steps.forEach(v=>{ctx.globalAlpha=.25;ctx.beginPath();ctx.moveTo(L,yy(v));ctx.lineTo(Rr,yy(v));ctx.stroke();ctx.globalAlpha=1;
-    ctx.fillStyle="#6b7a9c";ctx.fillText((v/10000)+"万",8,yy(v)+7);});
-  for(let hh=Math.ceil(t0);hh<=22;hh+=2){ctx.fillStyle="#6b7a9c";ctx.fillText(hh+":00",xx(hh)-18,B+26);}
-  /* 累計入場(毎分積み上げの実数モデル: 制限帯で傾きが寝る) */
-  ctx.strokeStyle="#7c9c6a";ctx.lineWidth=3;ctx.beginPath();
-  const rwG=restrictionWindow(now,att);
-  for(let t=t0;t<=22;t+=1/12){const v=cumEntriesModel(now,t,att,rwG,1);t===t0?ctx.moveTo(xx(t),yy(v)):ctx.lineTo(xx(t),yy(v));}
-  ctx.stroke();
-  /* ☔ 雨の時間帯(アーカイブがある場合)を薄青帯で表示 */
-  if (tl){
-    ctx.fillStyle="rgba(90,150,220,.14)";
-    for (const hk of Object.keys(tl)){
-      const hh2=+hk,hw=tl[hk];
-      const rainy=hw&&(["rain","heavyrain","storm","snow"].includes(hw.cond)||(hw.mul!=null&&hw.mul<0.92));
-      if (rainy&&hh2+1>t0&&hh2<t1) ctx.fillRect(xx(Math.max(hh2,t0)),T,xx(Math.min(hh2+1,t1))-xx(Math.max(hh2,t0)),B-T);
-    }
-  }
-  /* 園内人数: 実績=実線 / 予測=点線(モード別) */
-  const realNow=new Date();
-  const nowTT=realNow.getHours()+realNow.getMinutes()/60;
-  ctx.strokeStyle="#2a4a86";ctx.lineWidth=4;
-  let started=false;
-  if (mode==="future"){
-    ctx.setLineDash([7,6]);ctx.beginPath();
-    for(let x=t0;x<=t1;x+=1/12){const v=inParkOf(now,x,att);started?ctx.lineTo(xx(x),yy(v)):ctx.moveTo(xx(x),yy(v));started=true;}
-    ctx.stroke();ctx.setLineDash([]);
-  } else if (mode==="past"){
-    const det=detSeries(now,CLOSE_H+0.67,tl);
-    ctx.beginPath();
-    det.t.forEach((x,i)=>{if(x<t0||x>t1)return;started?ctx.lineTo(xx(x),yy(det.p[i])):ctx.moveTo(xx(x),yy(det.p[i]));started=true;});
-    ctx.stroke();
-  } else {
-    const log=actualSeries(now);   /* 決定論補完済み: 開園〜現在まで必ず連続 */
-    ctx.beginPath();
-    if (log) log.t.forEach((x,i)=>{if(x>nowTT+0.01)return;started?ctx.lineTo(xx(x),yy(log.p[i])):ctx.moveTo(xx(x),yy(log.p[i]));started=true;});
-    ctx.stroke();
-    ctx.setLineDash([7,6]);ctx.beginPath();started=false;
-    for(let x=Math.max(t0,nowTT);x<=t1;x+=1/12){const v=inParkOf(now,x,att);started?ctx.lineTo(xx(x),yy(v)):ctx.moveTo(xx(x),yy(v));started=true;}
-    ctx.stroke();ctx.setLineDash([]);
-  }
-  if (mode==="today"&&nowTT>=t0&&nowTT<=t1){ctx.strokeStyle="#bf4a2e";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(xx(nowTT),T);ctx.lineTo(xx(nowTT),B);ctx.stroke();}
-  window.__attHover={t0,t1,L,Rr,W,cvw:cv.clientWidth,att,now,rwG,mode,log:mode==="past"?detSeries(now,CLOSE_H+0.67,tl):(mode==="today"?actualSeries(now):null)};
-  let wxSum="";
-  if (tl){
-    const hrs=Object.keys(tl).map(Number).sort((a,b)=>a-b);
-    const rainH=hrs.find(x=>{const w=tl[x];return w&&(["rain","heavyrain","storm","snow"].includes(w.cond)||(w.mul!=null&&w.mul<0.92));});
-    const tmax=Math.max(...hrs.map(x=>tl[x]&&tl[x].temp!=null?tl[x].temp:-99));
-    wxSum=(J?"　天候: ":"  Wx: ")+(rainH!=null?(J?`☔ ${rainH}時頃から雨`:`rain from ~${rainH}:00`):"☀")+(tmax>-50?(J?`・最高${Math.round(tmax)}℃`:` · max ${Math.round(tmax)}°C`):"");
-  }
+  attBackdrop.classList.add("show");
+  const hv=await drawDayChart(document.getElementById("attChart"),now,mode);
+  window.__attHover=hv;
   document.getElementById("attNote").textContent=(mode==="past"
-    ?(J?"— 青実線=実績（共有記録＋再構成） ／ 緑=累計入場 ／ 赤帯=入場制限 ／ 薄青帯=雨":"Blue=actual / Green=entries / Red=restriction / Light blue=rain")
+    ?(J?"— 青実線=実績（共有記録＋再構成） ／ 緑=累計入場 ／ 赤帯=入場制限 ／ 薄青帯=雨 ／ 灰帯=トラブル対応":"Blue=actual / Green=entries / Red=restriction / Blue band=rain / Grey=incident")
     :mode==="future"
-    ?(J?"— 青点線=予測 ／ 緑=累計入場（モデル） ／ 赤帯=入場制限見込み":"Dashed=forecast / Green=entries / Red=likely restriction")
-    :(J?"— 青実線=本日の実績 ／ 青点線=予測 ／ 緑=累計入場 ／ 赤帯=入場制限 ／ 薄青帯=雨 ／ 縦線=現在":"Blue=actual / dashed=forecast / Green=entries / Red=restriction / Line=now"))+wxSum;
+    ?(J?"— 薄い点線=予測 ／ 緑=累計入場（モデル） ／ 赤帯=入場制限見込み":"Dashed=forecast / Green=entries / Red=likely restriction")
+    :(J?"— 濃い実線=実績 ／ 薄い点線=予測 ／ 緑=累計入場 ／ 赤帯=入場制限 ／ 薄青帯=雨 ／ 縦線=現在":"Solid=actual / faint dashed=forecast / Green=entries / Red=restriction / Line=now"))+(hv.wxSum||"");
 }
 document.getElementById("attChart").addEventListener("mousemove",ev=>{
   const hv=window.__attHover;
@@ -3646,6 +3806,33 @@ document.getElementById("attChart").addEventListener("mousemove",ev=>{
   tip.style.top=(ev.clientY-r.top-14)+"px";
 });
 document.getElementById("attChart").addEventListener("mouseleave",()=>{document.getElementById("attTip").style.display="none";});
+function bindChartHover(cvId,tipId,getHv){
+  const cv=document.getElementById(cvId),tip=document.getElementById(tipId);
+  cv.addEventListener("mousemove",ev=>{
+    const hv=getHv();
+    if (!hv||hv.t0==null){tip.style.display="none";return;}
+    const r=cv.getBoundingClientRect();
+    const px=(ev.clientX-r.left)/r.width*hv.W;
+    const tt2=hv.t0+(px-hv.L)/(hv.Rr-hv.L)*(hv.t1-hv.t0);
+    if (tt2<hv.t0||tt2>hv.t1){tip.style.display="none";return;}
+    const J=LANG==="ja";
+    const realNow=new Date();
+    const nowTT=realNow.getHours()+realNow.getMinutes()/60;
+    let inV=null,isAct=false;
+    if (hv.log&&(hv.mode==="past"||tt2<=nowTT)){
+      let bi=-1,bd=1;hv.log.t.forEach((x,i)=>{const dd=Math.abs(x-tt2);if(dd<bd){bd=dd;bi=i;}});
+      if (bi>=0&&bd<0.2){inV=hv.log.p[bi];isAct=true;}
+    }
+    if (inV==null) inV=inParkOf(hv.now,tt2,hv.att);
+    const cum=cumEntriesModel(hv.now,Math.max(tt2,hv.t0+0.01),hv.att,hv.rwG,1);
+    tip.innerHTML=`${fmtT(tt2)}<br>${J?"在園":"In park"} ${inV.toLocaleString()}${isAct?(J?" <small>(実績)</small>":""):(J?" <small>(予測)</small>":" <small>(fc)</small>")}<br>${J?"累計入場":"Entries"} ${cum.toLocaleString()}`;
+    tip.style.display="block";
+    tip.style.left=Math.min(ev.clientX-r.left+12,r.width-140)+"px";
+    tip.style.top=(ev.clientY-r.top-14)+"px";
+  });
+  cv.addEventListener("mouseleave",()=>tip.style.display="none");
+}
+bindChartHover("calChart","calTip",()=>window.__calHover);
 document.querySelector(".gauge-card").addEventListener("click",e=>{
   if (e.target.closest("button")) return;
   openAttendanceDetail(new Date(),"today");
@@ -3975,6 +4162,7 @@ const calBackdrop=document.getElementById("calBackdrop");
 document.getElementById("btnCal").addEventListener("click",()=>{renderCalendar();calBackdrop.classList.add("show");});
 document.getElementById("calClose").addEventListener("click",()=>calBackdrop.classList.remove("show"));
 calBackdrop.addEventListener("click",e=>{if(e.target===calBackdrop)calBackdrop.classList.remove("show");});
+function hideCalChart(){const w=document.getElementById("calChartWrap");if(w)w.style.display="none";}
 function renderCalendar(){
   const J=LANG==="ja";
   document.getElementById("calTitle").textContent=J?"混雑予想カレンダー":"Crowd Forecast Calendar";
@@ -4011,6 +4199,7 @@ function renderCalendar(){
   }
   const body=document.getElementById("calBody");
   body.innerHTML=html;
+  hideCalChart();
   body.querySelectorAll(".cal-day").forEach(c=>{
     c.addEventListener("click",()=>{
       const [y2,m2,d2]=c.dataset.dt.split("-").map(Number);
@@ -4045,13 +4234,19 @@ function renderCalendar(){
       }
       if (mnt.length) txt+=(J?"・休止: ":" · Closed: ")+mnt.join("、");
       const cd=document.getElementById("calDetail");
-      cd.textContent=txt+" ";
-      const gb=document.createElement("button");
-      gb.className="btn";gb.textContent=J?"📊 グラフを見る":"📊 Graph";
-      gb.style.cssText="padding:1px 8px;font-size:10px";
+      cd.textContent=txt;
+      /* 日付タップで即、下にグラフを展開(過去=実績/今日=実績+予測/未来=予測) */
       const isToday=dateKey(d)===dateKey(new Date());
-      gb.addEventListener("click",()=>openAttendanceDetail(d,past?"past":(isToday?"today":"future")));
-      cd.appendChild(gb);
+      const mode2=past?"past":(isToday?"today":"future");
+      const wrap=document.getElementById("calChartWrap");
+      wrap.style.display="block";
+      drawDayChart(document.getElementById("calChart"),d,mode2).then(hv=>{
+        window.__calHover=hv;
+        document.getElementById("calChartNote").textContent=(mode2==="past"
+          ?(J?"— 実線=実績 ／ 緑=累計入場 ／ 赤帯=入場制限 ／ 薄青帯=雨 ／ 灰帯=トラブル対応":"solid=actual")
+          :mode2==="future"?(J?"— 薄い点線=予測 ／ 赤帯=入場制限見込み":"dashed=forecast")
+          :(J?"— 濃い実線=実績 ／ 薄い点線=予測 ／ 縦線=現在":"solid=actual, dashed=forecast"))+(hv.wxSum||"");
+      });
     });
   });
 }
