@@ -93,6 +93,24 @@ try{day=JSON.parse(fs.readFileSync(dayFile,"utf8"));}catch(e){}
 if (wx){
   day.hours[String(d.getHours())]={cond:wx.current.condKey,temp:Math.round(wx.current.temp*10)/10,
     mul:wx.current.mul,precip:wx.current.precip??0};
+  // 運営台帳(毎時): 端末に依存せずサーバー側で自律記録
+  day.ops=day.ops||[];
+  const hourStr=`${String(d.getHours()).padStart(2,"0")}:00`;
+  if (!day.ops.some(o=>o.h===hourStr)){
+    day.ops.push({
+      h:hourStr,
+      cond:wx.current.condKey,
+      temp:Math.round(wx.current.temp*10)/10,
+      wind:wx.current.wind??null,
+      precip:wx.current.precip??0,
+      wxMulDay:wx.day?wx.day.mul:null,
+      newsDom:news?news.dom:null,
+      newsInb:news?news.inb:null,
+      newsReason:news?news.reason:null,
+      gen:Date.now(),
+    });
+    day.ops.sort((a,b)=>a.h.localeCompare(b.h));
+  }
   fs.writeFileSync(dayFile,JSON.stringify(day));
 }
 // 次の1時間ぶんの分刻み乱数テープ(全クライアント同一の即時ランダム源)
@@ -119,6 +137,7 @@ if (d.getHours()>=23){
     dayWx:wx?wx.day:null,
     newsReason:news?news.reason:null,
     closed:true,
+    opsHours:(day.ops||[]).length,
   };
   fs.writeFileSync(dayFile,JSON.stringify(day));
   fs.mkdirSync("data/index",{recursive:true});

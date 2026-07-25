@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>const APP_VERSION="v31",APP_DATE="2026-07-25";</script>
+<script>const APP_VERSION="v33",APP_DATE="2026-07-26";</script>
 <title>MALLOWBROOK PARK｜リアルタイム運営情報</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Cinzel:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -461,6 +461,7 @@ body.sky-late{background-image:radial-gradient(ellipse at 50% -10%,#131d38 0%,#0
       <input type="range" id="volBar" class="volbar" min="0" max="60" value="15" aria-label="音量">
       <button class="btn" id="btnCal" title="混雑予想カレンダー">📅 カレンダー</button>
       <button class="btn" id="btnTix" title="チケット情報">🎫 チケット</button>
+      <button class="btn" id="btnOps" title="運営レポート（社内）">🏢 運営</button>
       <button class="btn" id="btnDist" title="入園者分布">🔥 分布</button>
       <button class="btn" id="btnView" title="表示切替">📱 表示</button>
       <span class="ver-stamp" id="verStamp"></span>
@@ -553,6 +554,16 @@ body.sky-late{background-image:radial-gradient(ellipse at 50% -10%,#131d38 0%,#0
 </div>
 
 <!-- 来場者数の根拠 -->
+<div class="sheet-backdrop" id="opsBackdrop"><div class="sheet" style="max-width:620px">
+  <button class="sheet-close" id="opsClose" aria-label="閉じる">✕</button>
+  <div class="sh-name" id="opsTitle">🏢 運営レポート</div>
+  <div style="display:flex;gap:6px;align-items:center;margin:6px 0 4px">
+    <label style="font-size:11px;color:#8a7a55">対象日</label>
+    <input type="date" id="opsDate" style="font-size:12px;padding:2px 6px;border:1px solid #c8b88a;border-radius:6px;background:#fbf6e8">
+    <button class="btn" id="opsExport" style="font-size:10px;padding:1px 8px">📥 記録を書き出し</button>
+  </div>
+  <div id="opsBody"></div>
+</div></div>
 <div class="sheet-backdrop" id="tixBackdrop"><div class="sheet" style="max-width:560px">
   <div class="sh-head"><span class="sh-name">🎫 チケット情報</span><button class="btn" id="tixClose">✕</button></div>
   <div id="tixBody" style="padding:10px 14px;font-size:12.5px;line-height:1.7"></div>
@@ -733,6 +744,22 @@ let _drill=null;
 try{const q=new URLSearchParams(location.search).get("drill");
   if(q) _drill={power:"powerW",water:"waterW",fire:"fire",spot:"sensor"}[q]||null;}catch(e){}
 const _troubleCache={};
+/* 公表用のトラブル像: 未来時刻には実復旧(actEnd)を漏らさず、発表見込み(annEnd)までを休止として扱う。
+   annEndを過ぎても復旧していなければ、その時刻に初めて見込みを延長する(実運用と同じ振る舞い) */
+function troublePublic(d,tr,tt){
+  if (!tr) return null;
+  const isToday=dateKey(d)===dateKey(new Date());
+  const nowTT=new Date().getHours()+new Date().getMinutes()/60;
+  const ref=(isToday&&tt==null)?nowTT:(tt!=null?tt:nowTT);
+  if (dateKey(d)<dateKey(new Date())) return tr;          /* 過去日は実績として全開示 */
+  let ann=tr.annEnd;
+  if (ref>=tr.annEnd&&ref<tr.actEnd){
+    /* 見込み時刻を過ぎても未復旧: 15分刻みで延長告知 */
+    ann=Math.min(tr.actEnd,tr.annEnd+Math.ceil((ref-tr.annEnd)/0.25)*0.25);
+  } else if (ref>=tr.actEnd) ann=tr.actEnd;
+  const endPub=Math.min(ref>=tr.actEnd?tr.actEnd:ann,tr.actEnd);
+  return {...tr,annEnd:ann,pubEnd:endPub,tailEnd:tr.scale==="park"?endPub+(tr.tailEnd-tr.actEnd):endPub};
+}
 function troubleVisible(d,tr){
   if (!tr) return null;
   if (_drill) return tr;
@@ -809,7 +836,8 @@ function troubleAffects(tr,spot,d,tt){
 function sysCancelled(e,startT,d){
   d=d||new Date();
   const dk=dateKey(d),todayK=dateKey(new Date());
-  if (dk!==todayK) return rand01("sys-"+e.id+"-"+startT+"-"+dk)<0.04;   /* 過去・未来日は再現用シード */
+  if (dk>todayK) return false;                                           /* 未来日に中止は存在しない */
+  if (dk<todayK) return rand01("sys-"+e.id+"-"+startT+"-"+dk)<0.04;      /* 過去日は再現用シード */
   const nowTT=new Date().getHours()+new Date().getMinutes()/60;
   if (nowTT<startT-1) return false;                                     /* 60分前の判定時刻に初めて抽選 */
   const ck="mb_sysdec_"+dk+"_"+e.id+"_"+startT;
@@ -821,8 +849,9 @@ function sysCancelled(e,startT,d){
 }
 function weatherCancelled(e,startT,tt,d){
   {
-    const tr=troubleVisible(d||new Date(),troubleOf(d||new Date()));
-    if (tr&&tr.scale==="park"&&startT>=tr.start&&startT<tr.actEnd&&tt>=startT-1) return true;   /* 全園級トラブル中は中止 */
+    const trV2=troubleVisible(d||new Date(),troubleOf(d||new Date()));
+    const tr=trV2?troublePublic(d||new Date(),trV2,tt):null;
+    if (tr&&tr.scale==="park"&&startT>=tr.start&&startT<tr.pubEnd&&tt>=startT-1) return true;   /* 全園級トラブル中は中止 */
   }
   if (sysCancelled(e,startT,d)&&tt>=startT-1) return true;   /* 判定は60分前から公表 */
   if (e.indoor) return false;                                 /* 屋内公演は天候中止なし(構造保証) */
@@ -834,8 +863,9 @@ function weatherCancelled(e,startT,tt,d){
   return windy||severe;
 }
 function cancelReason(e,startT,tt,d){
-  const tr=troubleVisible(d||new Date(),troubleOf(d||new Date()));
-  if (tr&&tr.scale==="park"&&startT>=tr.start&&startT<tr.actEnd)
+  const trV3=troubleVisible(d||new Date(),troubleOf(d||new Date()));
+  const tr=trV3?troublePublic(d||new Date(),trV3,tt):null;
+  if (tr&&tr.scale==="park"&&startT>=tr.start&&startT<tr.pubEnd)
     return LANG==="ja"?`${tr.labelJa}のため中止`:"Cancelled (facility incident)";   /* トラブルはシステム調整と別事由 */
   /* 屋内公演の中止は常にシステム調整(悪天候表示は構造的にあり得ない) */
   if (e.indoor||sysCancelled(e,startT,d)) return LANG==="ja"?"システム調整のため中止":"Cancelled (system adjustment)";
@@ -1607,9 +1637,10 @@ function inspectionsOf(id,d){
 }
 function spotStatus(s,d,tt){
   {
-    const tr0=troubleVisible(d,troubleOf(d));
+    const trV=troubleVisible(d,troubleOf(d));
+    const tr0=trV?troublePublic(d,trV,tt):null;
     if (tr0){
-      const endT=tr0.scale==="park"?tr0.tailEnd:tr0.actEnd;
+      const endT=tr0.scale==="park"?tr0.tailEnd:tr0.pubEnd;
       const within=(tt>=tr0.start&&tt<endT)||(tr0.restDay&&tr0.spotId===s.id&&tt>=tr0.start);
       if (within&&troubleAffects(tr0,s,d,tt)) return {st:"trouble",tr:tr0};
     }
@@ -2154,7 +2185,8 @@ function newsItems(now,att,rw,residual){
       urgent.push(J?"⚠ 混雑のため入場を再度制限しています":"⚠ Restricted again due to crowding");
   }
   {
-    const trT=troubleVisible(now,troubleOf(now));
+    const trTv=troubleVisible(now,troubleOf(now));
+    const trT=trTv?troublePublic(now,trTv,tt):null;
     if (trT&&tt>=trT.start-0.1){
       const J3=LANG==="ja";
       if (troubleActive(now,tt)) urgent.push(J3?`⚠ ${trT.labelJa}のため${trT.scale==="park"?"全域の":trT.scale==="area"?trT.areaJa+"エリアの":""}一部施設を休止しています（復旧見込み ${fmtT(trT.annEnd)}頃）`
@@ -3761,7 +3793,29 @@ function opsReport(d){
   const eq=rw?entranceSim(d,att,rw):null;
   const maxQ=eq?Math.max(...eq.map(x=>x.dayQ)):0;
   const ps=presaleInfo(d);
-  return {att,rw,dv,actTotal,tot,peak,peakT,stay,spotStats,shows,tr,maxQ,ps,cs,
+  /* 記録の反映率: サーバー台帳(毎時)と端末ログ(5分/1時間)の被覆 */
+  const tl=SHARED.dayTL[dateKey(d)];
+  const opHours=Math.max(1,Math.round(CLOSE_H-oh));
+  const led5=(SHARED.dayOps5||{})[dateKey(d)];
+  const srvCov=led5&&led5.slots&&led5.slots.length
+    ? Math.min(100,Math.round(led5.slots.filter(s=>s.t>=oh&&s.t<=CLOSE_H).length/(opHours*12)*100))
+    : (tl?Math.min(100,Math.round(Object.keys(tl).filter(k=>+k>=oh&&+k<=CLOSE_H).length/opHours*100)):0);
+  const srvGran=led5?"5分粒度":(tl?"毎時":null);
+  {
+    const lg=(SHARED.dayLedger||{})[dateKey(d)];
+    if (lg&&lg.peakInPark) peak=Math.max(peak,lg.peakInPark);
+  }
+  const devCov=log&&log.t&&log.t.length?Math.min(100,Math.round((log.t[log.t.length-1]-log.t[0])/opHours*100)):0;
+  const devSpan=log&&log.t&&log.t.length?`${fmtT(log.t[0])}〜${fmtT(log.t[log.t.length-1])}`:null;
+  /* 端末ログがある時間帯はピーク在園を実測優先で置換 */
+  if (log&&log.p&&log.p.length){
+    const lp=Math.max(...log.p);
+    if (lp>0&&Math.abs(lp-peak)/Math.max(peak,1)<0.5){
+      const ix=log.p.indexOf(lp);
+      if (lp>peak){peak=lp;peakT=log.t[ix];}
+    }
+  }
+  return {att,rw,dv,actTotal,tot,peak,peakT,stay,spotStats,shows,tr,maxQ,ps,cs,srvCov,srvGran,devCov,devSpan,
     intake:Math.round(cumEntriesModel(d,21.9,att,rw,1)/att.total*100),
     morning:Math.round(morningQueuePeak(d,att)/100)*100};
 }
@@ -3815,6 +3869,11 @@ function opsReportHTML(d){
     <tr><td>${J?"天候":"Weather"}</td><td colspan="2">${wxLine}</td></tr>
     <tr><td>${J?"トラブル":"Incidents"}</td><td colspan="2">${r.tr?`${r.tr.labelJa}（${fmtT(r.tr.start)}〜${fmtT(r.tr.actEnd)}）`:(J?"なし":"none")}</td></tr>
     <tr><td>${J?"公演中止":"Cancellations"}</td><td colspan="2">${r.shows.length?r.shows.map(s=>`${fmtT(s.t)} ${s.ja}（${s.reason}）`).join("<br>"):(J?"なし":"none")}</td></tr>
+  </table>
+  <div class="att-sec">${J?"記録の反映状況":"Data coverage"}</div>
+  <table class="att-tbl">
+    <tr><td>${J?"共有台帳（GitHub）":"Server ledger"}</td><td>${r.srvCov}%</td><td class="src">${r.srvCov?(J?`${r.srvGran}で在園・待ち時間・天候を記録`:r.srvGran):(J?"未導入または当該日の記録なし":"none")}</td></tr>
+    <tr><td>${J?"この端末の記録":"This device"}</td><td>${r.devCov}%</td><td class="src">${r.devSpan?(J?`${r.devSpan} を観測`:r.devSpan):(J?"記録なし（モデル再構成で表示）":"model only")}</td></tr>
   </table>
   <div class="att-sec">${J?"所感":"Summary"}</div>
   <div class="ops-note">${cmt.join("")}</div>
@@ -3991,6 +4050,9 @@ async function loadSharedData(){
       if (j.date===dateKey(new Date())){try{stSet("mb_newsday_"+j.date,JSON.stringify({dom:NEWS_ATT.dom,inb:NEWS_ATT.inb,reason:NEWS_ATT.reason}));}catch(e){}}
     }
     if (j.today&&j.today.hours) SHARED.dayTL[j.date]=j.today.hours;
+    if (j.today&&j.today.ops){SHARED.dayOps=SHARED.dayOps||{};SHARED.dayOps[j.date]=j.today.ops;}
+    if (j.today&&j.today.ops5){SHARED.dayOps5=SHARED.dayOps5||{};SHARED.dayOps5[j.date]=j.today.ops5;}
+    if (j.today&&j.today.ledger){SHARED.dayLedger=SHARED.dayLedger||{};SHARED.dayLedger[j.date]=j.today.ledger;}
     if (j.tape){SHARED.tape=j.tape.vals||null;SHARED.tapeHour=j.tape.hour||null;SHARED.salt=j.tape.salt||null;}
   }catch(e){}
 }
@@ -4012,6 +4074,9 @@ async function loadDayArchive(key){
     if (!res.ok) return null;
     const j=await res.json();
     SHARED.dayTL[key]=j.hours||null;
+    if (j.ops){SHARED.dayOps=SHARED.dayOps||{};SHARED.dayOps[key]=j.ops;}
+    if (j.ops5){SHARED.dayOps5=SHARED.dayOps5||{};SHARED.dayOps5[key]=j.ops5;}
+    if (j.ledger){SHARED.dayLedger=SHARED.dayLedger||{};SHARED.dayLedger[key]=j.ledger;}
     return SHARED.dayTL[key];
   }catch(e){return null;}
 }
@@ -4088,8 +4153,9 @@ async function drawDayChart(cv,target,mode){
   const yy=v=>B-(v/ymax)*(B-T);
   const rwG=restrictionWindow(now,att);
   if (rwG&&rwG.release){ctx.fillStyle="rgba(200,60,40,.12)";ctx.fillRect(xx(rwG.start),T,xx(rwG.release)-xx(rwG.start),B-T);}
-  const tr=troubleVisible(now,troubleOf(now));
-  if (tr){ctx.fillStyle="rgba(120,120,120,.20)";ctx.fillRect(xx(Math.max(tr.start,t0)),T,xx(Math.min(tr.actEnd,t1))-xx(Math.max(tr.start,t0)),B-T);}
+  const trR=troubleVisible(now,troubleOf(now));
+  const tr=trR?troublePublic(now,trR,null):null;
+  if (tr){ctx.fillStyle="rgba(120,120,120,.20)";ctx.fillRect(xx(Math.max(tr.start,t0)),T,xx(Math.min(tr.pubEnd??tr.actEnd,t1))-xx(Math.max(tr.start,t0)),B-T);}
   if (tl){
     ctx.fillStyle="rgba(90,150,220,.14)";
     for (const hk of Object.keys(tl)){
@@ -4142,7 +4208,7 @@ async function drawDayChart(cv,target,mode){
     const tmax=Math.max(...hrs.map(x=>tl[x]&&tl[x].temp!=null?tl[x].temp:-99));
     wxSum=(J?"　天候: ":"  Wx: ")+(rainH!=null?(J?`☔ ${rainH}時頃から雨`:`rain ~${rainH}:00`):"☀")+(tmax>-50?(J?`・最高${Math.round(tmax)}℃`:``):"");
   }
-  if (troubleVisible(now,tr)) wxSum+=(J?`　⚠ ${tr.labelJa}（${fmtT(tr.start)}〜${fmtT(tr.actEnd)}対応）`:"");
+  if (tr) wxSum+=(J?`　⚠ ${tr.labelJa}（${fmtT(tr.start)}〜${fmtT(tr.pubEnd??tr.actEnd)}対応）`:"");
   return {t0,t1,L,Rr,W,att,now,rwG,mode,wxSum,
     log:mode==="past"?detSeries(now,CLOSE_H+0.67,tl):(mode==="today"?actualSeries(now):null)};
 }
@@ -4373,6 +4439,56 @@ function openTixModal(){
   document.getElementById("tixBackdrop").classList.add("show");
 }
 document.getElementById("btnTix").addEventListener("click",openTixModal);
+/* 運営レポート(社内): 明示ボタンから開き、対象日を選んで表示 */
+async function openOpsModal(target){
+  const now=new Date();
+  const d=target||new Date(now.getFullYear(),now.getMonth(),now.getDate()-1);
+  const inp=document.getElementById("opsDate");
+  inp.value=dateKey(d);
+  inp.max=dateKey(now);
+  const min=new Date(now.getFullYear(),now.getMonth(),now.getDate()-365);
+  inp.min=dateKey(min);
+  document.getElementById("opsBody").innerHTML=`<div class="ops-note">${LANG==="ja"?"共有台帳を読み込み中…":"Loading ledger…"}</div>`;
+  document.getElementById("opsBackdrop").classList.add("show");
+  try{await loadDayArchive(dateKey(d));}catch(e){}
+  document.getElementById("opsBody").innerHTML=opsReportHTML(d);
+  const cb=document.getElementById("opsCopy");
+  if (cb) cb.addEventListener("click",()=>{
+    const txt=document.getElementById("opsBody").innerText.replace(/\n{3,}/g,"\n\n");
+    try{navigator.clipboard.writeText(txt);cb.textContent=LANG==="ja"?"✓ コピーしました":"✓ Copied";}catch(e){}
+  });
+}
+document.getElementById("btnOps").addEventListener("click",()=>openOpsModal());
+document.getElementById("opsClose").addEventListener("click",()=>document.getElementById("opsBackdrop").classList.remove("show"));
+document.getElementById("opsBackdrop").addEventListener("click",e=>{if(e.target.id==="opsBackdrop")document.getElementById("opsBackdrop").classList.remove("show");});
+document.getElementById("opsDate").addEventListener("change",e=>{
+  const [y,m,dd]=e.target.value.split("-").map(Number);
+  if (y) openOpsModal(new Date(y,m-1,dd));
+});
+/* 案②: 実測記録の書き出し(GitHubへ手動アップロード用) */
+document.getElementById("opsExport").addEventListener("click",()=>{
+  const v=document.getElementById("opsDate").value;
+  const [y,m,dd]=v.split("-").map(Number);
+  const d=new Date(y,m-1,dd);
+  let log=null;try{log=JSON.parse(stGet("mb_log_"+dateKey(d))||"null");}catch(e){}
+  const att=dailyAttendance(d),rw=restrictionWindow(d,att),dv=dayDeviation(d);
+  const payload={
+    schema:"mallowbrook-ops-1",date:dateKey(d),exported:new Date().toISOString(),
+    forecastTotal:att.total,actualTotal:actualTotalOf(d,att),
+    deviation:dv?{dev:+dv.dev.toFixed(4),transfer:+dv.transfer.toFixed(4),noShow:+dv.noShow.toFixed(4),buzz:+dv.buzz.toFixed(4)}:null,
+    restriction:rw?{start:rw.start,release:rw.release,soldOutDay:rw.soldOutDay}:null,
+    tickets:ticketTotals(d,att),
+    trouble:troubleVisible(d,troubleOf(d)),
+    wxTimeline:SHARED.dayTL[dateKey(d)]||null,
+    deviceLog:log?{points:log.t.length,thin:!!log.thin,t:log.t,p:log.p}:null,
+  };
+  const blob=new Blob([JSON.stringify(payload,null,1)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="ops-"+dateKey(d)+".json";
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+});
 document.getElementById("tixClose").addEventListener("click",()=>document.getElementById("tixBackdrop").classList.remove("show"));
 document.getElementById("tixBackdrop").addEventListener("click",e=>{if(e.target.id==="tixBackdrop")document.getElementById("tixBackdrop").classList.remove("show");});
 document.querySelector(".gauge-card").addEventListener("click",e=>{
@@ -4816,12 +4932,13 @@ function renderCalendar(){
         if (ow){
           if (OPS_MODE&&past){
             ow.style.display="block";
-            ow.innerHTML=opsReportHTML(d);
+            ow.innerHTML="";
+            loadDayArchive(dateKey(d)).catch(()=>{}).then(()=>{ow.innerHTML=opsReportHTML(d);
             const cb=document.getElementById("opsCopy");
             if (cb) cb.addEventListener("click",()=>{
               const txt=ow.innerText.replace(/\n{3,}/g,"\n\n");
               try{navigator.clipboard.writeText(txt);cb.textContent=J?"✓ コピーしました":"✓ Copied";}catch(e){}
-            });
+            });});
           } else ow.style.display="none";
         }
       }

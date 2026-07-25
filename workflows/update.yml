@@ -15,6 +15,8 @@ jobs:
           node-version: 20
       - name: Build live data
         run: node scripts/build-live.mjs
+      - name: Write 5-min ops ledger
+        run: node scripts/ops-ledger.mjs
       - name: Commit & push
         run: |
           git config user.name "mallowbrook-bot"
