@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>const APP_VERSION="v30",APP_DATE="2026-07-25";</script>
+<script>const APP_VERSION="v31",APP_DATE="2026-07-25";</script>
 <title>MALLOWBROOK PARK｜リアルタイム運営情報</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Cinzel:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -291,6 +291,9 @@ body.nocomments .ticker2 .ticker-text{visibility:hidden}
 .tb-red{color:#8a2c1e;background:#f2d8d0}.tb-gray{color:#5a6470;background:#e2e6ea}
 .tk-bar{display:inline-block;width:70px;height:7px;background:#e4dcc4;border-radius:4px;vertical-align:middle;overflow:hidden}
 .tk-bar span{display:block;height:100%;background:linear-gradient(90deg,#b08a2a,#ffd75e);border-radius:4px}
+.ops-tag{display:inline-block;font-size:9.5px;font-weight:800;color:#6a4a1a;background:#f0e0b0;border:1px dashed #b08a2a;
+  border-radius:6px;padding:1px 8px;margin-bottom:4px}
+.ops-note{font-size:11.5px;line-height:1.75;color:#4a4030;background:rgba(160,130,60,.07);border-radius:8px;padding:6px 10px}
 .att-sec{font-size:11.5px;font-weight:800;color:#7a5c14;background:linear-gradient(90deg,#f0e6c8,transparent);
   border-left:3px solid var(--brass);padding:3px 8px;margin:10px 0 4px;border-radius:0 6px 6px 0}
 .att-tbl tr:nth-child(even){background:rgba(160,130,60,.06)}
@@ -601,6 +604,7 @@ body.sky-late{background-image:radial-gradient(ellipse at 50% -10%,#131d38 0%,#0
       <div id="calTip" class="chart-tip"></div>
       <div id="calChartNote" style="font-size:10px;color:#8a7a55;margin-top:2px"></div>
     </div>
+    <div id="opsWrap" style="display:none;margin-top:8px"></div>
   </div>
 </div>
 
@@ -3714,6 +3718,111 @@ function actualTotalOf(d,att){
   return dv?Math.round(att.total*(1+dv.dev)/100)*100:att.total;
 }
 
+/* ================= 運営レポート(社員向け・?ops=1で有効) ================= */
+let OPS_MODE=false;
+try{OPS_MODE=new URLSearchParams(location.search).get("ops")==="1";}catch(e){}
+function opsReport(d){
+  const J=LANG==="ja";
+  const att=dailyAttendance(d);
+  const rw=restrictionWindow(d,att);
+  const dv=dayDeviation(d);
+  const actTotal=actualTotalOf(d,att);
+  const tot=ticketTotals(d,att);
+  const oh=openH(d),cs=cohortsOf(d);
+  const log=(function(){try{return JSON.parse(stGet("mb_log_"+dateKey(d))||"null");}catch(e){return null;}})();
+  /* 在園ピークと到達時刻 */
+  let peak=0,peakT=null;
+  for (let x=oh;x<=CLOSE_H;x+=1/12){const v=inParkOf(d,x,att);if(v>peak){peak=v;peakT=x;}}
+  /* 平均滞在(在園面積÷入園数) */
+  let area=0;
+  for (let x=oh;x<=CLOSE_H+0.67;x+=1/12) area+=inParkOf(d,x,att)/12;
+  const stay=area/Math.max(1,cumEntriesModel(d,CLOSE_H,att,rw,1));
+  /* 施設別の待ち統計 */
+  const spotStats=SPOTS.filter(s=>s.type==="a").map(s=>{
+    let mx=0,sum=0,n=0,mxT=null;
+    for (let x=oh;x<=CLOSE_H;x+=0.25){
+      const st=spotStatus(s,d,x+0.01);
+      if (st.st!=="open") continue;
+      const w=calcWait(s,d,x+0.01,inParkOf(d,x+0.01,att),redistFactor(d,x+0.01));
+      if (w>mx){mx=w;mxT=x;}
+      sum+=w;n++;
+    }
+    return {ja:s.ja,max:Math.round(mx),avg:n?Math.round(sum/n):0,mxT};
+  }).sort((a,b)=>b.max-a.max);
+  /* ショー実施・中止 */
+  const shows=[];
+  todaysEntertainment(d).forEach(e=>{
+    showTimes(e,d).forEach(s=>{
+      const cancelled=weatherCancelled(e,s,CLOSE_H,d);
+      if (cancelled) shows.push({ja:e.ja,t:s,reason:cancelReason(e,s,CLOSE_H,d)});
+    });
+  });
+  const tr=troubleVisible(d,troubleOf(d));
+  const eq=rw?entranceSim(d,att,rw):null;
+  const maxQ=eq?Math.max(...eq.map(x=>x.dayQ)):0;
+  const ps=presaleInfo(d);
+  return {att,rw,dv,actTotal,tot,peak,peakT,stay,spotStats,shows,tr,maxQ,ps,cs,
+    intake:Math.round(cumEntriesModel(d,21.9,att,rw,1)/att.total*100),
+    morning:Math.round(morningQueuePeak(d,att)/100)*100};
+}
+function opsReportHTML(d){
+  const J=LANG==="ja";
+  const r=opsReport(d);
+  const pct=(a,b)=>b?Math.round(a/b*100):0;
+  const dstr=`${d.getMonth()+1}/${d.getDate()}`;
+  const wxTL=SHARED.dayTL[dateKey(d)];
+  let wxLine="—";
+  if (wxTL){
+    const hrs=Object.keys(wxTL).map(Number).sort((a,b)=>a-b);
+    const rainH=hrs.filter(x=>{const w=wxTL[x];return w&&(["rain","heavyrain","storm","snow"].includes(w.cond)||(w.mul!=null&&w.mul<0.92));});
+    const tmax=Math.max(...hrs.map(x=>wxTL[x]?.temp??-99));
+    wxLine=(rainH.length?`降雨 ${rainH[0]}時〜${rainH[rainH.length-1]}時`:"降雨なし")+(tmax>-50?`・最高${Math.round(tmax)}℃`:"");
+  }
+  const cmt=[];
+  if (r.dv){
+    cmt.push(`予測比 ${r.dv.dev>=0?"+":""}${(r.dv.dev*100).toFixed(1)}%（日付振替 ${(r.dv.transfer*100).toFixed(1)}%・ノーショー ${(r.dv.noShow*100).toFixed(1)}%${r.dv.buzz?"・話題化ブーストあり":""}）。`);
+  }
+  if (r.rw) cmt.push(`入場制限を${fmtT(r.rw.start)}に開始${r.rw.release?`し${fmtT(r.rw.release)}に解除`:""}。受入率${r.intake}%、当日券待機列は最大${r.maxQ.toLocaleString()}人。`);
+  else cmt.push("入場制限の発動なし。");
+  if (r.tr) cmt.push(`${r.tr.labelJa}が${fmtT(r.tr.start)}に発生、${fmtT(r.tr.actEnd)}に復旧（対応${Math.round((r.tr.actEnd-r.tr.start)*60)}分）。`);
+  if (r.shows.length) cmt.push(`公演中止 ${r.shows.length}件（${[...new Set(r.shows.map(s=>s.reason))].join("・")}）。`);
+  cmt.push(`ピーク在園 ${r.peak.toLocaleString()}人（${fmtT(r.peakT)}）、平均滞在 ${r.stay.toFixed(1)}時間。`);
+  const advice=[];
+  if (r.rw&&r.intake<92) advice.push("制限開始が早く受入率が低下。前日告知と当日券の時間指定枠で平準化を検討。");
+  if (r.maxQ>=4000) advice.push("当日券待機列が長期化。17:00以降入園枠の案内を前倒しすると滞留を短縮できる見込み。");
+  if (r.morning>=8000) advice.push("開園待ちが大規模。アーリーオープンの適用またはゲート増設の検討対象。");
+  if (r.spotStats[0]&&r.spotStats[0].max>=140) advice.push(`${r.spotStats[0].ja}が最大${r.spotStats[0].max}分。PP配分・運転間隔の見直し余地。`);
+  if (!advice.length) advice.push("特記事項なし。平常運営の範囲。");
+  const tixRows=Object.keys(TICKET_LABELS).filter(k=>r.tot.pred[k]).map(k=>
+    `<tr><td>${TICKET_LABELS[k]}</td><td>${r.tot.pred[k].toLocaleString()}</td><td class="src">${r.tot.hasDev?r.tot.act[k].toLocaleString():"—"}</td></tr>`).join("");
+  return `<div class="ops-tag">${J?"社内資料（シミュレーションに基づく参考値）":"Internal (simulated)"}</div>
+  <div class="att-sec">${dstr} ${J?"入園実績":"Admissions"}</div>
+  <table class="att-tbl">
+    <tr><td>${J?"予測／実績":"Forecast/Actual"}</td><td>${r.att.total.toLocaleString()} → <b>${r.actTotal.toLocaleString()}</b></td><td class="src">${J?"達成率":"Rate"} ${pct(r.actTotal,r.att.total)}%</td></tr>
+    <tr><td>${J?"ピーク在園":"Peak in park"}</td><td>${r.peak.toLocaleString()}</td><td class="src">${r.peakT!=null?fmtT(r.peakT):"—"}</td></tr>
+    <tr><td>${J?"平均滞在":"Avg stay"}</td><td>${r.stay.toFixed(1)}${J?"時間":"h"}</td><td class="src">${J?"在園積分÷入園数":"area/entries"}</td></tr>
+    <tr><td>${J?"開園待ち":"Morning queue"}</td><td>${r.morning.toLocaleString()}</td><td class="src">${J?"ピーク時":"peak"}</td></tr>
+    <tr><td>${J?"入場制限":"Restriction"}</td><td>${r.rw?`${fmtT(r.rw.start)}〜${r.rw.release?fmtT(r.rw.release):"閉園"}`:(J?"なし":"none")}</td><td class="src">${r.rw?`${J?"受入率":"intake"} ${r.intake}%・${J?"待機列最大":"queue"} ${r.maxQ.toLocaleString()}`:""}</td></tr>
+  </table>
+  <div class="att-sec">${J?"チケット種別（予測／実績見込み）":"Tickets"}</div>
+  <table class="att-tbl"><tr class="att-hd"><td>${J?"種別":"Type"}</td><td>${J?"予測":"Fc"}</td><td class="src">${J?"実績見込み":"Act"}</td></tr>${tixRows}
+    <tr><td>${J?"事前販売進捗":"Presale"}</td><td>${Math.round(r.ps.prog*100)}%</td><td class="src">${r.ps.st==="soldout"||r.ps.st==="resale"?(J?"完売":"sold out"):(J?"完売せず":"—")}</td></tr></table>
+  <div class="att-sec">${J?"アトラクション待ち時間 上位5":"Top waits"}</div>
+  <table class="att-tbl"><tr class="att-hd"><td>${J?"施設":"Attraction"}</td><td>${J?"最大":"Max"}</td><td class="src">${J?"平均／最大時刻":"Avg / peak"}</td></tr>
+    ${r.spotStats.slice(0,5).map(s=>`<tr><td>${s.ja}</td><td>${s.max}${J?"分":"m"}</td><td class="src">${s.avg}${J?"分":"m"} ／ ${s.mxT!=null?fmtT(s.mxT):"—"}</td></tr>`).join("")}</table>
+  <div class="att-sec">${J?"運営イベント":"Operations"}</div>
+  <table class="att-tbl">
+    <tr><td>${J?"天候":"Weather"}</td><td colspan="2">${wxLine}</td></tr>
+    <tr><td>${J?"トラブル":"Incidents"}</td><td colspan="2">${r.tr?`${r.tr.labelJa}（${fmtT(r.tr.start)}〜${fmtT(r.tr.actEnd)}）`:(J?"なし":"none")}</td></tr>
+    <tr><td>${J?"公演中止":"Cancellations"}</td><td colspan="2">${r.shows.length?r.shows.map(s=>`${fmtT(s.t)} ${s.ja}（${s.reason}）`).join("<br>"):(J?"なし":"none")}</td></tr>
+  </table>
+  <div class="att-sec">${J?"所感":"Summary"}</div>
+  <div class="ops-note">${cmt.join("")}</div>
+  <div class="att-sec">${J?"翌営業日への提言":"Recommendations"}</div>
+  <div class="ops-note">${advice.map(a=>"・"+a).join("<br>")}</div>
+  <button class="btn" id="opsCopy" style="margin-top:8px">${J?"📋 日報テキストをコピー":"Copy report"}</button>`;
+}
+
 /* ================= 累計入園(毎分の入園者数を積み上げる実数モデル) ================= */
 const OPEN_DATE=new Date(2026,5,13);   /* 2026年6月13日 グランドオープン */
 const _cumCache={};
@@ -3841,12 +3950,24 @@ function recordSample(now,tt,att,inPark,rw){
   log.meta.peak=Math.max(log.meta.peak||0,inPark);
   try{
     stSet(logKey(now),JSON.stringify(log));
-    /* 45日より古いログを間引き */
+    /* 二段粒度: 14日超は1時間粒度へ間引き、1年超は削除(1年保持で約2MB) */
     if (now.getMinutes()===0){
-      const cutoff=new Date(now.getFullYear(),now.getMonth(),now.getDate()-45);
-      for (let i=0;i<200;i++){
-        const k="mb_log_"+dateKey(new Date(cutoff.getFullYear(),cutoff.getMonth(),cutoff.getDate()-i));
-        try{if(localStorage.getItem(k)!=null)localStorage.removeItem(k);else if(i>5)break;}catch(e){break;}
+      for (let i=14;i<=380;i++){
+        const d2=new Date(now.getFullYear(),now.getMonth(),now.getDate()-i);
+        const k="mb_log_"+dateKey(d2);
+        try{
+          const raw=localStorage.getItem(k);
+          if (raw==null) continue;
+          if (i>365){localStorage.removeItem(k);continue;}
+          const lg=JSON.parse(raw);
+          if (lg.thin) continue;
+          const keep=[];
+          lg.t.forEach((x,idx)=>{if(Math.abs(x-Math.round(x))<0.02)keep.push(idx);});
+          const nw={};
+          for (const sid in (lg.w||{})) nw[sid]=keep.map(ix=>lg.w[sid][ix]);
+          lg.t=keep.map(ix=>lg.t[ix]);lg.p=keep.map(ix=>lg.p[ix]);lg.w=nw;lg.thin=1;
+          localStorage.setItem(k,JSON.stringify(lg));
+        }catch(e){}
       }
     }
   }catch(e){}
@@ -3872,6 +3993,17 @@ async function loadSharedData(){
     if (j.today&&j.today.hours) SHARED.dayTL[j.date]=j.today.hours;
     if (j.tape){SHARED.tape=j.tape.vals||null;SHARED.tapeHour=j.tape.hour||null;SHARED.salt=j.tape.salt||null;}
   }catch(e){}
+}
+async function loadMonthIndex(y,m){
+  const key=y+"-"+String(m+1).padStart(2,"0");
+  SHARED.monthIdx=SHARED.monthIdx||{};
+  if (SHARED.monthIdx[key]!==undefined) return SHARED.monthIdx[key];
+  SHARED.monthIdx[key]=null;
+  try{
+    const res=await fetch("data/index/"+key+".json",{cache:"no-store"});
+    if (res.ok) SHARED.monthIdx[key]=await res.json();
+  }catch(e){}
+  return SHARED.monthIdx[key];
 }
 async function loadDayArchive(key){
   if (SHARED.dayTL[key]) return SHARED.dayTL[key];
@@ -4679,6 +4811,20 @@ function renderCalendar(){
       const mode2=past?"past":(isToday?"today":"future");
       const wrap=document.getElementById("calChartWrap");
       wrap.style.display="block";
+      {
+        const ow=document.getElementById("opsWrap");
+        if (ow){
+          if (OPS_MODE&&past){
+            ow.style.display="block";
+            ow.innerHTML=opsReportHTML(d);
+            const cb=document.getElementById("opsCopy");
+            if (cb) cb.addEventListener("click",()=>{
+              const txt=ow.innerText.replace(/\n{3,}/g,"\n\n");
+              try{navigator.clipboard.writeText(txt);cb.textContent=J?"✓ コピーしました":"✓ Copied";}catch(e){}
+            });
+          } else ow.style.display="none";
+        }
+      }
       drawDayChart(document.getElementById("calChart"),d,mode2).then(hv=>{
         window.__calHover=hv;
         document.getElementById("calChartNote").textContent=(mode2==="past"

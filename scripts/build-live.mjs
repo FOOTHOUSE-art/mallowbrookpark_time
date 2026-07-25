@@ -102,4 +102,31 @@ const tape={hour:hourKey,salt:Math.random().toString(36).slice(2,10),
   vals:{show:mk(),trouble:mk(),misc:mk()}};
 const live={gen:Date.now(),date:key,wx,news,today:day,tape};
 fs.writeFileSync("data/live.json",JSON.stringify(live));
+
+// 閉園後(23時台)に日次サマリーを確定し、月別インデックスへ追記(サーバー側は無期限保存)
+if (d.getHours()>=23){
+  const hrs=Object.keys(day.hours||{}).map(Number).sort((a,b)=>a-b);
+  const temps=hrs.map(x=>day.hours[x]?.temp).filter(v=>v!=null);
+  const rainH=hrs.filter(x=>{
+    const w=day.hours[x];
+    return w&&(["rain","heavyrain","storm","snow"].includes(w.cond)||(w.mul!=null&&w.mul<0.92));
+  });
+  day.summary={
+    date:key,
+    tempMax:temps.length?Math.max(...temps):null,
+    tempMin:temps.length?Math.min(...temps):null,
+    rainHours:rainH,
+    dayWx:wx?wx.day:null,
+    newsReason:news?news.reason:null,
+    closed:true,
+  };
+  fs.writeFileSync(dayFile,JSON.stringify(day));
+  fs.mkdirSync("data/index",{recursive:true});
+  const idxFile=`data/index/${key.slice(0,7)}.json`;
+  let idx={};
+  try{idx=JSON.parse(fs.readFileSync(idxFile,"utf8"));}catch(e){}
+  idx[key]={tempMax:day.summary.tempMax,rain:rainH.length>0,cond:wx?wx.day.cond:null};
+  fs.writeFileSync(idxFile,JSON.stringify(idx));
+  console.log("daily summary written",key);
+}
 console.log("live.json updated",key,d.getHours()+":00");
