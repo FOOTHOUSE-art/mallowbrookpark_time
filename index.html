@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>const APP_VERSION="v33",APP_DATE="2026-07-26";</script>
+<script>const APP_VERSION="v34",APP_DATE="2026-07-26";</script>
 <title>MALLOWBROOK PARK｜リアルタイム運営情報</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Cinzel:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -177,7 +177,7 @@ main{flex:1 1 auto;min-height:0;display:flex;gap:6px}
 .ico-show{background:#3a5aa8}.ico-well{background:#2a7d78}.ico-svc{background:#5a6b8c}
 .sheet-backdrop{display:none;position:fixed;inset:0;background:rgba(10,16,30,.62);z-index:100;align-items:flex-end;justify-content:center}
 .sheet-backdrop.show{display:flex}
-.sheet{position:relative;width:min(680px,100%);max-height:82vh;overflow-y:auto;
+.sheet{position:relative;width:100%;max-width:min(680px,100%);max-height:82vh;overflow-y:auto;
   background:linear-gradient(180deg,#fbf5e6,#f3e9d2);border:2px solid var(--brass);border-bottom:none;
   border-radius:18px 18px 0 0;padding:18px 20px 24px;box-shadow:0 -8px 40px rgba(0,0,0,.6)}
 .sheet-close{position:absolute;top:10px;right:12px;width:30px;height:30px;border-radius:50%;
@@ -299,6 +299,16 @@ body.nocomments .ticker2 .ticker-text{visibility:hidden}
 .att-tbl tr:nth-child(even){background:rgba(160,130,60,.06)}
 .att-tbl .att-hd td{font-weight:800;color:#7a5c14;font-size:10.5px;border-bottom:1px solid #d8c89a}
 .att-tbl .att-key td{font-weight:800;font-size:13px;color:#4a3810;background:rgba(255,215,94,.18)}
+.att-tbl{table-layout:fixed;width:100%}
+.att-tbl td:nth-child(1){width:30%}
+.att-tbl td:nth-child(2){width:26%;white-space:nowrap}
+.att-tbl td.src{width:44%;word-break:break-word}
+body.m-sp .att-tbl td:nth-child(1){width:34%}
+body.m-sp .att-tbl td:nth-child(2){width:30%;white-space:normal}
+body.m-sp .att-tbl td.src{width:36%}
+.att-tbl.tix-tbl td:nth-child(1){width:38%}
+.att-tbl.tix-tbl td:nth-child(2){width:26%}
+.att-tbl.tix-tbl td.src{width:36%}
 .att-tbl{width:100%;border-collapse:collapse;font-size:12px}
 .att-tbl td{padding:4px 8px;border-bottom:1px solid #ddcea8;color:var(--ink)}
 .att-tbl td:nth-child(2){text-align:right;font-weight:800;color:var(--navy);white-space:nowrap}
@@ -554,7 +564,7 @@ body.sky-late{background-image:radial-gradient(ellipse at 50% -10%,#131d38 0%,#0
 </div>
 
 <!-- 来場者数の根拠 -->
-<div class="sheet-backdrop" id="opsBackdrop"><div class="sheet" style="max-width:620px">
+<div class="sheet-backdrop" id="opsBackdrop"><div class="sheet" style="max-width:min(880px,94vw)">
   <button class="sheet-close" id="opsClose" aria-label="閉じる">✕</button>
   <div class="sh-name" id="opsTitle">🏢 運営レポート</div>
   <div style="display:flex;gap:6px;align-items:center;margin:6px 0 4px">
@@ -564,12 +574,12 @@ body.sky-late{background-image:radial-gradient(ellipse at 50% -10%,#131d38 0%,#0
   </div>
   <div id="opsBody"></div>
 </div></div>
-<div class="sheet-backdrop" id="tixBackdrop"><div class="sheet" style="max-width:560px">
+<div class="sheet-backdrop" id="tixBackdrop"><div class="sheet" style="max-width:min(780px,94vw)">
   <div class="sh-head"><span class="sh-name">🎫 チケット情報</span><button class="btn" id="tixClose">✕</button></div>
   <div id="tixBody" style="padding:10px 14px;font-size:12.5px;line-height:1.7"></div>
 </div></div>
 <div class="sheet-backdrop" id="attBackdrop">
-  <div class="sheet" role="dialog" aria-modal="true" style="max-width:620px">
+  <div class="sheet" role="dialog" aria-modal="true" style="max-width:min(840px,94vw)">
     <button class="sheet-close" id="attClose" aria-label="閉じる">✕</button>
     <div class="sh-name" id="attTitle">本日の想定来場者数の根拠</div>
     <div id="attBody"></div>
@@ -746,6 +756,20 @@ try{const q=new URLSearchParams(location.search).get("drill");
 const _troubleCache={};
 /* 公表用のトラブル像: 未来時刻には実復旧(actEnd)を漏らさず、発表見込み(annEnd)までを休止として扱う。
    annEndを過ぎても復旧していなければ、その時刻に初めて見込みを延長する(実運用と同じ振る舞い) */
+/* システム調整(点検枠)の公表像: 未来日は非表示、当日は開始時刻を過ぎて初めて公表。
+   終了は「予定(schedEnd)」までを公表し、延びた場合はその時刻に15分刻みで延長告知する */
+function inspPublic(d,w){
+  const todayK=dateKey(new Date()), dk=dateKey(d);
+  if (dk>todayK) return null;
+  if (dk<todayK) return {end:w.actualEnd,ann:w.schedEnd};      /* 過去日は実績 */
+  const nowTT=new Date().getHours()+new Date().getMinutes()/60;
+  if (nowTT<w.start) return null;                              /* まだ発生していない */
+  let ann=w.schedEnd;
+  if (nowTT>=w.schedEnd&&nowTT<w.actualEnd)
+    ann=Math.min(w.actualEnd,w.schedEnd+Math.ceil((nowTT-w.schedEnd)/0.25)*0.25);
+  else if (nowTT>=w.actualEnd) ann=w.actualEnd;
+  return {end:Math.min(nowTT>=w.actualEnd?w.actualEnd:ann,w.actualEnd),ann};
+}
 function troublePublic(d,tr,tt){
   if (!tr) return null;
   const isToday=dateKey(d)===dateKey(new Date());
@@ -1659,8 +1683,10 @@ function spotStatus(s,d,tt){
   }
   const wins=inspectionsOf(s.id,d);
   for (const w of wins){
-    if (tt>=w.start&&tt<w.actualEnd)
-      return {st:"insp",until:w.schedEnd>=21.9?null:w.schedEnd,idx:w.idx,n:wins.length,bad:w.bad};
+    const pub=inspPublic(d,w);
+    if (!pub) continue;                                   /* 未来の調整は存在しない扱い */
+    if (tt>=w.start&&tt<pub.end)
+      return {st:"insp",until:pub.ann>=21.9?null:pub.ann,idx:w.idx,n:wins.length,bad:w.bad};
   }
   if (s.sunset&&tt>=sunsetH()&&tt<CLOSE_H) return {st:"sunset"};
   return {st:"open"};
