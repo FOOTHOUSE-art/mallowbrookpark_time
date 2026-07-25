@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>const APP_VERSION="v25",APP_DATE="2026-07-24";</script>
+<script>const APP_VERSION="v29",APP_DATE="2026-07-25";</script>
 <title>MALLOWBROOK PARK｜リアルタイム運営情報</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Cinzel:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -17,7 +17,8 @@
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden}
-body.m-sp{overflow-y:auto!important;height:auto!important;min-height:100%}
+html.m-sp{overflow-y:auto!important;overflow-x:hidden!important;height:auto!important}
+body.m-sp{overflow-y:auto!important;overflow-x:hidden!important;height:auto!important;min-height:100%}
 body{
   font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN",sans-serif;
   background:var(--navy-deep);
@@ -218,7 +219,15 @@ body.m-sp .player{min-width:112px}
 body.m-sp .event-banner{margin-bottom:8px}
 body.m-sp .shows-card{margin-bottom:8px}
 body.m-sp{height:auto;overflow:auto}
-body.m-sp .app{height:auto;display:block}
+body.m-sp .app{height:auto!important;display:block;overflow:visible!important;padding-bottom:24px}
+body.m-sp header{flex-wrap:wrap;row-gap:4px}
+body.m-sp .cum-mini{order:9;flex:1 1 100%;flex-direction:row;justify-content:space-between;gap:8px;margin:4px 0 0;padding:3px 8px}
+body.m-sp .cum-mini .cm-l{font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.m-sp .clock-plate{margin-left:auto}
+body.m-sp .ver-stamp{text-align:left}
+body.m-sp .side{overflow:visible!important}
+body.m-sp canvas{max-width:100%}
+body.m-sp .modal{max-height:88vh;overflow-y:auto}
 body.m-sp header{flex-wrap:wrap;margin-bottom:8px}
 body.m-sp main{display:block}
 body.m-sp .map-card{max-width:100%;height:auto;aspect-ratio:auto;margin-bottom:8px}
@@ -304,6 +313,8 @@ body.nocomments .ticker2 .ticker-text{visibility:hidden}
 .cal-lv2{background:#f6d3bd;color:#8a3d1a}.cal-lv3{background:#eeb6a8;color:#7a1f10}
 .cal-out{opacity:.28;cursor:default}
 .cal-past{opacity:.55}
+.cal-today{outline:2px solid #ffd75e;outline-offset:-2px;box-shadow:0 0 8px rgba(255,215,94,.45);position:relative}
+.today-badge{position:absolute;top:1px;right:2px;font-size:7.5px;font-weight:800;color:#7a5c14;background:#ffd75e;border-radius:5px;padding:0 3px;line-height:11px}
 .cal-past:hover{opacity:.9}
 .cal-month{font-family:"Shippori Mincho",serif;font-weight:800;font-size:14px;color:var(--navy);margin:4px 0 6px}
 .btn-bgm{display:flex;align-items:center;gap:5px;justify-content:center}
@@ -434,6 +445,7 @@ body.sky-late{background-image:radial-gradient(ellipse at 50% -10%,#131d38 0%,#0
       </button>
       <input type="range" id="volBar" class="volbar" min="0" max="60" value="15" aria-label="音量">
       <button class="btn" id="btnCal" title="混雑予想カレンダー">📅 カレンダー</button>
+      <button class="btn" id="btnTix" title="チケット情報">🎫 チケット</button>
       <button class="btn" id="btnDist" title="入園者分布">🔥 分布</button>
       <button class="btn" id="btnView" title="表示切替">📱 表示</button>
       <span class="ver-stamp" id="verStamp"></span>
@@ -526,6 +538,10 @@ body.sky-late{background-image:radial-gradient(ellipse at 50% -10%,#131d38 0%,#0
 </div>
 
 <!-- 来場者数の根拠 -->
+<div class="sheet-backdrop" id="tixBackdrop"><div class="sheet" style="max-width:560px">
+  <div class="sh-head"><span class="sh-name">🎫 チケット情報</span><button class="btn" id="tixClose">✕</button></div>
+  <div id="tixBody" style="padding:10px 14px;font-size:12.5px;line-height:1.7"></div>
+</div></div>
 <div class="sheet-backdrop" id="attBackdrop">
   <div class="sheet" role="dialog" aria-modal="true" style="max-width:620px">
     <button class="sheet-close" id="attClose" aria-label="閉じる">✕</button>
@@ -701,6 +717,17 @@ let _drill=null;
 try{const q=new URLSearchParams(location.search).get("drill");
   if(q) _drill={power:"powerW",water:"waterW",fire:"fire",spot:"sensor"}[q]||null;}catch(e){}
 const _troubleCache={};
+function troubleVisible(d,tr){
+  if (!tr) return null;
+  if (_drill) return tr;
+  const todayK=dateKey(new Date()),dk=dateKey(d);
+  if (dk>todayK) return null;                                   /* 未来日には障害情報は存在しない */
+  if (dk===todayK){
+    const nowTT=new Date().getHours()+new Date().getMinutes()/60;
+    if (nowTT<tr.start) return null;                            /* 当日も発生時刻までは非表示 */
+  }
+  return tr;
+}
 function troubleOf(d){
   const key=dateKey(d);
   if (key in _troubleCache) return _troubleCache[key];
@@ -764,12 +791,21 @@ function troubleAffects(tr,spot,d,tt){
 
 
 function sysCancelled(e,startT,d){
-  /* システム調整による中止(約4%/公演・日付シードで決定的。屋内ショーも対象) */
-  return rand01("sys-"+e.id+"-"+startT+"-"+dateKey(d||new Date()))<0.04;
+  d=d||new Date();
+  const dk=dateKey(d),todayK=dateKey(new Date());
+  if (dk!==todayK) return rand01("sys-"+e.id+"-"+startT+"-"+dk)<0.04;   /* 過去・未来日は再現用シード */
+  const nowTT=new Date().getHours()+new Date().getMinutes()/60;
+  if (nowTT<startT-1) return false;                                     /* 60分前の判定時刻に初めて抽選 */
+  const ck="mb_sysdec_"+dk+"_"+e.id+"_"+startT;
+  try{const v=stGet(ck);if(v!=null)return v==="1";}catch(err){}
+  const decT=new Date();decT.setHours(Math.floor(startT-1),Math.round(((startT-1)%1)*60),0,0);
+  const val=liveRand("show",decT)<0.04;
+  try{stSet(ck,val?"1":"0");}catch(err){}
+  return val;
 }
 function weatherCancelled(e,startT,tt,d){
   {
-    const tr=troubleOf(d||new Date());
+    const tr=troubleVisible(d||new Date(),troubleOf(d||new Date()));
     if (tr&&tr.scale==="park"&&startT>=tr.start&&startT<tr.actEnd&&tt>=startT-1) return true;   /* 全園級トラブル中は中止 */
   }
   if (sysCancelled(e,startT,d)&&tt>=startT-1) return true;   /* 判定は60分前から公表 */
@@ -782,7 +818,7 @@ function weatherCancelled(e,startT,tt,d){
   return windy||severe;
 }
 function cancelReason(e,startT,tt,d){
-  const tr=troubleOf(d||new Date());
+  const tr=troubleVisible(d||new Date(),troubleOf(d||new Date()));
   if (tr&&tr.scale==="park"&&startT>=tr.start&&startT<tr.actEnd)
     return LANG==="ja"?`${tr.labelJa}のため中止`:"Cancelled (facility incident)";   /* トラブルはシステム調整と別事由 */
   /* 屋内公演の中止は常にシステム調整(悪天候表示は構造的にあり得ない) */
@@ -1263,6 +1299,19 @@ function seasonalCohortMul(d,id){
   if ((m===5||m===10)&&!off){ if(id==="student")k*=1.4; if(id==="tourD")k*=1.3; }               /* 遠足・修学旅行 */
   if (isChristmasEvent(d)){ if(id==="genL")k*=1.2; if(id==="inbound")k*=1.1; }
   if ((m===12||m===1||m===2)&&!(md>=1229||md<=103)){ if(id==="kidsL")k*=0.85; if(id==="student")k*=0.9; }
+  {
+    const chi2=consecutiveHolidayInfo(d);
+    if (chi2){
+      if (chi2.pos==="mid"&&id==="far") k*=1.30;      /* 中日は泊まりがけ遠方勢の中心日 */
+      if (chi2.pos==="mid"&&id==="hotel") k*=1.25;
+    }
+  }
+  if (id==="heavy"){
+    const md2=mmdd(d);
+    if (md2===613) k*=1.5;                                       /* 開園記念日(6/13) */
+    else if (d.getDate()===13) k*=1.15;                          /* 毎月13日のマンスリー記念日 */
+    for (const ev of EVENTS){ if (md2===ev.startMMDD||md2===ev.endMMDD) k*=1.4; }   /* イベント初日・最終日 */
+  }
   if (id==="inbound") k*=0.6+0.4*inboundInfo(d).mul;                                             /* 春節・国慶節等 */
   /* 悪天候予想の日は層別に来園見送り(子連れライト最大・ヘビー/宿泊ほぼ無反応) */
   const dwx=dayWxOf(d);
@@ -1289,7 +1338,8 @@ function cohortsOf(d){
     if (c.id==="student"&&!off) inBase=13.2;                        /* 平日の学生=放課後入園 */
     if (c.id==="student"&&off)  inBase=10.5;                        /* 休日の学生=午前から */
     const inC=inBase+(rand01("coh-i"+i+key)-0.5)*0.85;
-    const outC=c.outC+(rand01("coh-o"+i+key)-0.5)*0.85;
+    let outC=c.outC+(rand01("coh-o"+i+key)-0.5)*0.85;
+    {const chi3=consecutiveHolidayInfo(d);if(chi3&&chi3.pos==="last")outC-=0.75;}   /* 連休最終日は翌日に備え早帰り */
     let share=c.share*js*seasonalCohortMul(d,c.id);                 /* 季節動向を反映 */
     if (off){ if(c.id.startsWith("kids"))share*=1.25; if(c.id==="hotel")share*=1.2; if(c.id==="genL")share*=1.05; }
     else    { if(c.id.startsWith("kids"))share*=0.75; if(c.id==="heavy")share*=1.1; if(c.id==="genL")share*=0.9; }
@@ -1397,6 +1447,17 @@ function inboundInfo(d){
 }
 function hash32(s){let h=2166136261>>>0;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
 function rand01(s){let x=hash32(s);x^=x<<13;x>>>=0;x^=x>>17;x^=x<<5;x>>>=0;return (x%100000)/100000;}
+const SHARED={on:false,gen:null,dayTL:{},tape:null,tapeHour:null,salt:null};
+/* 即時ランダム: live.json同梱の分刻み乱数テープ(全員同一)。無ければ時間バケットシードに降格 */
+function liveRand(kind,dt){
+  dt=dt||new Date();
+  const hourKey=dateKey(dt)+"-"+dt.getHours();
+  if (SHARED.tape&&SHARED.tapeHour===hourKey&&SHARED.tape[kind]){
+    return SHARED.tape[kind][dt.getMinutes()%60];
+  }
+  return rand01(kind+"|"+hourKey+"|"+(SHARED.salt||"local"));
+}
+
 const fmtT=tt=>{const h=Math.floor(tt),m=Math.round((tt-h)*60);return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");};
 
 /* ================= 天候（東京固定・日没つき） ================= */
@@ -1406,22 +1467,23 @@ function wxCategory(code,temp){
   let key,mul,icon;
   if (code===0){key="clear";mul=1.0;icon="☀️";}
   else if (code===1){key="sunny";mul=1.0;icon="🌤️";}
-  else if (code===2||code===3){key="cloudy";mul=0.97;icon="☁️";}
-  else if (code>=45&&code<=48){key="fog";mul=0.95;icon="🌫️";}
-  else if (code>=51&&code<=57){key="drizzle";mul=0.85;icon="🌦️";}
-  else if (code===64||code===65||code===82){key="heavyrain";mul=0.55;icon="🌧️";}
-  else if ((code>=61&&code<=63)||code===80||code===81||code===66||code===67){key="rain";mul=0.70;icon="🌧️";}
-  else if ((code>=71&&code<=77)||code===85||code===86){key="snow";mul=0.60;icon="❄️";}
-  else if (code>=95){key="storm";mul=0.50;icon="⛈️";}
-  else {key="cloudy";mul=0.95;icon="☁️";}
-  if (temp!=null&&temp>=33) mul*=0.92;
-  if (temp!=null&&temp<=3) mul*=0.92;
+  else if (code===2||code===3){key="cloudy";mul=1.00;icon="☁️";}   /* 曇りで来園をやめる人はいない */
+  else if (code>=45&&code<=48){key="fog";mul=0.99;icon="🌫️";}
+  else if (code>=51&&code<=57){key="drizzle";mul=0.96;icon="🌦️";}  /* 小雨: 当日思い立ち層が少し減るだけ */
+  else if (code===64||code===65||code===82){key="heavyrain";mul=0.75;icon="🌧️";}
+  else if ((code>=61&&code<=63)||code===80||code===81||code===66||code===67){key="rain";mul=0.88;icon="🌧️";}
+  else if (code===71||code===73||code===85){key="snow";mul=0.90;icon="❄️";}      /* 軽い雪はむしろ話題性 */
+  else if (code>=75&&code<=77||code===86){key="snow";mul=0.70;icon="❄️";}        /* 積雪・交通乱れ級 */
+  else if (code>=95){key="storm";mul=0.55;icon="⛈️";}                             /* 台風・計画運休の連鎖 */
+  else {key="cloudy";mul=1.00;icon="☁️";}
+  if (temp!=null&&temp>=35) mul*=0.94;      /* 猛暑は時間シフトが主で総計は微減 */
+  if (temp!=null&&temp<=2) mul*=0.97;       /* 冬装備で来る */
   return {key,mul,icon};
 }
 function sunsetH(){return WX.sunset??SUNSET_FALLBACK[new Date().getMonth()];}
 async function fetchWeather(){
   try{
-    const url=`https://api.open-meteo.com/v1/forecast?latitude=${TOKYO_LAT}&longitude=${TOKYO_LON}&current=temperature_2m,weather_code,wind_speed_10m&daily=sunset&forecast_days=1&timezone=Asia%2FTokyo`;
+    const url=`https://api.open-meteo.com/v1/forecast?latitude=${TOKYO_LAT}&longitude=${TOKYO_LON}&current=temperature_2m,weather_code,wind_speed_10m&daily=sunset,weather_code,temperature_2m_max&forecast_days=1&timezone=Asia%2FTokyo`;
     const j=await (await fetch(url)).json();
     const c=wxCategory(j.current.weather_code,j.current.temperature_2m);
     let ss=null;
@@ -1429,7 +1491,13 @@ async function fetchWeather(){
       const sd=new Date(j.daily.sunset[0]);
       ss=sd.getHours()+sd.getMinutes()/60;
     }
-    WX={ok:true,temp:j.current.temperature_2m,mul:c.mul,condKey:c.key,icon:c.icon,sunset:ss,wind:j.current.wind_speed_10m??null};
+    let dMul=null,dCond=null,dTm=null;
+    try{
+      const dwc=j.daily.weather_code?.[0];dTm=j.daily.temperature_2m_max?.[0];
+      if (dwc!=null){const dc=wxCategory(dwc,dTm);dCond=dc.key;dMul=dc.mul;}   /* 当日予報(凍結用) */
+    }catch(e){}
+    WX={ok:true,temp:j.current.temperature_2m,mul:c.mul,condKey:c.key,icon:c.icon,sunset:ss,wind:j.current.wind_speed_10m??null,
+        dayMul:dMul,dayCond:dCond,dayTempMax:dTm};
   }catch(e){WX={ok:false,temp:null,mul:1.0,condKey:null,icon:"—",sunset:WX.sunset,wind:null};}
   renderWeather();
 }
@@ -1523,7 +1591,7 @@ function inspectionsOf(id,d){
 }
 function spotStatus(s,d,tt){
   {
-    const tr0=troubleOf(d);
+    const tr0=troubleVisible(d,troubleOf(d));
     if (tr0){
       const endT=tr0.scale==="park"?tr0.tailEnd:tr0.actEnd;
       const within=(tt>=tr0.start&&tt<endT)||(tr0.restDay&&tr0.spotId===s.id&&tt>=tr0.start);
@@ -1561,25 +1629,48 @@ function redistFactor(d,tt){
 
 /* ================= 来場者数モデル ================= */
 /* ---- 日次確定層: 開園前予想の天候・ニュース係数をその日一日固定 ---- */
+const _dayFixMem={};   /* localStorage不可でもセッション内不変を保証するメモリ凍結 */
+function _clearDerivedCaches(){
+  for (const c of [_cohortCache,_occPeakCache,_cumCache]) for (const k in c) delete c[k];
+}
 function dayWxOf(d){
   const k="mb_wxday_"+dateKey(d);
-  try{const v=JSON.parse(stGet(k)||"null");if(v)return v;}catch(e){}
+  try{const v=JSON.parse(stGet(k)||"null");if(v){_dayFixMem[k]=v;return v;}}catch(e){}
+  if (_dayFixMem[k]) return _dayFixMem[k];
   if (dateKey(d)===dateKey(new Date())&&WX.ok){
-    const v={mul:WX.mul,tempMax:WX.temp,cond:WX.condKey};
+    const v=WX.dayMul!=null?{mul:WX.dayMul,tempMax:WX.dayTempMax,cond:WX.dayCond}   /* 当日予報を凍結 */
+                           :{mul:WX.mul,tempMax:WX.temp,cond:WX.condKey};
+    _dayFixMem[k]=v;
     try{stSet(k,JSON.stringify(v));}catch(e){}
+    _clearDerivedCaches();          /* 中立→確定のアトミック切替 */
     return v;
   }
-  return {mul:1,tempMax:null,cond:null};   /* 予報未取得・未来日は中立 */
+  return {mul:1,tempMax:null,cond:null};
 }
 function dayNewsOf(d){
   const k="mb_newsday_"+dateKey(d);
-  try{const v=JSON.parse(stGet(k)||"null");if(v)return v;}catch(e){}
+  try{const v=JSON.parse(stGet(k)||"null");if(v){_dayFixMem[k]=v;return v;}}catch(e){}
+  if (_dayFixMem[k]) return _dayFixMem[k];
   if (dateKey(d)===dateKey(new Date())){
     const v={dom:NEWS_ATT.dom,inb:NEWS_ATT.inb,reason:NEWS_ATT.reason};
-    if (NEWS_HEADLINES.length||NEWS_ATT.reason){try{stSet(k,JSON.stringify(v));}catch(e){}}
+    if (NEWS_HEADLINES.length||NEWS_ATT.reason){_dayFixMem[k]=v;try{stSet(k,JSON.stringify(v));}catch(e){}_clearDerivedCaches();}
     return v;
   }
   return {dom:1,inb:1,reason:null};
+}
+/* 連休検出: 3連休以上で位置(初日/中日/最終日)を返す。補正は常に1.00以上 */
+function consecutiveHolidayInfo(d){
+  if (!isOffDay(d)) return null;
+  let back=0,fwd=0;
+  for (let i=1;i<=9;i++){const p=new Date(d.getFullYear(),d.getMonth(),d.getDate()-i);if(isOffDay(p))back++;else break;}
+  for (let i=1;i<=9;i++){const n=new Date(d.getFullYear(),d.getMonth(),d.getDate()+i);if(isOffDay(n))fwd++;else break;}
+  const len=back+fwd+1;
+  if (len<3) return null;
+  const pos=back===0?"first":fwd===0?"last":"mid";
+  let mul=pos==="mid"?(len>=4?1.18:1.12):pos==="first"?1.05:1.00;   /* 中日>初日>最終日、すべて≥1.00 */
+  const md=mmdd(d);
+  if ((md>=429&&md<=506)||(md>=808&&md<=816)) mul=Math.min(mul,1.06);   /* GW・お盆は季節係数と重複させない */
+  return {len,pos,mul};
 }
 function dailyAttendance(d){
   const key=dateKey(d),dow=d.getDay();
@@ -1603,7 +1694,10 @@ function dailyAttendance(d){
   const season=seasonInfo(d);
   const dwx=dayWxOf(d), dnews=dayNewsOf(d);
   /* 総計は開園前確定の天候予想・ニュースのみで算出(実況では変動しない) */
-  let grand=Math.round(base*season.mul*(0.92+rand01("att-"+key)*0.16)*dwx.mul*dnews.dom/100)*100;
+  const preShare=0.62;   /* 事前購入(確定)層の概算比。天候は浮動層にのみ効く */
+  const effWx=preShare+(1-preShare)*dwx.mul;
+  const chi=consecutiveHolidayInfo(d);
+  let grand=Math.round(base*season.mul*(chi?chi.mul:1)*(0.92+rand01("att-"+key)*0.16)*effWx*dnews.dom/100)*100;
   let nightAdd=0;
   if (nightTicketDay(d)){nightAdd=Math.round(base*0.10/100)*100;grand+=nightAdd;}
   const raw=grand;
@@ -1677,18 +1771,95 @@ function inParkOf(d,tt,att){
   return Math.round(v/100)*100;
 }
 /* 制限の開始/解除時刻を決定的に走査（解除判定のみ実質キャパの余裕を使用） */
+/* ===== 客層×チケット種別マトリクス(基準値・日次乱数±15%。価格は今後設定予定) ===== */
+const TICKET_MIX={
+  heavy:  {pass:0.70,dated:0.25,day:0.05},
+  far:    {pass:0.05,dated:0.85,day:0.10},
+  genH:   {pass:0.15,dated:0.55,day:0.30},
+  genL:   {pass:0.03,dated:0.45,day:0.52},
+  kidsH:  {pass:0.25,dated:0.60,day:0.15},
+  kidsL:  {pass:0.05,dated:0.55,day:0.40},
+  hotel:  {pass:0.05,dated:0.05,vacation:0.90},
+  tourD:  {dated:0.05,group:0.95},
+  inbound:{dated:0.80,day:0.15,group:0.05},
+  student:{pass:0.10,dated:0.45,day:0.45},
+};
+/* 年間パスの除外日(特定日): 特異日・お盆・GW・年末年始・夏休みの土日・イベント初日(8/1) */
+function passBlackout(d){
+  const md=mmdd(d),dow=d.getDay();
+  if (rampLevel(d).lv===3) return true;
+  if (md>=808&&md<=816) return true;
+  if (md>=429&&md<=506) return true;
+  if (md>=1229||md<=103) return true;
+  if (md>=718&&md<=831&&(dow===0||dow===6)) return true;
+  if (md===801) return true;
+  return false;
+}
+const _tmixCache={};
+function ticketMixOf(d){
+  const key=dateKey(d);
+  if (_tmixCache[key]) return _tmixCache[key];
+  const cs=cohortsOf(d),bo=passBlackout(d),night=nightTicketDay(d);
+  const out={};
+  cs.forEach((c,i)=>{
+    const base=TICKET_MIX[c.id]||{dated:0.6,day:0.4};
+    const m={};
+    let tot=0;
+    for (const k of ["pass","dated","day","night","group","vacation"]){
+      let v=base[k]||0;
+      if (v>0) v*=0.85+rand01("tm-"+c.id+"-"+k+"-"+key)*0.30;   /* ±15% */
+      m[k]=v;tot+=v;
+    }
+    for (const k in m) m[k]/=tot||1;
+    if (bo&&m.pass>0){m.dated+=m.pass;m.pass=0;}                 /* 除外日は年パス勢も日付指定で来園 */
+    if (night&&(c.id==="genH"||c.id==="genL"||c.id==="student")){const mv=m.day*0.30;m.day-=mv;m.night=(m.night||0)+mv;}
+    out[c.id]={mix:m,share:c.share};
+  });
+  _tmixCache[key]=out;
+  return out;
+}
+/* 制限中に入園できる比率 = 日付指定+団体+バケーション(+8/1は特別招待)。年パスは制限中入園不可 */
+function admitShare(d){
+  const tm=ticketMixOf(d);
+  let s=0;
+  for (const id in tm) s+=tm[id].share*((tm[id].mix.dated||0)+(tm[id].mix.group||0)+(tm[id].mix.vacation||0)+(tm[id].mix.night||0));
+  if (mmdd(d)===801) s+=0.01;                                    /* スポンサー・関係者特別招待(8/1限定) */
+  return Math.min(0.85,s);
+}
+function prebuyRate(d){return admitShare(d);}
 function restrictionWindow(d,att){
-  if (peakPredict(d,att)<MAX_CAP*0.997) return null;   /* 予想ピーク在園が上限未満なら制限なし */
-  let start=null,release=null,peaked=false,prev=0;
+  if (peakPredict(d,att)<MAX_CAP*0.997) return null;
+  let start=null,rel=null,peaked=false,prev=0,below=0;
   for (let x=openH(d);x<=CLOSE_H;x+=1/12){
     const p=inParkOf(d,x,att);
-    if (start==null&&p>=START_LINE*0.999) start=x;         /* 70,000到達で先読み開始 */
+    if (start==null&&p>=START_LINE*0.999) start=x;
     if (p<prev) peaked=true;
-    if (start!=null&&peaked&&release==null&&p<RELEASE_LINE){release=x;break;}
+    if (start!=null&&peaked&&rel==null){
+      below=(p<RELEASE_LINE)?below+1:0;
+      if (below>=4) rel=x;                                  /* 68,000未満が20分継続で解除 */
+    }
     prev=p;
   }
   if (start==null) return null;
-  return {start:Math.round(start*12)/12,release:release==null?null:Math.round(release*12)/12};
+  start=Math.round(start*12)/12;
+  const soldOutDay=peakPredict(d,att)>=95000;
+  let release=null,reentry=null,relWin=null,resume=null;
+  if (rel!=null){
+    release=Math.ceil(rel*4)/4;                              /* 15分刻みで全解除 */
+    relWin=[Math.max(start,release-0.5),release+0.5];
+    resume=soldOutDay?null:Math.max(start,release-0.25);
+    let s2=null,r2=null,pk2=false,pv=0,bl=0;
+    for (let x=release+1/12;x<=CLOSE_H;x+=1/12){
+      const p=inParkOf(d,x,att);
+      if (s2==null&&p>=START_LINE) s2=x;
+      if (p<pv) pk2=true;
+      if (s2!=null&&pk2&&r2==null){bl=(p<66000)?bl+1:0;if(bl>=6)r2=x;}
+      pv=p;
+    }
+    if (s2!=null) reentry={start:Math.round(s2*12)/12,release:r2==null?null:Math.ceil(r2*4)/4};
+  }
+  return {start,release,relWin,resume,reentry,soldOutDay,
+          preAnnounce:Math.round((start-0.75)*12)/12,stopDayTix:Math.round((start-0.33)*12)/12};
 }
 const mealFactor=tt=>0.35+1.9*Math.exp(-Math.pow(tt-12.4,2)/1.445)+1.6*Math.exp(-Math.pow(tt-18.4,2)/1.62);
 /* ===== アトラクション別の需要プロファイル（人気順×時間帯パターン） =====
@@ -1863,6 +2034,38 @@ function morningQueuePeak(d,att){
   const jitter=0.75+rand01("mq-"+dateKey(d))*0.5;
   return Math.min(11500,att.total*heavy*arrFrac*jitter);   /* 実態上限≈1万人前後 */
 }
+/* 制限中の2レーン列(5分刻み決定論。GATE_CAP=220人/分, バーク40%/60分, リターン枠転換25%) */
+const GATE_CAP=220;
+const _eqCache={};
+function entranceSim(d,att,rw){
+  const key=dateKey(d)+"|"+att.total;
+  if (_eqCache[key]) return _eqCache[key];
+  const oh=openH(d);
+  const arr=[];let dayQ=0,retPool=0;
+  const adm=admitShare(d);
+  for (let x=oh;x<=CLOSE_H;x+=1/12){
+    const rate=att.total*(cumulativeEntry(x+1/12,d)-cumulativeEntry(x,d))*12/60;   /* 人/分 */
+    const inWin=rw&&((x>=rw.start&&(rw.release==null||x<rw.release))||(rw.reentry&&x>=rw.reentry.start&&(rw.reentry.release==null||x<rw.reentry.release)));
+    const preStop=rw&&x>=rw.stopDayTix&&x<rw.start;
+    if (inWin||preStop){
+      dayQ+=rate*(1-adm)*5;                                      /* 当日券・年パス勢が滞留 */
+      const bark=dayQ*(1-Math.pow(0.60,5/60));                   /* 60分で40%離脱 */
+      dayQ-=bark;retPool+=bark*0.25;                             /* うち25%は17時以降入園枠へ */
+    } else if (dayQ>0){
+      dayQ=Math.max(0,dayQ-GATE_CAP*0.6*5);                      /* 解除後は優先消化 */
+    }
+    const datedWait=inWin?Math.min(25,Math.max(5,Math.round(rate*adm/(GATE_CAP*0.8)*10))):null;
+    arr.push({t:x,dayQ:Math.round(dayQ/50)*50,datedWait,ret:Math.round(retPool/50)*50});
+  }
+  _eqCache[key]=arr;
+  return arr;
+}
+function entranceInfo(d,tt,att,rw){
+  if (!rw) return null;
+  const a=entranceSim(d,att,rw);
+  for (let i=a.length-1;i>=0;i--) if (a[i].t<=tt) return a[i];
+  return null;
+}
 function entranceQueue(d,tt,att,rw){
   const oh=openH(d);
   if (tt>=CLOSE_H) return 0;
@@ -1914,8 +2117,28 @@ function newsItems(now,att,rw,residual){
   const tt=now.getHours()+now.getMinutes()/60;
   const oh=openH(now), J=LANG==="ja";
   const items=[], urgent=[];
+  if (rw){
+    if (tt>=rw.preAnnounce&&tt<rw.stopDayTix) urgent.push(J?"⚠ 混雑のため、まもなく入場制限を開始する見込みです":"⚠ Entry restriction expected shortly");
+    else if (tt>=rw.stopDayTix&&tt<rw.start) urgent.push(J?"🎫 当日券の販売を一時停止しました（日付指定券は入園いただけます）":"🎫 Same-day sales paused");
+    else if (tt>=rw.start&&(rw.release==null||tt<rw.release)){
+      urgent.push(J?`⚠ 入場制限中｜当日券の販売・ご入園を停止しています。日付指定券・バケーションプランのお客様はご入園いただけます${rw.relWin?`（解除見込み ${fmtT(rw.relWin[0])}〜${fmtT(rw.relWin[1])}頃）`:""}`
+                  :`⚠ Restricted | dated tickets & Vacation Plan may enter${rw.relWin?` (release ${fmtT(rw.relWin[0])}–${fmtT(rw.relWin[1])})`:""}`);
+      if (rw.soldOutDay&&tt>=15) urgent.push(J?"🎫 本日の当日券の入場受付は終了しました":"🎫 Same-day admission ended for today");
+      {
+        const ei=entranceInfo(now,tt,att,rw);
+        if (ei){
+          if (ei.datedWait!=null) items.push(J?`🎟 日付指定・団体レーン: 待ち約${ei.datedWait}分（ご入園いただけます）`:`🎟 Dated lane ~${ei.datedWait} min`);
+          if (ei.dayQ>=500) items.push(J?`⏳ 当日券・年間パスの入園待ち 約${ei.dayQ.toLocaleString()}人（解除までお待ちいただいています）`:`⏳ Waiting queue ~${ei.dayQ.toLocaleString()}`);
+          if (ei.ret>=500&&tt<17) items.push(J?`🕔 17:00以降入園枠のご案内 約${ei.ret.toLocaleString()}人が転換済み`:`🕔 ~${ei.ret.toLocaleString()} moved to 5pm+ entry`);
+        }
+      }
+    }
+    else if (rw.resume&&tt>=rw.resume&&tt<rw.resume+0.25) urgent.push(J?"🎫 当日券の販売を再開しました":"🎫 Same-day sales resumed");
+    if (rw.reentry&&tt>=rw.reentry.start&&(rw.reentry.release==null||tt<rw.reentry.release))
+      urgent.push(J?"⚠ 混雑のため入場を再度制限しています":"⚠ Restricted again due to crowding");
+  }
   {
-    const trT=troubleOf(now);
+    const trT=troubleVisible(now,troubleOf(now));
     if (trT&&tt>=trT.start-0.1){
       const J3=LANG==="ja";
       if (troubleActive(now,tt)) urgent.push(J3?`⚠ ${trT.labelJa}のため${trT.scale==="park"?"全域の":trT.scale==="area"?trT.areaJa+"エリアの":""}一部施設を休止しています（復旧見込み ${fmtT(trT.annEnd)}頃）`
@@ -1947,7 +2170,7 @@ function newsItems(now,att,rw,residual){
     /* 悪天候ショー中止 */
     todaysEntertainment(now).forEach(e=>{
       const st=showStatus(e,now,tt);
-      if (st.st==="wxcancel") urgent.push(J?`☔ 本日${fmtT(st.start)}の『${e.ja}』は悪天候のため中止します`:`☔ ${fmtT(st.start)} "${e.en}" cancelled due to weather`);
+      if (st.st==="wxcancel") urgent.push(J?`${e.indoor?"🔧":"☔"} 本日${fmtT(st.start)}の『${e.ja}』は${cancelReason(e,st.start,tt,now)}します`:`${fmtT(st.start)} "${e.en}": ${cancelReason(e,st.start,tt,now)}`);
     });
     /* 平常項目 */
     items.push(J?`ℹ 本日の営業時間: ${fmtT(oh)}〜22:00${oh<9?"（アーリーオープン実施中）":""}`:`ℹ Today's hours: ${fmtT(oh)}–22:00${oh<9?" (early open)":""}`);
@@ -2197,7 +2420,16 @@ function showStatusText(e,st){
   }
   if (st.st==="maint") return {cls:"sc-maint",txt:t("maintShow")+" "+rangeStr(st.range)};
   if (st.st==="cancel") return {cls:"sc-maint",txt:t("cancelShow")};
-  if (st.st==="wxcancel") return {cls:"sc-maint",txt:(LANG==="ja"?"中止（悪天候）":"Cancelled (weather)")+"｜"+fmtT(st.start)};
+  if (st.st==="wxcancel"){
+    const nowD=new Date(),tt2=nowD.getHours()+nowD.getMinutes()/60;
+    let nextOk="";
+    if (e.timeGen||e.times){
+      const ts=showTimes(e,nowD);
+      const nx=ts.find(s=>s>st.start&&!weatherCancelled(e,s,tt2,nowD));
+      if (nx!=null) nextOk=LANG==="ja"?`（次回${fmtT(nx)}は予定どおり）`:` (next ${fmtT(nx)} as scheduled)`;
+    }
+    return {cls:"sc-maint",txt:cancelReason(e,st.start,tt2,nowD)+"｜"+fmtT(st.start)+nextOk};
+  }
   if (st.st==="live") return {cls:"sc-live",txt:t("liveShow")+"｜"+fmtT(st.start)+"–"+fmtT(st.end)};
   if (st.st==="soon") return {cls:"sc-soon",txt:t("soonShow")+fmtT(st.start)+"（"+t("minTo")+st.minutesTo+(LANG==="ja"?"分":" min")+"）"};
   if (st.st==="done") return {cls:"sc-done",txt:t("doneShow")};
@@ -3222,6 +3454,10 @@ function genClosedMidnight(c){return R([
   `明日の混雑予想とにらめっこ。アーリー行くか…行くか`,`昨日の写真を現像に出す準備。フィルム勢です`,
   `カレンダーの🔥マーク、避けるか突っ込むか`,`夜中のQ:明日雨でもパレードある? 自分:天気次第!`]);}
 function genClosedMorning(c){return R([
+  `日付指定にしといて良かった〜、制限中でもすんなり入園`,
+  `年パス勢、解除待ちの列で常連会が始まってる`,
+  `毎月13日はマンスリー記念日。年パス組の同窓会みたいになる`,
+  `当日券販売終了の放送、夏の風物詩になりつつある`,
   `開園待ちなう。${c.early?"8:30アーリー助かる":"9時が待ち遠しい"}`,`荷物検査の列、進み早い`,
   `朝のマローブルック、空気がうまい`,`始発組、集合`,`開園CM流れると鳥肌立つ`,
   `ゲート前でPP作戦会議中。初手チェイスで一致`,`朝マックならぬ朝はやて(開園後)を狙う`,
@@ -3447,6 +3683,25 @@ if (stGet("mb_cmt_on")==="off") document.body.classList.add("nocomments");
 fetchJapanNews();
 setInterval(fetchJapanNews,900000);
 
+/* ===== 当日偏差: 予測に対し実績は必ずズレる(ノーショー・当日券の出足・話題化。全員同一シード) ===== */
+function dayDeviation(d){
+  const dk=dateKey(d),todayK=dateKey(new Date());
+  if (dk>todayK) return null;                                    /* 未来に偏差は存在しない */
+  const wxBad=dayWxOf(d).mul<0.95;
+  const tr=transferInfo(d);
+  const noShow=0.02+rand01("ns-"+dk)*0.03;                       /* 変更もせず来ない純ノーショー2〜5% */
+  const dayLuck=(rand01("dl-"+dk)-0.5)*0.30;                     /* 当日券の出足±15%(浮動層に対して) */
+  const buzz=rand01("bz-"+dk)<0.05?(0.04+rand01("bz2-"+dk)*0.06):0;   /* 5%で話題化+4〜10% */
+  const presold=admitShare(d);
+  let dev=-(noShow+tr.rate)*presold+dayLuck*(1-presold)+buzz;   /* 雨予報日の減少は「振替」が主因 */
+  dev=Math.max(-0.10,Math.min(0.12,dev));
+  return {dev,noShow,dayLuck,buzz,transfer:tr.rate,wxBad:tr.wxBad};
+}
+function actualTotalOf(d,att){
+  const dv=dayDeviation(d);
+  return dv?Math.round(att.total*(1+dv.dev)/100)*100:att.total;
+}
+
 /* ================= 累計入園(毎分の入園者数を積み上げる実数モデル) ================= */
 const OPEN_DATE=new Date(2026,5,13);   /* 2026年6月13日 グランドオープン */
 const _cumCache={};
@@ -3458,7 +3713,8 @@ function cumEntriesModel(d,tt,att,rw,liveDamp){
     const arr=[];let acc=0,prevC=0;
     for (let x=oh;x<=CLOSE_H;x+=1/12){
       let rate=att.total*(cumulativeEntry(x+1/12,d)-cumulativeEntry(x,d));
-      if (rw&&x>=rw.start&&(rw.release==null||x<rw.release)) rate*=0.45;   /* ゲート一進一出 */
+      const inWin=rw&&((x>=rw.start&&(rw.release==null||x<rw.release))||(rw.reentry&&x>=rw.reentry.start&&(rw.reentry.release==null||x<rw.reentry.release)));
+      if (inWin) rate*=prebuyRate(d);   /* 制限中も事前購入層は入園継続(受入最大化) */
       acc+=rate;
       /* 整合性: 累計入場は在園数を下回り得ない(入った人数≧いま居る人数) */
       let c=Math.max(acc,inParkOf(d,x,att)*1.03);   /* 分単位ゆらぎ(±1.5%)を吸収する余裕 */
@@ -3510,7 +3766,9 @@ function todayCumActual(now,tt,att,rw){
   if (upto>st.at){
     /* 前回計測時刻から今までの入園増分(実況天候で減衰) */
     const liveDamp=(WX.ok&&WX.mul<0.85)?0.90:1;
-    const inc=(cumEntriesModel(now,upto,att,rw,1)-cumEntriesModel(now,st.at,att,rw,1))*liveDamp;
+    const dv=dayDeviation(now);
+    const drift=1+(liveRand("misc",now)-0.5)*0.03;               /* 毎時テープの微ドリフト±1.5% */
+    const inc=(cumEntriesModel(now,upto,att,rw,1)-cumEntriesModel(now,st.at,att,rw,1))*liveDamp*(1+(dv?dv.dev:0))*drift;
     st.val+=Math.max(0,inc);
     st.at=upto;
     try{stSet("mb_cumtoday",JSON.stringify(st));}catch(e){}
@@ -3582,7 +3840,6 @@ function recordSample(now,tt,att,inPark,rw){
   }catch(e){}
 }
 /* ---- 共有データ(GitHub Actions生成のdata/live.json)。無ければ従来のクライアント取得に自動降格 ---- */
-const SHARED={on:false,gen:null,dayTL:{}};
 async function loadSharedData(){
   try{
     const res=await fetch("data/live.json?t="+Math.floor(Date.now()/600000),{cache:"no-store"});
@@ -3601,6 +3858,7 @@ async function loadSharedData(){
       if (j.date===dateKey(new Date())){try{stSet("mb_newsday_"+j.date,JSON.stringify({dom:NEWS_ATT.dom,inb:NEWS_ATT.inb,reason:NEWS_ATT.reason}));}catch(e){}}
     }
     if (j.today&&j.today.hours) SHARED.dayTL[j.date]=j.today.hours;
+    if (j.tape){SHARED.tape=j.tape.vals||null;SHARED.tapeHour=j.tape.hour||null;SHARED.salt=j.tape.salt||null;}
   }catch(e){}
 }
 async function loadDayArchive(key){
@@ -3636,7 +3894,8 @@ function detSeries(d,uptoTT,tl){
   const out={t:[],p:[],c:[]};
   for (let x=oh-0.25;x<=end;x+=1/12){
     out.t.push(x);
-    out.p.push(withWxAt(tl,x,()=>inParkOf(d,x,att)));
+    const dv=dayDeviation(d);
+    out.p.push(Math.round(withWxAt(tl,x,()=>inParkOf(d,x,att))*(1+(dv?dv.dev*0.8:0))/100)*100);
     out.c.push(cumEntriesModel(d,Math.max(x,oh+0.001),att,rw,1));
   }
   return out;
@@ -3685,7 +3944,7 @@ async function drawDayChart(cv,target,mode){
   const yy=v=>B-(v/ymax)*(B-T);
   const rwG=restrictionWindow(now,att);
   if (rwG&&rwG.release){ctx.fillStyle="rgba(200,60,40,.12)";ctx.fillRect(xx(rwG.start),T,xx(rwG.release)-xx(rwG.start),B-T);}
-  const tr=troubleOf(now);
+  const tr=troubleVisible(now,troubleOf(now));
   if (tr){ctx.fillStyle="rgba(120,120,120,.20)";ctx.fillRect(xx(Math.max(tr.start,t0)),T,xx(Math.min(tr.actEnd,t1))-xx(Math.max(tr.start,t0)),B-T);}
   if (tl){
     ctx.fillStyle="rgba(90,150,220,.14)";
@@ -3739,7 +3998,7 @@ async function drawDayChart(cv,target,mode){
     const tmax=Math.max(...hrs.map(x=>tl[x]&&tl[x].temp!=null?tl[x].temp:-99));
     wxSum=(J?"　天候: ":"  Wx: ")+(rainH!=null?(J?`☔ ${rainH}時頃から雨`:`rain ~${rainH}:00`):"☀")+(tmax>-50?(J?`・最高${Math.round(tmax)}℃`:``):"");
   }
-  if (tr) wxSum+=(J?`　⚠ ${tr.labelJa}（${fmtT(tr.start)}〜${fmtT(tr.actEnd)}対応）`:"");
+  if (troubleVisible(now,tr)) wxSum+=(J?`　⚠ ${tr.labelJa}（${fmtT(tr.start)}〜${fmtT(tr.actEnd)}対応）`:"");
   return {t0,t1,L,Rr,W,att,now,rwG,mode,wxSum,
     log:mode==="past"?detSeries(now,CLOSE_H+0.67,tl):(mode==="today"?actualSeries(now):null)};
 }
@@ -3758,7 +4017,8 @@ async function openAttendanceDetail(target,mode){
   const rows=[
     [J?`基礎値（${baseLabel}）`:`Base (${baseLabel})`, "", ATT_SOURCES.cal],
     [J?`季節「${att.season.ja}」`:`Season`, `×${att.season.mul.toFixed(2)}`, ATT_SOURCES.cal],
-    [J?"天候(実況)":"Weather", WX.ok?`×${WX.mul.toFixed(2)}`:"—", ATT_SOURCES.wx],
+    [J?"天候予想（開園前確定・総計に反映）":"Weather (fixed)", `×${dayWxOf(now).mul.toFixed(2)}`, ATT_SOURCES.wx],
+    [J?"天候（実況・入園ペースと待ち時間のみ）":"Weather (live)", WX.ok?`×${WX.mul.toFixed(2)}`:"—", ATT_SOURCES.wx],
     [J?"観光ニュース":"Tourism news",
       (NEWS_ATT.reason?`×${((NEWS_ATT.dom+NEWS_ATT.inb)/2).toFixed(2)}（${NEWS_ATT.reason}）`:(NEWS_HEADLINES.length?"×1.00":(J?"取得不可（暦・天候のみで算出）":"unavailable"))),
       (NEWS_STATUS.ok?`✓ ${NEWS_STATUS.at?fmtT(NEWS_STATUS.at.getHours()+NEWS_STATUS.at.getMinutes()/60):""}（${NEWS_STATUS.src}）`
@@ -3766,7 +4026,11 @@ async function openAttendanceDetail(target,mode){
         :(J?"✗ 再試行中":"✗ retrying"))],
     ...(att.nightAdd?[[J?"🌙ナイトチケット層":"Night tickets", `+${att.nightAdd.toLocaleString()}`, ATT_SOURCES.night]]:[]),
     [J?"日次ゆらぎ":"Daily variance", "±8%", J?"乱数(日付シード)":"Seeded random"],
-    [J?"想定来場者数（日計）":"Expected total (daily)", att.total.toLocaleString()+(att.raw>PROC_CAP?(J?"（処理能力上限）":" (capped)"):""), ""],
+    [J?"事前販売進捗（日付指定・団体・宿泊）":"Presale progress", `${Math.round(presaleInfo(now).prog*100)}%${J?`→予約来場見込み ${Math.min(att.total,Math.round(att.total*admitShare(now)*Math.min(1,presaleInfo(now).prog+0.1)/100)*100).toLocaleString()}人`:""}`, J?(presaleInfo(now).restrictDriven?"販売ペースが基準超のため入場制限を見込み":"販売実績から予約層を推定（日付変更可）"):"from presale"],
+    ...(dayDeviation(now)&&dayDeviation(now).wxBad&&mode!=="future"?[[J?"日付振替見込み":"Date transfers", `▲${(Math.round(att.total*admitShare(now)*dayDeviation(now).transfer/100)*100).toLocaleString()}${J?"人（雨予報のため別日へ変更）":""}`, J?"日付指定は変更可能":"transferable"]]:[]),
+    ...(dayDeviation(now)&&mode!=="future"?[[J?"当日偏差（実績見込み）":"Day-of deviation", `${actualTotalOf(now,att).toLocaleString()}${J?"人":""}（${dayDeviation(now).dev>=0?"+":""}${(dayDeviation(now).dev*100).toFixed(1)}%）`, J?`ノーショー${(dayDeviation(now).noShow*100).toFixed(1)}%${dayDeviation(now).buzz?"・話題化ブースト":""}`:"no-show etc."]]:[]),
+    [J?"想定来場者数（日計・予測）":"Expected total (daily)", att.total.toLocaleString()+(att.raw>PROC_CAP?(J?"（処理能力上限）":" (capped)"):""), ""],
+    ...(restrictionWindow(now,att)?[[J?"本日の入園受入率（見込み）":"Intake rate", `${Math.round(cumEntriesModel(now,21.9,att,restrictionWindow(now,att),1)/att.total*100)}%`, J?"制限中も事前購入層を受入":"prebuy admitted"]]:[]),
     [J?"予想ピーク需要（ゲート制御前）":"Predicted peak demand", `${peakPredict(now,att).toLocaleString()}${peakPredict(now,att)>=MAX_CAP?(J?`（同時上限${MAX_CAP.toLocaleString()}→入場制限見込み）`:" (limit)"):""}`, J?`合成カーブから自動算出（本日比${occPeakOf(now,att).toFixed(2)}）`:`auto (×${occPeakOf(now,att).toFixed(2)})`],
   ];
   const cs=cohortsOf(now);
@@ -3833,6 +4097,75 @@ function bindChartHover(cvId,tipId,getHv){
   cv.addEventListener("mouseleave",()=>tip.style.display="none");
 }
 bindChartHover("calChart","calTip",()=>window.__calHover);
+/* 日付指定の事前販売台帳v2: 90日前10:00発売。混雑日ほど早く完売(⚠発表の駆け込み込み)。
+   日付変更可能な「予約」として扱い、変更・ノーショーは当日偏差側で控除する */
+function presaleInfo(d){
+  const t0=new Date();t0.setHours(0,0,0,0);
+  const target=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  const daysAhead=Math.round((target-t0)/86400000);
+  const saleStart=new Date(target);saleStart.setDate(saleStart.getDate()-90);
+  if (daysAhead>90) return {st:"notyet",saleStart,daysAhead,prog:0,sellBy:null};
+  const total=dailyAttendanceCal(d);
+  const key=dateKey(d);
+  /* 完売日(D-何日で売り切れるか): 超繁忙D-30〜14 / 制限見込みD-14〜7 / 混雑D-3〜0(半々) / 平常=完売なし */
+  let sellBy=null;
+  if (total>=100000) sellBy=14+Math.round(rand01("sb-"+key)*16);
+  else if (total>=88000) sellBy=7+Math.round(rand01("sb-"+key)*7);
+  else if (total>=72000&&rand01("sb2-"+key)<0.5) sellBy=Math.round(rand01("sb-"+key)*3);
+  const press=Math.min(1.25,total/95000);
+  const e=Math.min(1,Math.max(0,(90-daysAhead)/90));
+  let prog=press*(0.15*Math.min(1,e*9)+0.45*e+0.40*Math.pow(Math.max(0,e-0.845)/0.155,1.6));
+  if (total>=88000&&daysAhead<=30) prog+=0.12;                    /* ⚠発表(D-30)の駆け込みステップ */
+  prog*=0.92+rand01("ps-"+key)*0.16;
+  /* 完売日に向けて進捗を整合(単調・完売日で100%) */
+  if (sellBy!=null){
+    const eN=Math.min(1,Math.max(0,(90-Math.max(daysAhead,sellBy))/(90-sellBy)));
+    prog=Math.max(prog,eN*0.99);
+    if (daysAhead<=sellBy) prog=1;
+  }
+  prog=Math.max(0,Math.min(1,prog));
+  /* 再販の出やすさは振替・キャンセル量から導出 */
+  const trRate=dayWxOf(d).mul<0.95?0.08:0.025;
+  const resaleP=0.10+trRate*2.0;
+  const st=prog>=1?(rand01("psr-"+key)<resaleP?"resale":"soldout"):prog>0.80?"few":"onsale";
+  return {st,prog,saleStart,daysAhead,sellBy,restrictDriven:total>=88000};
+}
+/* 日付変更(振替): 悪天候予報日は5〜12%が別日へ。ノーショーとは別勘定 */
+function transferInfo(d){
+  const wxBad=dayWxOf(d).mul<0.95;
+  const rate=wxBad?0.05+rand01("tr-"+dateKey(d))*0.07:0.02+rand01("tr-"+dateKey(d))*0.01;
+  return {rate,wxBad};
+}
+function dateTixStatus(d){
+  const p=presaleInfo(d);
+  return p.st==="soldout"?"soldout":p.st==="few"?"few":"ok";
+}
+function openTixModal(){
+  const J=LANG==="ja";
+  const now=new Date(),tt=now.getHours()+now.getMinutes()/60;
+  const att=dailyAttendance(now),rw=restrictionWindow(now,att);
+  let day;
+  if (rw&&rw.soldOutDay&&tt>=15) day=J?"本日分の入場受付は終了しました":"Ended for today";
+  else if (rw&&tt>=rw.stopDayTix&&(rw.release==null||tt<(rw.resume??rw.release))) day=J?"販売を一時停止中（入場制限のため）":"Paused (restriction)";
+  else if (tt>=20) day=J?"本日の販売は終了しました":"Ended";
+  else if (rw&&tt<rw.stopDayTix) day=J?`販売中（${fmtT(rw.stopDayTix)}頃 販売停止見込み）`:"On sale (pausing soon)";
+  else day=J?"販売中":"On sale";
+  const ds=dateTixStatus(now);
+  document.getElementById("tixBody").innerHTML=`
+    <table class="att-tbl">
+    <tr><td>${J?"日付指定ワンデー":"Dated 1-Day"}</td><td>${J?"入園保証":"Guaranteed"}</td><td class="src">${J?"本日分は販売終了（日付変更での来園は可）・":"Today: closed · "}${ds==="soldout"?(J?"完売":"Sold out"):ds==="few"?(J?"残りわずか":"Few left"):(J?`販売中（進捗${Math.round(presaleInfo(now).prog*100)}%）`:"On sale")}${J?"・入場制限中もご入園いただけます":""}</td></tr>
+    <tr><td>${J?"当日券":"Same-day"}</td><td>${day}</td><td class="src">${J?"窓口・オンライン当日枠":"Gate & online"}</td></tr>
+    <tr><td>${J?"🌙ナイトチケット":"Night"}</td><td>${nightTicketDay(now)?(J?"本日対象（17:00〜）":"Today 17:00–"):(J?"本日対象外":"Not today")}</td><td class="src">${J?"平日限定・夏休み期間除く":"Weekdays only"}</td></tr>
+    <tr><td>${J?"年間パスポート":"Annual Pass"}</td><td>${passBlackout(now)?(J?"本日は除外日（入園不可）":"Blackout today"):(rw&&tt>=rw.start&&(rw.release==null||tt<rw.release))?(J?"入場制限中は入園いただけません":"No entry during restriction"):(J?"入園いただけます":"Valid today")}</td><td class="src">${J?"特定日・入場制限中は入園不可":"Blackout dates & restrictions excluded"}</td></tr>
+    ${mmdd(now)===801?`<tr><td>${J?"特別招待チケット":"Special Invitation"}</td><td>${J?"入園保証（制限中も可）":"Guaranteed entry"}</td><td class="src">${J?"スポンサー・関係者向け（8/1限定）":"Sponsors & guests (Aug 1 only)"}</td></tr>`:""}
+    <tr><td>${J?"バケーションプラン":"Vacation Plan"}</td><td>${J?"入園保証＋ハッピー15":"Guaranteed + Happy 15"}</td><td class="src">${J?"パークホテル宿泊特典・15分早くご入園":"Hotel guests, 15 min early"}</td></tr>
+    </table>
+    <div style="margin-top:8px;font-size:11px;color:#8a7a55">※ プライオリティパス（PP）はアトラクションの優先入場であり、入園券ではありません。<br>※ 入場制限中も、日付指定券・団体券・バケーションプラン・再入園のお客様はご入園いただけます（年間パスポートは除く）。<br>※ 各券種の価格は今後設定予定です。</div>`;
+  document.getElementById("tixBackdrop").classList.add("show");
+}
+document.getElementById("btnTix").addEventListener("click",openTixModal);
+document.getElementById("tixClose").addEventListener("click",()=>document.getElementById("tixBackdrop").classList.remove("show"));
+document.getElementById("tixBackdrop").addEventListener("click",e=>{if(e.target.id==="tixBackdrop")document.getElementById("tixBackdrop").classList.remove("show");});
 document.querySelector(".gauge-card").addEventListener("click",e=>{
   if (e.target.closest("button")) return;
   openAttendanceDetail(new Date(),"today");
@@ -3927,7 +4260,16 @@ function distSnapshot(d,tt){
     clusters.push({x:26,y:32,n:residual.count,area:"ポピーの月明かりの森",shape:"lost",nm:LANG==="ja"?"残留ゲスト(捜索中)":"Remaining guests"});
   }
   if (queue>0){
-    clusters.push({x:34,y:70,n:Math.min(queue,12000),area:"エントランス",shape:"gate",nm:LANG==="ja"?"エントランス待機列":"Entrance queue"});
+    {
+      const rwE=restrictionWindow(d,dailyAttendance(d));
+      const ei=rwE?entranceInfo(d,tt,dailyAttendance(d),rwE):null;
+      if (ei&&ei.dayQ>=300){
+        clusters.push({x:32,y:71,n:ei.dayQ,area:"エントランス",shape:"gate",nm:LANG==="ja"?"当日券・年パス 入園待ち列（停止中）":"Waiting (paused)"});
+        clusters.push({x:37,y:69,n:Math.min(queue,3000),area:"エントランス",shape:"gate",nm:LANG==="ja"?"日付指定・団体レーン（入園中）":"Dated lane (flowing)"});
+      } else {
+        clusters.push({x:34,y:70,n:Math.min(queue,12000),area:"エントランス",shape:"gate",nm:LANG==="ja"?"エントランス待機列":"Entrance queue"});
+      }
+    }
   }
   return {clusters,inPark,queue,galive,closed,residual};
 }
@@ -4170,7 +4512,12 @@ function renderCalendar(){
   const now=new Date();
   let html="";
   const wd=J?["日","月","火","水","木","金","土"]:["S","M","T","W","T","F","S"];
-  for (let off=0;off<2;off++){
+  window._calOff=window._calOff??0;
+  html+=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+    <button class="btn" id="calPrev" ${window._calOff<=0?"disabled":""}>◀ 前月</button>
+    <span style="font-size:11px;color:#8a7a55">${J?"6ヶ月先まで表示できます":"Up to 6 months ahead"}</span>
+    <button class="btn" id="calNext" ${window._calOff>=4?"disabled":""}>翌月 ▶</button></div>`;
+  for (let off=window._calOff;off<window._calOff+2;off++){
     const y=now.getFullYear()+(now.getMonth()+off>11?1:0);
     const m=(now.getMonth()+off)%12;
     html+=`<div class="cal-month">${y}${J?"年":"/"}${m+1}${J?"月":""}</div><div class="cal-grid">`;
@@ -4191,7 +4538,8 @@ function renderCalendar(){
       const attLite={total,nightAdd:0,raw:total};
       const restrictLikely=!past&&total*occPeakOf(d,attLite)>=MAX_CAP;
       const marks=(restrictLikely?"⚠":"")+(openH(d)<9?"⏰":"")+(rl.lv===3?"🔥":"")+(bigMaint?"🛠":"")+(nightTicketDay(d)?"🌙":"")+(rec&&rec.meta?"📈":"");
-      html+=`<div class="cal-day cal-lv${lv}${past?" cal-past":""}" data-dt="${dateKey(d)}" data-past="${past?1:0}" title="${hol||""}">
+      const isToday=dateKey(d)===dateKey(now);
+      html+=`<div class="cal-day cal-lv${lv}${past?" cal-past":""}${isToday?" cal-today":""}" data-dt="${dateKey(d)}" data-past="${past?1:0}" title="${hol||""}">${isToday?`<span class="today-badge">${J?"今日":"today"}</span>`:""}
         <span class="d">${dd}</span>${marks}
         ${hol?`<span class="hn">${J?hol:(HNAME_EN[hol]||hol)}</span>`:""}</div>`;
     }
@@ -4200,6 +4548,9 @@ function renderCalendar(){
   const body=document.getElementById("calBody");
   body.innerHTML=html;
   hideCalChart();
+  const pv=document.getElementById("calPrev"),nx=document.getElementById("calNext");
+  if (pv) pv.addEventListener("click",()=>{window._calOff=Math.max(0,window._calOff-1);renderCalendar();});
+  if (nx) nx.addEventListener("click",()=>{window._calOff=Math.min(4,window._calOff+1);renderCalendar();});
   body.querySelectorAll(".cal-day").forEach(c=>{
     c.addEventListener("click",()=>{
       const [y2,m2,d2]=c.dataset.dt.split("-").map(Number);
@@ -4213,8 +4564,8 @@ function renderCalendar(){
         let rec=null;try{rec=JSON.parse(stGet("mb_log_"+dateKey(d))||"null");}catch(e){}
         if (rec&&rec.meta){
           txt=`${m2}/${d2} ${J?"実績":"Actual"}: `
-            +(J?`ピーク在園 ${rec.meta.peak.toLocaleString()}人・想定来場 ${rec.meta.total.toLocaleString()}人`
-                :`peak ${rec.meta.peak.toLocaleString()} / est. ${rec.meta.total.toLocaleString()}`)
+            +(J?`予測 ${rec.meta.total.toLocaleString()}人／実績 ${actualTotalOf(d,{total:rec.meta.total}).toLocaleString()}人（達成率${Math.round(actualTotalOf(d,{total:rec.meta.total})/rec.meta.total*100)}%）・ピーク在園 ${rec.meta.peak.toLocaleString()}人`
+                :`fc ${rec.meta.total.toLocaleString()} / act ${actualTotalOf(d,{total:rec.meta.total}).toLocaleString()} / peak ${rec.meta.peak.toLocaleString()}`)
             +(rec.meta.restricted?(J?"・入場制限実施":" · restricted"):(J?"・制限なし":""))
             +(rec.meta.early?(J?"・アーリーオープン実施":""):"")
             +(J?`（記録 ${rec.t.length}点）`:"");
@@ -4227,7 +4578,11 @@ function renderCalendar(){
         const total=dailyAttendanceCal(d);
         const chInfo=ppInfo("chase",d,openH(d)+0.01,total);
         txt=`${m2}/${d2}: ${J?"想定":"Est."} ${total.toLocaleString()}${J?"人":""}・${t("fcLevels")[fcLevelOf(total)]}`;
+        {const ps=presaleInfo(d);
+         txt+=J?(ps.st==="notyet"?`・日付指定券 未発売（${ps.saleStart.getMonth()+1}/${ps.saleStart.getDate()} 10:00発売開始）`
+               :`・日付指定券 ${ps.st==="soldout"?"完売":ps.st==="resale"?"完売（キャンセル分再販あり）":ps.st==="few"?"残りわずか":`販売中（進捗${Math.round(ps.prog*100)}%）`}`):"";}
         if (total*occPeakOf(d,{total,nightAdd:0,raw:total})>=MAX_CAP) txt+=J?"・⚠入場制限見込み":" · ⚠restriction likely";
+        {const chi4=consecutiveHolidayInfo(d);if(chi4)txt+=J?`・${chi4.len}連休の${chi4.pos==="mid"?"中日":chi4.pos==="first"?"初日":"最終日"}`:"";}
         if (openH(d)<9) txt+=J?`・${fmtT(openH(d))}アーリーオープン`:` · ${fmtT(openH(d))} early open`;
         if (rl.lv===3) txt+=J?`・特異日「${rl.name}」`:" · surge day";
         if (chInfo&&chInfo.endT) txt+=J?`・チェイスPP終了予想${fmtT(chInfo.endT)}頃`:` · Chase PP est. end ~${fmtT(chInfo.endT)}`;
@@ -4257,6 +4612,7 @@ let viewMode=new URLSearchParams(location.search).get("view")==="sp"?"sp":
 function applyView(){
   const sp=viewMode==="sp"||(viewMode==="auto"&&window.innerWidth<900);
   document.body.classList.toggle("m-sp",sp);
+  document.documentElement.classList.toggle("m-sp",sp);
   document.getElementById("btnView").textContent=sp?"🖥":"📱";
 }
 document.getElementById("btnView").addEventListener("click",()=>{

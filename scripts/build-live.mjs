@@ -13,9 +13,10 @@ const WMO={0:"sunny",1:"sunny",2:"cloudy",3:"cloudy",45:"fog",48:"fog",
   80:"rain",81:"rain",82:"heavyrain",95:"storm",96:"storm",99:"storm",
   71:"snow",73:"snow",75:"snow",85:"snow",86:"snow"};
 function wxMul(cond,temp){
-  let m={sunny:1.0,cloudy:0.97,fog:0.94,rain:0.85,heavyrain:0.72,storm:0.62,snow:0.78}[cond]??1;
-  if (temp!=null&&temp>=35) m*=0.93;
-  if (temp!=null&&temp<=2)  m*=0.93;
+  // クライアントwxCategoryと同一表(曇り1.00・小雨0.96・軽い雪0.90)
+  let m={sunny:1.0,cloudy:1.00,fog:0.99,drizzle:0.96,rain:0.88,heavyrain:0.75,storm:0.55,snow:0.90}[cond]??1;
+  if (temp!=null&&temp>=35) m*=0.94;
+  if (temp!=null&&temp<=2)  m*=0.97;
   return Math.round(m*100)/100;
 }
 async function fetchWx(){
@@ -94,6 +95,11 @@ if (wx){
     mul:wx.current.mul,precip:wx.current.precip??0};
   fs.writeFileSync(dayFile,JSON.stringify(day));
 }
-const live={gen:Date.now(),date:key,wx,news,today:day};
+// 次の1時間ぶんの分刻み乱数テープ(全クライアント同一の即時ランダム源)
+const hourKey=`${key}-${d.getHours()}`;
+const mk=()=>Array.from({length:60},()=>Math.round(Math.random()*1e6)/1e6);
+const tape={hour:hourKey,salt:Math.random().toString(36).slice(2,10),
+  vals:{show:mk(),trouble:mk(),misc:mk()}};
+const live={gen:Date.now(),date:key,wx,news,today:day,tape};
 fs.writeFileSync("data/live.json",JSON.stringify(live));
 console.log("live.json updated",key,d.getHours()+":00");
