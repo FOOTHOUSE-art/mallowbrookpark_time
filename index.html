@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>const APP_VERSION="v29",APP_DATE="2026-07-25";</script>
+<script>const APP_VERSION="v30",APP_DATE="2026-07-25";</script>
 <title>MALLOWBROOK PARK｜リアルタイム運営情報</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Cinzel:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -286,6 +286,16 @@ body.nocomments .ticker2 .ticker-text{visibility:hidden}
 .chart-tip{position:absolute;display:none;pointer-events:none;background:rgba(30,26,14,.94);color:#f2e8cc;
   font-size:11px;font-weight:700;border:1px solid var(--brass);border-radius:8px;padding:4px 9px;z-index:5;white-space:nowrap}
 .chart-tip small{color:#cbbf9a;font-weight:600}
+.tk-badge{display:inline-block;font-size:10px;font-weight:800;border-radius:7px;padding:1px 8px;white-space:nowrap}
+.tb-green{color:#2c6a3f;background:#d8eeda}.tb-amber{color:#8a5c10;background:#f5e6c0}
+.tb-red{color:#8a2c1e;background:#f2d8d0}.tb-gray{color:#5a6470;background:#e2e6ea}
+.tk-bar{display:inline-block;width:70px;height:7px;background:#e4dcc4;border-radius:4px;vertical-align:middle;overflow:hidden}
+.tk-bar span{display:block;height:100%;background:linear-gradient(90deg,#b08a2a,#ffd75e);border-radius:4px}
+.att-sec{font-size:11.5px;font-weight:800;color:#7a5c14;background:linear-gradient(90deg,#f0e6c8,transparent);
+  border-left:3px solid var(--brass);padding:3px 8px;margin:10px 0 4px;border-radius:0 6px 6px 0}
+.att-tbl tr:nth-child(even){background:rgba(160,130,60,.06)}
+.att-tbl .att-hd td{font-weight:800;color:#7a5c14;font-size:10.5px;border-bottom:1px solid #d8c89a}
+.att-tbl .att-key td{font-weight:800;font-size:13px;color:#4a3810;background:rgba(255,215,94,.18)}
 .att-tbl{width:100%;border-collapse:collapse;font-size:12px}
 .att-tbl td{padding:4px 8px;border-bottom:1px solid #ddcea8;color:var(--ink)}
 .att-tbl td:nth-child(2){text-align:right;font-weight:800;color:var(--navy);white-space:nowrap}
@@ -312,6 +322,8 @@ body.nocomments .ticker2 .ticker-text{visibility:hidden}
 .cal-lv0{background:#ddefe2;color:#1d5232}.cal-lv1{background:#f6e8c8;color:#7a5a12}
 .cal-lv2{background:#f6d3bd;color:#8a3d1a}.cal-lv3{background:#eeb6a8;color:#7a1f10}
 .cal-out{opacity:.28;cursor:default}
+.tix-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:1px;vertical-align:middle}
+.td-red{background:#c0452c}.td-amber{background:#d8a02c}.td-gray{background:#b8b0a0;opacity:.6}
 .cal-past{opacity:.55}
 .cal-today{outline:2px solid #ffd75e;outline-offset:-2px;box-shadow:0 0 8px rgba(255,215,94,.45);position:relative}
 .today-badge{position:absolute;top:1px;right:2px;font-size:7.5px;font-weight:800;color:#7a5c14;background:#ffd75e;border-radius:5px;padding:0 3px;line-height:11px}
@@ -4034,10 +4046,31 @@ async function openAttendanceDetail(target,mode){
     [J?"予想ピーク需要（ゲート制御前）":"Predicted peak demand", `${peakPredict(now,att).toLocaleString()}${peakPredict(now,att)>=MAX_CAP?(J?`（同時上限${MAX_CAP.toLocaleString()}→入場制限見込み）`:" (limit)"):""}`, J?`合成カーブから自動算出（本日比${occPeakOf(now,att).toFixed(2)}）`:`auto (×${occPeakOf(now,att).toFixed(2)})`],
   ];
   const cs=cohortsOf(now);
-  const cohortTbl=`<div class="db-title" style="margin-top:8px">${J?"本日の客層構成（基準値±日次変動で毎日変わります）":"Today's cohort mix (daily randomized)"}</div>
-    <table class="att-tbl">${cs.map(c=>`<tr><td>${c.ja}</td><td>${(c.share*100).toFixed(0)}%・${(Math.round(att.total*c.share/100)*100).toLocaleString()}人</td><td class="src">${J?"入園"+fmtT(c.inC)+"頃→退園"+fmtT(Math.min(c.outC,22))+"頃":fmtT(c.inC)+"→"+fmtT(Math.min(c.outC,22))}</td></tr>`).join("")}<tr><td>${J?"合計":"Total"}</td><td>100%・${att.total.toLocaleString()}${J?"人":""}</td><td class="src"></td></tr></table>`;
+  const tmix=ticketMixOf(now);
+  const mixStr=id=>{
+    const m=tmix[id]?tmix[id].mix:null;
+    if (!m) return "";
+    const short={pass:"パス",dated:"指定",day:"当日",night:"ナイト",group:"団体",vacation:"VP"};
+    return Object.entries(m).filter(([k,v])=>v>=0.03).sort((a,b)=>b[1]-a[1]).slice(0,3)
+      .map(([k,v])=>`${short[k]}${Math.round(v*100)}%`).join("・");
+  };
+  const cohortTbl=`<div class="att-sec">${J?"本日の客層構成（比率・人数・利用チケット実績）":"Cohort mix & ticket usage"}</div>
+    <table class="att-tbl"><tr class="att-hd"><td>${J?"客層":"Cohort"}</td><td>${J?"比率・人数":"Share"}</td><td class="src">${J?"入退園 ／ チケット内訳":"In-out / tickets"}</td></tr>
+    ${cs.map(c=>`<tr><td>${c.ja}</td><td>${(c.share*100).toFixed(0)}%・${(Math.round(att.total*c.share/100)*100).toLocaleString()}人</td><td class="src">${J?"入園"+fmtT(c.inC)+"頃→退園"+fmtT(Math.min(c.outC,22))+"頃":fmtT(c.inC)+"→"+fmtT(Math.min(c.outC,22))}<br>🎫 ${mixStr(c.id)}</td></tr>`).join("")}<tr><td>${J?"合計":"Total"}</td><td>100%・${att.total.toLocaleString()}${J?"人":""}</td><td class="src"></td></tr></table>`;
+  /* セクション分割: 係数(予測の内訳) / 本日の見込み / 客層構成 — 情報は全維持 */
+  const isFactor=r=>/季節|天候|ニュース|基礎値|ゆらぎ|Season|Weather|news|Base|variance/.test(r[0]);
+  const facRows=rows.filter(isFactor), sumRows=rows.filter(r=>!isFactor(r));
+  const tt2=ticketTotals(now,att);
+  const tixRows=Object.keys(TICKET_LABELS).filter(k=>tt2.pred[k]).map(k=>
+    `<tr><td>${J?TICKET_LABELS[k]:k}</td><td>${tt2.pred[k].toLocaleString()}</td><td class="src">${tt2.hasDev?tt2.act[k].toLocaleString()+(J?"人":""):(J?"—(開園後に確定)":"—")}</td></tr>`).join("");
+  const tixTbl=`<div class="att-sec">${J?"本日のチケット販売総数（左=予測 ／ 右=実績見込み）":"Ticket sales (forecast / actual est.)"}</div>
+    <table class="att-tbl tix-tbl"><tr class="att-hd"><td>${J?"種別":"Type"}</td><td>${J?"予測":"Forecast"}</td><td class="src">${J?"実績見込み":"Actual est."}</td></tr>${tixRows}</table>`;
   document.getElementById("attBody").innerHTML=
-    `<table class="att-tbl">${rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="src">${r[2]}</td></tr>`).join("")}</table>`+cohortTbl;
+    `<div class="att-sec">${J?"予測の内訳（係数）":"Forecast factors"}</div>
+     <table class="att-tbl">${facRows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="src">${r[2]}</td></tr>`).join("")}</table>
+     <div class="att-sec">${J?"本日の見込み":"Today's estimates"}</div>
+     <table class="att-tbl">${sumRows.map(r=>`<tr${/想定来場者数/.test(r[0])?' class="att-key"':''}><td>${r[0]}</td><td>${r[1]}</td><td class="src">${r[2]}</td></tr>`).join("")}</table>`
+    +tixTbl+cohortTbl;
   attBackdrop.classList.add("show");
   const hv=await drawDayChart(document.getElementById("attChart"),now,mode);
   window.__attHover=hv;
@@ -4130,6 +4163,32 @@ function presaleInfo(d){
   const st=prog>=1?(rand01("psr-"+key)<resaleP?"resale":"soldout"):prog>0.80?"few":"onsale";
   return {st,prog,saleStart,daysAhead,sellBy,restrictDriven:total>=88000};
 }
+/* 当日のチケット種別ごとの販売総数(予測)と実績見込み(偏差・振替・制限を反映) */
+const TICKET_LABELS={pass:"年間パスポート",dated:"日付指定",day:"当日券",night:"ナイト",group:"団体",vacation:"バケーションプラン"};
+function ticketTotals(d,att){
+  const tm=ticketMixOf(d);
+  const pred={};
+  for (const id in tm) for (const k in tm[id].mix){
+    const v=att.total*tm[id].share*tm[id].mix[k];
+    if (v>0) pred[k]=(pred[k]||0)+v;
+  }
+  const dv=dayDeviation(d);
+  const rw=restrictionWindow(d,att);
+  const act={};
+  for (const k in pred){
+    let v=pred[k];
+    if (dv){
+      if (k==="dated"||k==="group"||k==="vacation") v*=1-(dv.noShow+dv.transfer);   /* 予約層: ノーショー・振替控除 */
+      else if (k==="day") v*=(1+dv.dayLuck)*(rw?0.55:1);                            /* 当日券: 出足±・制限日は販売停止分減 */
+      else if (k==="pass") v*=(1+dv.dayLuck*0.5)*(rw?0.35:1);                       /* 年パス: 制限中入園不可の影響大 */
+      else if (k==="night") v*=1+dv.dayLuck*0.5;
+      if (dv.buzz&&(k==="day"||k==="pass")) v*=1+dv.buzz*2;
+    }
+    act[k]=Math.round(v/100)*100;
+    pred[k]=Math.round(pred[k]/100)*100;
+  }
+  return {pred,act,hasDev:!!dv};
+}
 /* 日付変更(振替): 悪天候予報日は5〜12%が別日へ。ノーショーとは別勘定 */
 function transferInfo(d){
   const wxBad=dayWxOf(d).mul<0.95;
@@ -4144,23 +4203,41 @@ function openTixModal(){
   const J=LANG==="ja";
   const now=new Date(),tt=now.getHours()+now.getMinutes()/60;
   const att=dailyAttendance(now),rw=restrictionWindow(now,att);
+  const ps=presaleInfo(now);
   let day;
-  if (rw&&rw.soldOutDay&&tt>=15) day=J?"本日分の入場受付は終了しました":"Ended for today";
-  else if (rw&&tt>=rw.stopDayTix&&(rw.release==null||tt<(rw.resume??rw.release))) day=J?"販売を一時停止中（入場制限のため）":"Paused (restriction)";
-  else if (tt>=20) day=J?"本日の販売は終了しました":"Ended";
-  else if (rw&&tt<rw.stopDayTix) day=J?`販売中（${fmtT(rw.stopDayTix)}頃 販売停止見込み）`:"On sale (pausing soon)";
-  else day=J?"販売中":"On sale";
-  const ds=dateTixStatus(now);
+  if (rw&&rw.soldOutDay&&tt>=15) day={t:J?"本日分の入場受付は終了しました":"Ended",c:"tb-red"};
+  else if (rw&&tt>=rw.stopDayTix&&(rw.release==null||tt<(rw.resume??rw.release))) day={t:J?"販売を一時停止中（入場制限）":"Paused",c:"tb-red"};
+  else if (tt>=20) day={t:J?"本日の販売は終了しました":"Ended",c:"tb-gray"};
+  else if (rw&&tt<rw.stopDayTix) day={t:J?`販売中（${fmtT(rw.stopDayTix)}頃 停止見込み）`:"On sale (pausing soon)",c:"tb-amber"};
+  else day={t:J?"販売中":"On sale",c:"tb-green"};
+  const restricted=rw&&tt>=rw.start&&(rw.release==null||tt<rw.release);
+  const badge=(t,c)=>`<span class="tk-badge ${c}">${t}</span>`;
+  const bar=p=>`<span class="tk-bar"><span style="width:${Math.round(p*100)}%"></span></span>`;
+  const tot=ticketTotals(now,att);
+  const dstr=J?`${now.getMonth()+1}月${now.getDate()}日（${WD_JA[now.getDay()]}）`:now.toLocaleDateString();
+  const tomorrow=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
+  const psT=presaleInfo(tomorrow);
+  const stTxt=p=>p.st==="soldout"?badge(J?"完売":"Sold out","tb-red"):p.st==="resale"?badge(J?"完売（再販あり）":"Resale","tb-amber"):p.st==="few"?badge(J?"残りわずか":"Few","tb-amber"):p.st==="notyet"?badge(J?"未発売":"Not yet","tb-gray"):badge(J?"販売中":"On sale","tb-green");
   document.getElementById("tixBody").innerHTML=`
+    <div class="att-sec">${J?`${dstr} 本日のご入園に使えるチケット`:"Today's admission"}</div>
     <table class="att-tbl">
-    <tr><td>${J?"日付指定ワンデー":"Dated 1-Day"}</td><td>${J?"入園保証":"Guaranteed"}</td><td class="src">${J?"本日分は販売終了（日付変更での来園は可）・":"Today: closed · "}${ds==="soldout"?(J?"完売":"Sold out"):ds==="few"?(J?"残りわずか":"Few left"):(J?`販売中（進捗${Math.round(presaleInfo(now).prog*100)}%）`:"On sale")}${J?"・入場制限中もご入園いただけます":""}</td></tr>
-    <tr><td>${J?"当日券":"Same-day"}</td><td>${day}</td><td class="src">${J?"窓口・オンライン当日枠":"Gate & online"}</td></tr>
-    <tr><td>${J?"🌙ナイトチケット":"Night"}</td><td>${nightTicketDay(now)?(J?"本日対象（17:00〜）":"Today 17:00–"):(J?"本日対象外":"Not today")}</td><td class="src">${J?"平日限定・夏休み期間除く":"Weekdays only"}</td></tr>
-    <tr><td>${J?"年間パスポート":"Annual Pass"}</td><td>${passBlackout(now)?(J?"本日は除外日（入園不可）":"Blackout today"):(rw&&tt>=rw.start&&(rw.release==null||tt<rw.release))?(J?"入場制限中は入園いただけません":"No entry during restriction"):(J?"入園いただけます":"Valid today")}</td><td class="src">${J?"特定日・入場制限中は入園不可":"Blackout dates & restrictions excluded"}</td></tr>
-    ${mmdd(now)===801?`<tr><td>${J?"特別招待チケット":"Special Invitation"}</td><td>${J?"入園保証（制限中も可）":"Guaranteed entry"}</td><td class="src">${J?"スポンサー・関係者向け（8/1限定）":"Sponsors & guests (Aug 1 only)"}</td></tr>`:""}
-    <tr><td>${J?"バケーションプラン":"Vacation Plan"}</td><td>${J?"入園保証＋ハッピー15":"Guaranteed + Happy 15"}</td><td class="src">${J?"パークホテル宿泊特典・15分早くご入園":"Hotel guests, 15 min early"}</td></tr>
+    <tr><td>${J?"日付指定ワンデー":"Dated 1-Day"}</td><td>${badge(J?"入園保証":"Guaranteed","tb-green")}</td><td class="src">${J?"本日分は販売終了（日付変更での来園は可）・制限中も入園可":"Sales closed for today; transferable; enters during restriction"}</td></tr>
+    <tr><td>${J?"当日券":"Same-day"}</td><td>${badge(day.t,day.c)}</td><td class="src">${J?"窓口・オンライン当日枠":"Gate & online"}</td></tr>
+    <tr><td>${J?"🌙ナイトチケット":"Night"}</td><td>${nightTicketDay(now)?badge(J?"本日対象 17:00〜":"Today 17:00–","tb-green"):badge(J?"本日対象外":"Not today","tb-gray")}</td><td class="src">${J?"平日限定・夏休み期間除く":"Weekdays only"}</td></tr>
+    <tr><td>${J?"年間パスポート":"Annual Pass"}</td><td>${passBlackout(now)?badge(J?"本日は除外日":"Blackout","tb-red"):restricted?badge(J?"制限中は入園不可":"No entry now","tb-red"):badge(J?"入園可":"Valid","tb-green")}</td><td class="src">${J?"特定日・入場制限中は入園不可":"Excluded on blackout dates & restrictions"}</td></tr>
+    ${mmdd(now)===801?`<tr><td>${J?"特別招待チケット":"Invitation"}</td><td>${badge(J?"入園保証（制限中も可）":"Guaranteed","tb-green")}</td><td class="src">${J?"スポンサー・関係者向け（8/1限定）":"Sponsors (Aug 1)"}</td></tr>`:""}
+    <tr><td>${J?"バケーションプラン":"Vacation Plan"}</td><td>${badge(J?"入園保証＋ハッピー15":"Guaranteed +15min","tb-green")}</td><td class="src">${J?"パークホテル宿泊特典・15分早くご入園・制限中も入園可":"Hotel guests"}</td></tr>
     </table>
-    <div style="margin-top:8px;font-size:11px;color:#8a7a55">※ プライオリティパス（PP）はアトラクションの優先入場であり、入園券ではありません。<br>※ 入場制限中も、日付指定券・団体券・バケーションプラン・再入園のお客様はご入園いただけます（年間パスポートは除く）。<br>※ 各券種の価格は今後設定予定です。</div>`;
+    <div class="att-sec">${J?"本日の販売総数（左=予測 ／ 右=実績見込み）":"Sales totals (forecast / actual est.)"}</div>
+    <table class="att-tbl"><tr class="att-hd"><td>${J?"種別":"Type"}</td><td>${J?"予測":"Fc"}</td><td class="src">${J?"実績見込み":"Actual est."}</td></tr>
+    ${Object.keys(TICKET_LABELS).filter(k=>tot.pred[k]).map(k=>`<tr><td>${J?TICKET_LABELS[k]:k}</td><td>${tot.pred[k].toLocaleString()}</td><td class="src">${tot.hasDev?tot.act[k].toLocaleString()+(J?"人":""):"—"}</td></tr>`).join("")}
+    </table>
+    <div class="att-sec">${J?"事前販売の状況":"Presale status"}</div>
+    <table class="att-tbl">
+    <tr><td>${J?"本日":"Today"}</td><td>${stTxt(ps)}</td><td class="src">${bar(ps.prog)} ${Math.round(ps.prog*100)}%${ps.restrictDriven?(J?"・販売ペース基準超→制限見込み":""):""}</td></tr>
+    <tr><td>${J?"明日":"Tomorrow"}</td><td>${stTxt(psT)}</td><td class="src">${bar(psT.prog)} ${Math.round(psT.prog*100)}%</td></tr>
+    </table>
+    <div style="margin-top:8px;font-size:11px;color:#8a7a55">※ プライオリティパス（PP）はアトラクションの優先入場であり、入園券ではありません。<br>※ 入場制限中も、日付指定券・団体券・バケーションプラン・再入園のお客様はご入園いただけます（年間パスポートは除く）。<br>※ 日付指定券は来園日前日まで日付変更が可能です。各券種の価格は今後設定予定です。</div>`;
   document.getElementById("tixBackdrop").classList.add("show");
 }
 document.getElementById("btnTix").addEventListener("click",openTixModal);
@@ -4508,7 +4585,7 @@ function hideCalChart(){const w=document.getElementById("calChartWrap");if(w)w.s
 function renderCalendar(){
   const J=LANG==="ja";
   document.getElementById("calTitle").textContent=J?"混雑予想カレンダー":"Crowd Forecast Calendar";
-  document.getElementById("calNote").textContent=J?"※未来は暦に基づく予想、過去の日付はタップで実績（📈=記録あり）を表示します。⚠=入場制限見込み　⏰=アーリーオープン　🔥=特異日　🛠=大型メンテ　🌙=ナイトチケット":"* Future = forecast; tap past dates for actuals (📈). ⚠=restriction likely ⏰=early 🔥=surge 🛠=maint 🌙=night tix";
+  document.getElementById("calNote").textContent=J?"※未来は暦に基づく予想、過去の日付はタップで実績（📈=記録あり）を表示します。●=日付指定券の販売状況（赤=完売・黄=残少・灰=未発売）　⚠=入場制限見込み　⏰=アーリーオープン　🔥=特異日　🛠=大型メンテ　🌙=ナイトチケット":"* Future = forecast; tap past dates for actuals (📈). ⚠=restriction likely ⏰=early 🔥=surge 🛠=maint 🌙=night tix";
   const now=new Date();
   let html="";
   const wd=J?["日","月","火","水","木","金","土"]:["S","M","T","W","T","F","S"];
@@ -4537,7 +4614,14 @@ function renderCalendar(){
       if (past){try{rec=JSON.parse(stGet("mb_log_"+dateKey(d))||"null");}catch(e){}}
       const attLite={total,nightAdd:0,raw:total};
       const restrictLikely=!past&&total*occPeakOf(d,attLite)>=MAX_CAP;
-      const marks=(restrictLikely?"⚠":"")+(openH(d)<9?"⏰":"")+(rl.lv===3?"🔥":"")+(bigMaint?"🛠":"")+(nightTicketDay(d)?"🌙":"")+(rec&&rec.meta?"📈":"");
+      let tixDot="";
+      if (!past){
+        const ps2=presaleInfo(d);
+        if (ps2.st==="soldout"||ps2.st==="resale") tixDot=`<span class="tix-dot td-red" title="日付指定 完売"></span>`;
+        else if (ps2.st==="few") tixDot=`<span class="tix-dot td-amber" title="日付指定 残りわずか"></span>`;
+        else if (ps2.st==="notyet") tixDot=`<span class="tix-dot td-gray" title="未発売"></span>`;
+      }
+      const marks=tixDot+(restrictLikely?"⚠":"")+(openH(d)<9?"⏰":"")+(rl.lv===3?"🔥":"")+(bigMaint?"🛠":"")+(nightTicketDay(d)?"🌙":"")+(rec&&rec.meta?"📈":"");
       const isToday=dateKey(d)===dateKey(now);
       html+=`<div class="cal-day cal-lv${lv}${past?" cal-past":""}${isToday?" cal-today":""}" data-dt="${dateKey(d)}" data-past="${past?1:0}" title="${hol||""}">${isToday?`<span class="today-badge">${J?"今日":"today"}</span>`:""}
         <span class="d">${dd}</span>${marks}
