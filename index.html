@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>const APP_VERSION="v34",APP_DATE="2026-07-26";</script>
+<script>const APP_VERSION="v35",APP_DATE="2026-07-26";</script>
 <title>MALLOWBROOK PARK｜リアルタイム運営情報</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Cinzel:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -204,6 +204,14 @@ main{flex:1 1 auto;min-height:0;display:flex;gap:6px}
 .sh-tag{font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:999px;background:#e8dcba;color:#5a4c2a;border:1px solid #cbb87f}
 .sh-tag.warn{background:#f3d9cf;color:#8a3a22;border-color:#d09a83}
 .sh-tagline{font-family:"Shippori Mincho",serif;font-weight:700;font-size:14px;color:var(--forest);margin-bottom:6px}
+.ph-wrap{display:none;position:relative;width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;
+  margin:2px 0 10px;border:2px solid var(--brass);background:#2a2418;cursor:pointer;box-shadow:0 3px 14px rgba(0,0,0,.25)}
+.ph-track{position:absolute;inset:0}
+.ph-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .35s ease}
+.ph-img.ph-on{opacity:1}
+.ph-dots{position:absolute;right:8px;bottom:7px;display:none;gap:5px;z-index:2}
+.ph-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.45);border:1px solid rgba(0,0,0,.35);cursor:pointer}
+.ph-dot.on{background:#ffd75e}
 .sh-desc{font-size:13px;line-height:1.8;color:var(--ink);margin-bottom:10px}
 .sh-meta{font-size:12px;color:#6b5d3f;margin-bottom:8px}
 .sh-menus{margin-top:4px}
@@ -2367,6 +2375,46 @@ function beforeOrClosed(){
   const now=new Date(),tt=now.getHours()+now.getMinutes()/60,oh=openH(now);
   return tt<oh?(LANG==="ja"?`開園前（${fmtT(oh)}開園）`:`Opens at ${fmtT(oh)}`):t("closed");
 }
+/* 施設・ショーの紹介画像: assets/img/spots/<id>.jpg と <id>_2.jpg を自動読込。
+   無い場合は枠ごと非表示になるため、画像は1枚ずつ追加していけます */
+function photoGallery(id){
+  const base="assets/img/spots/"+id;
+  return `<div class="ph-wrap" id="ph-${id}">
+    <div class="ph-track">
+      <img class="ph-img ph-on" src="${base}.jpg" loading="lazy" alt="" data-i="0"
+        onerror="this.dataset.bad=1;phCheck('${id}')">
+      <img class="ph-img" src="${base}_2.jpg" loading="lazy" alt="" data-i="1"
+        onerror="this.dataset.bad=1;phCheck('${id}')">
+    </div>
+    <div class="ph-dots"></div></div>`;
+}
+window.phCheck=function phCheck(id){
+  const w=document.getElementById("ph-"+id);
+  if (!w) return;
+  const imgs=[...w.querySelectorAll(".ph-img")];
+  const ok=imgs.filter(im=>!im.dataset.bad);
+  imgs.forEach(im=>{if(im.dataset.bad)im.remove();});
+  if (!ok.length){w.style.display="none";return;}
+  w.style.display="block";
+  ok.forEach((im,i)=>im.classList.toggle("ph-on",i===0));
+  const dots=w.querySelector(".ph-dots");
+  if (ok.length>1){
+    dots.innerHTML=ok.map((_,i)=>`<span class="ph-dot${i===0?" on":""}" data-i="${i}"></span>`).join("");
+    dots.style.display="flex";
+    dots.querySelectorAll(".ph-dot").forEach(dt=>dt.addEventListener("click",()=>{
+      const i=+dt.dataset.i;
+      ok.forEach((im,j)=>im.classList.toggle("ph-on",j===i));
+      dots.querySelectorAll(".ph-dot").forEach((d2,j)=>d2.classList.toggle("on",j===i));
+    }));
+    w.onclick=e=>{
+      if (e.target.classList.contains("ph-dot")) return;
+      const cur=ok.findIndex(im=>im.classList.contains("ph-on"));
+      const nx=(cur+1)%ok.length;
+      ok.forEach((im,j)=>im.classList.toggle("ph-on",j===nx));
+      dots.querySelectorAll(".ph-dot").forEach((d2,j)=>d2.classList.toggle("on",j===nx));
+    };
+  } else dots.style.display="none";
+};
 function statusShort(st){
   if (st.st==="lo") return LANG==="ja"?"L.O.終了":"Last order done";
   if (st.st==="prep") return LANG==="ja"?"準備中":"Preparing";
@@ -2652,10 +2700,12 @@ function openDetail(id){
     <div class="sh-area">${ar}</div>
     ${live}${dayBars}${tagHtml}
     ${g.tagJa?`<div class="sh-tagline">${LANG==="ja"?g.tagJa:g.tagEn}</div>`:""}
+    ${photoGallery(id)}
     ${g.dJa?`<div class="sh-desc">${LANG==="ja"?g.dJa:g.dEn}</div>`:""}
     ${(ENTERTAINMENT.find(x=>x.id===id)||{}).noteJa?`<div class="sh-area" style="margin-top:-4px;margin-bottom:8px">※ ${LANG==="ja"?ENTERTAINMENT.find(x=>x.id===id).noteJa:"Indoor show: never cancelled due to weather"}</div>`:""}
     ${meta}${menus}${notes}`;
   backdrop.classList.add("show");
+  setTimeout(()=>phCheck(id),30);           /* 画像の有無を判定して枠を出し分け */
 }
 
 function refresh(){
