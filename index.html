@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>const APP_VERSION="v35",APP_DATE="2026-07-26";</script>
+<script>const APP_VERSION="v36",APP_DATE="2026-07-26";</script>
 <title>MALLOWBROOK PARK｜リアルタイム運営情報</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Cinzel:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -212,6 +212,8 @@ main{flex:1 1 auto;min-height:0;display:flex;gap:6px}
 .ph-dots{position:absolute;right:8px;bottom:7px;display:none;gap:5px;z-index:2}
 .ph-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.45);border:1px solid rgba(0,0,0,.35);cursor:pointer}
 .ph-dot.on{background:#ffd75e}
+.ph-count{position:absolute;left:8px;bottom:6px;font-size:10px;font-weight:800;color:#f2e8cc;
+  background:rgba(20,16,8,.55);border-radius:6px;padding:1px 7px;z-index:2;letter-spacing:.03em}
 .sh-desc{font-size:13px;line-height:1.8;color:var(--ink);margin-bottom:10px}
 .sh-meta{font-size:12px;color:#6b5d3f;margin-bottom:8px}
 .sh-menus{margin-top:4px}
@@ -2377,43 +2379,54 @@ function beforeOrClosed(){
 }
 /* 施設・ショーの紹介画像: assets/img/spots/<id>.jpg と <id>_2.jpg を自動読込。
    無い場合は枠ごと非表示になるため、画像は1枚ずつ追加していけます */
+const PHOTO_MAX=8;   /* assets/img/spots/<id>.jpg, <id>_2.jpg … <id>_8.jpg まで自動認識 */
 function photoGallery(id){
   const base="assets/img/spots/"+id;
-  return `<div class="ph-wrap" id="ph-${id}">
-    <div class="ph-track">
-      <img class="ph-img ph-on" src="${base}.jpg" loading="lazy" alt="" data-i="0"
-        onerror="this.dataset.bad=1;phCheck('${id}')">
-      <img class="ph-img" src="${base}_2.jpg" loading="lazy" alt="" data-i="1"
-        onerror="this.dataset.bad=1;phCheck('${id}')">
-    </div>
-    <div class="ph-dots"></div></div>`;
+  let imgs="";
+  for (let i=0;i<PHOTO_MAX;i++){
+    const src=i===0?base+".jpg":`${base}_${i+1}.jpg`;
+    imgs+=`<img class="ph-img${i===0?" ph-on":""}" src="${src}" loading="lazy" alt="" data-i="${i}" onerror="this.dataset.bad=1;phCheck('${id}')">`;
+  }
+  return `<div class="ph-wrap" id="ph-${id}"><div class="ph-track">${imgs}</div>
+    <div class="ph-dots"></div><div class="ph-count"></div></div>`;
 }
 window.phCheck=function phCheck(id){
   const w=document.getElementById("ph-"+id);
   if (!w) return;
   const imgs=[...w.querySelectorAll(".ph-img")];
-  const ok=imgs.filter(im=>!im.dataset.bad);
   imgs.forEach(im=>{if(im.dataset.bad)im.remove();});
+  const ok=[...w.querySelectorAll(".ph-img")];
   if (!ok.length){w.style.display="none";return;}
   w.style.display="block";
-  ok.forEach((im,i)=>im.classList.toggle("ph-on",i===0));
   const dots=w.querySelector(".ph-dots");
+  const cnt=w.querySelector(".ph-count");
+  const show=i=>{
+    ok.forEach((im,j)=>im.classList.toggle("ph-on",j===i));
+    dots.querySelectorAll(".ph-dot").forEach((d2,j)=>d2.classList.toggle("on",j===i));
+    if (cnt) cnt.textContent=ok.length>1?`${i+1} / ${ok.length}`:"";
+  };
   if (ok.length>1){
-    dots.innerHTML=ok.map((_,i)=>`<span class="ph-dot${i===0?" on":""}" data-i="${i}"></span>`).join("");
+    dots.innerHTML=ok.map((_,i)=>`<span class="ph-dot" data-i="${i}"></span>`).join("");
     dots.style.display="flex";
-    dots.querySelectorAll(".ph-dot").forEach(dt=>dt.addEventListener("click",()=>{
-      const i=+dt.dataset.i;
-      ok.forEach((im,j)=>im.classList.toggle("ph-on",j===i));
-      dots.querySelectorAll(".ph-dot").forEach((d2,j)=>d2.classList.toggle("on",j===i));
-    }));
-    w.onclick=e=>{
-      if (e.target.classList.contains("ph-dot")) return;
+    dots.querySelectorAll(".ph-dot").forEach(dt=>dt.addEventListener("click",e=>{e.stopPropagation();show(+dt.dataset.i);}));
+    w.onclick=()=>{
       const cur=ok.findIndex(im=>im.classList.contains("ph-on"));
-      const nx=(cur+1)%ok.length;
-      ok.forEach((im,j)=>im.classList.toggle("ph-on",j===nx));
-      dots.querySelectorAll(".ph-dot").forEach((d2,j)=>d2.classList.toggle("on",j===nx));
+      show((cur+1)%ok.length);
     };
-  } else dots.style.display="none";
+    /* スワイプ操作(スマホ) */
+    let sx=null;
+    w.ontouchstart=e=>{sx=e.touches[0].clientX;};
+    w.ontouchend=e=>{
+      if (sx==null) return;
+      const dx=e.changedTouches[0].clientX-sx;
+      if (Math.abs(dx)>40){
+        const cur=ok.findIndex(im=>im.classList.contains("ph-on"));
+        show((cur+(dx<0?1:ok.length-1))%ok.length);
+      }
+      sx=null;
+    };
+  } else {dots.style.display="none";w.onclick=null;}
+  show(0);
 };
 function statusShort(st){
   if (st.st==="lo") return LANG==="ja"?"L.O.終了":"Last order done";
