@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>const APP_VERSION="v41",APP_DATE="2026-07-26";</script>
+<script>const APP_VERSION="v43",APP_DATE="2026-07-26";</script>
 <title>MALLOWBROOK PARK｜リアルタイム運営情報</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Cinzel:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -331,6 +331,59 @@ body.nocomments .ticker2 .ticker-text{visibility:hidden}
 .h-ok{background:#4f9968}.h-delay{background:#cf9c2c}.h-hold{background:#8a8fa0}.h-evac{background:#bf4a2e}.h-closed{background:#c9bfa8}.h-other{background:#e0d8c4}
 .h-legend{display:flex;align-items:center;gap:4px;font-size:10px;color:#8a7a55;flex-wrap:wrap}
 .h-legend .h-cell{width:10px;height:10px;margin-left:6px}
+#occ{display:none;position:fixed;inset:0;z-index:400;background:#080c14;color:#c8d6e8;
+  font-family:"SFMono-Regular",Consolas,"Courier New",monospace;flex-direction:column;overflow:hidden}
+#occ.show{display:flex}
+.occ-top{display:flex;align-items:center;gap:14px;padding:8px 14px;background:linear-gradient(180deg,#0e1626,#0a1120);
+  border-bottom:1px solid #1e3352;flex-wrap:wrap}
+.occ-brand{font-size:13px;letter-spacing:.08em;color:#7fa8d8}
+.occ-brand b{color:#ffd75e}
+.occ-sim{display:block;font-size:9px;color:#5a7091;letter-spacing:.12em}
+.occ-kpi{display:flex;gap:14px;margin-left:auto;flex-wrap:wrap}
+.occ-kpi span{font-size:11px;color:#8fa8c8}
+.occ-kpi b{color:#e8f0ff;font-size:14px;margin-left:5px}
+.occ-clock{display:flex;align-items:center;gap:10px;font-size:16px;color:#ffd75e;font-variant-numeric:tabular-nums}
+.occ-x{background:#1b2a44;color:#c8d6e8;border:1px solid #2e4a72;border-radius:6px;
+  padding:3px 10px;font-size:11px;cursor:pointer;font-family:inherit}
+.occ-main{flex:1;display:grid;grid-template-columns:minmax(300px,1fr) minmax(360px,1.35fr);gap:10px;padding:10px;min-height:0}
+.occ-left,.occ-right{display:flex;flex-direction:column;min-height:0;gap:6px}
+.occ-h{font-size:10px;letter-spacing:.14em;color:#5f81ad;border-bottom:1px solid #1e3352;padding-bottom:3px}
+.occ-h i{font-style:normal;color:#3f5a80;margin-left:6px}
+.occ-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;overflow:auto;padding-right:2px}
+.occ-tile{background:#101a2c;border:1px solid #1e3352;border-left-width:4px;border-radius:6px;padding:6px 8px;cursor:pointer}
+.occ-tile:hover{background:#152340}
+.occ-tile.sel{background:#17263f;border-color:#3d6fb5;box-shadow:0 0 0 1px #3d6fb5 inset}
+.occ-tile .t-n{font-size:11px;color:#dce8f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.occ-tile .t-s{font-size:9.5px;letter-spacing:.06em;margin-top:2px}
+.occ-tile .t-w{font-size:16px;color:#ffd75e;font-variant-numeric:tabular-nums}
+.occ-tile .t-sub{font-size:9px;color:#6d88ab}
+.st-open{border-left-color:#2fa860}.st-open .t-s{color:#5fd68f}
+.st-delay{border-left-color:#d8a02c}.st-delay .t-s{color:#ffc85a}
+.st-hold{border-left-color:#8a8fa0}.st-hold .t-s{color:#b6bccc}
+.st-closed{border-left-color:#c0452c}.st-closed .t-s{color:#ff8f76}
+.st-evac{border-left-color:#ff3b30;animation:occBlink 1s steps(2) infinite}.st-evac .t-s{color:#ff6b60}
+.st-pre{border-left-color:#3d6fb5}.st-pre .t-s{color:#7fb0ee}
+@keyframes occBlink{50%{background:#2a1420}}
+.occ-alerts{flex:0 0 auto;max-height:26vh;overflow:auto;font-size:11px;line-height:1.65}
+.occ-alerts div{padding:3px 6px;border-left:3px solid #2e4a72;background:#0d1524;margin-bottom:3px;border-radius:0 4px 4px 0}
+.occ-alerts .a-crit{border-left-color:#ff3b30;color:#ffb9b2}
+.occ-alerts .a-warn{border-left-color:#d8a02c;color:#ffd89a}
+.occ-alerts .a-info{border-left-color:#3d6fb5;color:#a8c6ea}
+#occRadar{width:100%;flex:1 1 auto;min-height:200px;background:radial-gradient(ellipse at 50% 45%,#0d1b2e,#080d18 70%);
+  border:1px solid #1e3352;border-radius:8px}
+.occ-legend{display:flex;gap:10px;font-size:9.5px;color:#6d88ab;flex-wrap:wrap}
+.occ-legend b{color:#c8d6e8;font-weight:600}
+.occ-veh{flex:0 0 auto;max-height:30vh;overflow:auto;font-size:10.5px}
+.occ-veh table{width:100%;border-collapse:collapse}
+.occ-veh td{padding:2px 6px;border-bottom:1px solid #14203a;white-space:nowrap}
+.occ-veh .v-id{color:#7fb0ee}.occ-veh .v-hold{color:#ff8f76}
+body.m-sp .occ-main{grid-template-columns:1fr;overflow:auto}
+.ops-badge{display:none;grid-column:1/-1;font-size:9.5px;font-weight:800;color:#2a2010;background:#ffd75e;
+  border-radius:6px;padding:1px 7px;text-align:center;cursor:pointer;letter-spacing:.03em}
+.ops-badge.on{display:block}
+body.m-sp .ops-badge{display:none!important}
+.ops-jump{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px;margin:4px 0 8px}
+.ops-jump .btn{justify-content:flex-start;font-size:11.5px;padding:6px 10px;width:100%}
 .role-bar{display:flex;align-items:center;gap:8px;font-size:11px;color:#6a5a30;background:rgba(160,130,60,.10);
   border-radius:8px;padding:4px 9px;margin-bottom:4px;flex-wrap:wrap}
 .role-bar select{font-size:11px;padding:1px 5px;border-radius:6px;border:1px solid #c8b88a;background:#fbf6e8}
@@ -535,6 +588,7 @@ body.sky-late{background-image:radial-gradient(ellipse at 50% -10%,#131d38 0%,#0
       <button class="btn" id="btnDist" title="入園者分布">🔥 分布</button>
       <button class="btn" id="btnView" title="表示切替">📱 表示</button>
       <span class="ver-stamp" id="verStamp"></span>
+      <span class="ops-badge" id="opsBadge" title="運営モード中（クリックで運営レポート）">🏢 運営モード</span>
     </div>
   </header>
 
@@ -2629,6 +2683,9 @@ function renderChips(containerId,redraw){
 function openMenuSheet(){
   const g=document.getElementById("menuGrid");
   const ids=["btnRefresh","btnLang","btnBgm","btnCal","btnTix","btnOps","btnDist","btnView"];
+  const note=document.createElement("div");
+  note.style.cssText="grid-column:1/-1;font-size:11px;color:#8a7a55;margin-top:2px";
+  note.textContent=LANG==="ja"?"※「🏢 運営」から運営レポートと各施設の運営管理コンソールを開けます":"";
   g.innerHTML="";
   ids.forEach(id=>{
     const src=document.getElementById(id);
@@ -2642,6 +2699,7 @@ function openMenuSheet(){
     });
     g.appendChild(b);
   });
+  g.appendChild(note);
   document.getElementById("menuBackdrop").classList.add("show");
 }
 /* ================= MALLOWBROOK Operations Console (MOC) ================= */
@@ -3025,6 +3083,167 @@ function opsLogList(id){
     const arr=JSON.parse(stGet("mb_opslog_"+dateKey(new Date()))||"[]");
     return arr.filter(x=>x.id===id);
   }catch(e){return [];}
+}
+/* ================= 運営センター(視覚的な一元監視+動的運行画面) ================= */
+const OCC={on:false,sel:"chase",raf:null,last:0};
+function occStateClass(id){
+  return {OPEN:"st-open",DELAYED:"st-delay",OPERATIONAL_HOLD:"st-hold",TEMP_CLOSED:"st-closed",
+    EVACUATING:"st-evac",WEATHER_HOLD:"st-hold",MAINTENANCE:"st-closed",RECOVERY_TEST:"st-hold",
+    REOPENING:"st-hold",LIMITED_OPERATION:"st-delay",PRE_OPEN:"st-pre",CLOSED:"st-pre"}[id]||"st-pre";
+}
+function occRenderTiles(){
+  const now=new Date(),tt=now.getHours()+now.getMinutes()/60;
+  const att=dailyAttendance(now);
+  const list=SPOTS.filter(s=>s.type==="a");
+  const el=document.getElementById("occTiles");
+  el.innerHTML=list.map(s=>{
+    const st=opStateOf(s,now,tt);
+    const code=(OP_CODES[st.id]||["--","--"]);
+    const w=calcWait(s,now,tt,inParkOf(now,tt,att),redistFactor(now,tt));
+    const q=w!=null?queueCountOf(s.id,w):null;
+    const sp=RIDE_SPEC[s.id]||{};
+    return `<div class="occ-tile ${occStateClass(st.id)}${OCC.sel===s.id?" sel":""}" data-id="${s.id}">
+      <div class="t-n">${s.ja}</div>
+      <div class="t-s">${code[0]} ${code[1]}</div>
+      <div class="t-w">${w!=null?w:"--"}<span class="t-sub">分</span></div>
+      <div class="t-sub">列 ${q!=null?q.toLocaleString():"--"} ／ ${sp.cap?sp.cap.toLocaleString()+"人/時":"滞在管理"}</div>
+    </div>`;
+  }).join("");
+  document.getElementById("occCount").textContent=`${list.filter(s=>opStateOf(s,now,tt).id==="OPEN").length}/${list.length} OPEN`;
+  el.querySelectorAll(".occ-tile").forEach(t=>t.addEventListener("click",()=>{OCC.sel=t.dataset.id;occRenderTiles();occRenderVeh();}));
+  /* KPI */
+  const inPark=inParkOf(now,tt,att);
+  const rw=restrictionWindow(now,att);
+  document.getElementById("occKpi").innerHTML=
+    `<span>IN PARK<b>${inPark.toLocaleString()}</b></span>
+     <span>ENTRIES<b>${todayCumActual(now,tt,att,rw).toLocaleString()}</b></span>
+     <span>RESTRICTION<b>${rw&&tt>=rw.start&&(rw.release==null||tt<rw.release)?"ACTIVE":"—"}</b></span>
+     <span>QUEUE<b>${(entranceQueue(now,tt,att,rw)||0).toLocaleString()}</b></span>`;
+  /* アラート */
+  const al=[];
+  list.forEach(s=>{
+    const st=opStateOf(s,now,tt);
+    if (st.id==="EVACUATING") al.push(["a-crit",`OP-80 ${s.ja}：避難対応中 ${st.note}`]);
+    else if (st.id==="TEMP_CLOSED") al.push(["a-warn",`OP-40 ${s.ja}：${st.note}`]);
+    else if (st.id==="OPERATIONAL_HOLD") al.push(["a-warn",`OP-30 ${s.ja}：${st.note}`]);
+    else if (st.id==="DELAYED") al.push(["a-info",`OP-20 ${s.ja}：処理能力を超える需要`]);
+    const rp=recoveryPassOf(s,now,tt);
+    if (rp&&tt>=rp.at) al.push(["a-info",`🎟 ${s.ja}：優先搭乗券 ${rp.issued.toLocaleString()}枚 配布（${rp.reason}）`]);
+  });
+  if (rw&&tt>=rw.start&&(rw.release==null||tt<rw.release))
+    al.unshift(["a-crit",`入場制限中：当日券停止／日付指定・VPは入園可${rw.relWin?`（解除見込み ${fmtT(rw.relWin[0])}〜${fmtT(rw.relWin[1])}）`:""}`]);
+  ENTERTAINMENT.forEach(e=>{
+    const st=showStatus(e,now,tt);
+    if (st.st==="wxcancel") al.push(["a-warn",`公演中止 ${e.ja} ${fmtT(st.start||0)}：${cancelReason(e,st.start||0,tt,now)}`]);
+  });
+  document.getElementById("occAlerts").innerHTML=al.length?al.map(a=>`<div class="${a[0]}">${a[1]}</div>`).join(""):`<div class="a-info">異常なし ALL NORMAL</div>`;
+}
+function occRenderVeh(){
+  const now=new Date(),tt=now.getHours()+now.getMinutes()/60;
+  const s=SPOTS.find(x=>x.id===OCC.sel);
+  if (!s) return;
+  document.getElementById("occSelName").textContent=s.ja+"　"+(RIDE_SPEC[s.id]?.ja||"");
+  const veh=vehicleStates(s,now,tt);
+  const box=document.getElementById("occVeh");
+  if (!veh){box.innerHTML=`<div style="color:#6d88ab;font-size:11px;padding:6px">滞在型施設のため車両運行はありません（同時滞在 ${(RIDE_SPEC[s.id]||{}).hold||"—"}人）</div>`;return;}
+  box.innerHTML=`<table>${veh.list.map(v=>`<tr>
+    <td class="v-id">V${String(v.id).padStart(2,"0")}</td><td>${v.block}</td>
+    <td>${v.n?v.n+"/"+(RIDE_SPEC[s.id].seats):"—"}</td>
+    <td class="${v.state.includes("停止")?"v-hold":""}">${v.state}${v.delay?` +${v.delay}s`:""}</td></tr>`).join("")}</table>`;
+  document.getElementById("occLegend").innerHTML=
+    `<span><b>●</b> 走行中</span><span style="color:#ff8f76"><b>●</b> 停止(前方占有)</span>
+     <span style="color:#5fd68f"><b>●</b> 搭乗/降車</span><span>区間占有は明度で表示</span>
+     <span>DISPATCH <b>${Math.round(veh.gap*60)}s</b></span><span>ACTIVE <b>${veh.active}</b>編成</span>`;
+}
+/* レーダー風の動的運行画面(1秒未満で滑らかに更新) */
+function occDrawRadar(ts){
+  const cv=document.getElementById("occRadar");
+  if (!cv||!OCC.on) return;
+  const w=cv.clientWidth||600,hgt=cv.clientHeight||300;
+  cv.width=w*2;cv.height=hgt*2;
+  const g=cv.getContext("2d");g.setTransform(2,0,0,2,0,0);
+  g.clearRect(0,0,w,hgt);
+  const s=SPOTS.find(x=>x.id===OCC.sel);
+  const now=new Date(),tt=now.getHours()+now.getMinutes()/60+now.getSeconds()/3600;
+  const veh=s?vehicleStates(s,now,tt):null;
+  const cx=w/2,cy=hgt/2,rx=Math.min(w*0.40,240),ry=Math.min(hgt*0.34,120);
+  /* グリッド */
+  g.strokeStyle="rgba(80,130,190,.18)";g.lineWidth=1;
+  for(let i=1;i<=3;i++){g.beginPath();g.ellipse(cx,cy,rx*i/3,ry*i/3,0,0,Math.PI*2);g.stroke();}
+  g.beginPath();g.moveTo(cx-rx,cy);g.lineTo(cx+rx,cy);g.moveTo(cx,cy-ry);g.lineTo(cx,cy+ry);g.stroke();
+  /* スイープ */
+  const sweep=(ts/2600)%1*Math.PI*2;
+  const grad=g.createRadialGradient(cx,cy,4,cx,cy,rx);
+  grad.addColorStop(0,"rgba(90,200,255,.16)");grad.addColorStop(1,"rgba(90,200,255,0)");
+  g.save();g.translate(cx,cy);g.rotate(sweep);g.scale(1,ry/rx);
+  g.fillStyle=grad;g.beginPath();g.moveTo(0,0);g.arc(0,0,rx,-0.42,0);g.closePath();g.fill();g.restore();
+  if (!veh){
+    g.fillStyle="#6d88ab";g.font="12px monospace";
+    g.fillText("NO VEHICLE OPERATION (滞在型施設)",cx-120,cy);
+    OCC.raf=requestAnimationFrame(occDrawRadar);return;
+  }
+  /* コース(楕円)とブロック境界 */
+  const blocks=veh.blocks,nb=blocks.length;
+  g.strokeStyle="rgba(120,180,240,.35)";g.lineWidth=10;
+  g.beginPath();g.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);g.stroke();
+  const occupied={};
+  veh.list.forEach(v=>{occupied[v.block]=(occupied[v.block]||0)+1;});
+  for (let i=0;i<nb;i++){
+    const a0=(i/nb)*Math.PI*2-Math.PI/2, a1=((i+1)/nb)*Math.PI*2-Math.PI/2;
+    const on=occupied[blocks[i]]||0;
+    g.strokeStyle=on?`rgba(120,200,255,${0.25+Math.min(0.5,on*0.18)})`:"rgba(60,100,150,.22)";
+    g.lineWidth=10;g.beginPath();g.ellipse(cx,cy,rx,ry,0,a0,a1);g.stroke();
+    const am=(a0+a1)/2;
+    g.fillStyle=on?"#bcd8f8":"#4b6c95";g.font="9px monospace";
+    const lx=cx+Math.cos(am)*(rx+18)-12,ly=cy+Math.sin(am)*(ry+16);
+    g.fillText(blocks[i],lx,ly);
+  }
+  /* 車両ドット(位相を秒単位で連続移動) */
+  const minute=tt*60;
+  veh.list.forEach((v,i)=>{
+    const bi=blocks.indexOf(v.block);
+    if (bi<0) return;
+    const frac=v.state.includes("停止")?0.5:((minute/veh.gap+i*(nb/Math.max(1,veh.active)))%1);
+    const ang=((bi+frac)/nb)*Math.PI*2-Math.PI/2;
+    const x=cx+Math.cos(ang)*rx,y=cy+Math.sin(ang)*ry;
+    const col=v.state.includes("停止")?"#ff6b60":(v.block==="LOAD"||v.block==="UNLOAD")?"#5fd68f":"#7fd0ff";
+    if (v.state.includes("停止")){
+      g.fillStyle="rgba(255,80,64,.18)";g.beginPath();g.arc(x,y,10+Math.sin(ts/220)*3,0,Math.PI*2);g.fill();
+    }
+    g.fillStyle=col;g.beginPath();g.arc(x,y,5,0,Math.PI*2);g.fill();
+    g.fillStyle="#0a1120";g.font="bold 7px monospace";g.fillText(String(v.id),x-(v.id>9?5:2),y+2.5);
+  });
+  /* 中央情報 */
+  const st=opStateOf(s,now,tt);
+  const code=(OP_CODES[st.id]||["--","--"]);
+  g.fillStyle="#ffd75e";g.font="bold 13px monospace";g.textAlign="center";
+  g.fillText(code[0]+" "+code[1],cx,cy-4);
+  g.fillStyle="#8fa8c8";g.font="10px monospace";
+  g.fillText(`ACTIVE ${veh.active} / ${veh.list.length}　DISPATCH ${Math.round(veh.gap*60)}s`,cx,cy+12);
+  g.textAlign="left";
+  OCC.raf=requestAnimationFrame(occDrawRadar);
+}
+function openOpsCenter(){
+  if (window.__bindOcc) window.__bindOcc();
+  OCC.on=true;
+  document.getElementById("occ").classList.add("show");
+  document.getElementById("occ").setAttribute("aria-hidden","false");
+  occRenderTiles();occRenderVeh();
+  if (OCC.raf) cancelAnimationFrame(OCC.raf);
+  OCC.raf=requestAnimationFrame(occDrawRadar);
+  if (!OCC.timer) OCC.timer=setInterval(()=>{
+    if (!OCC.on) return;
+    const n=new Date();
+    document.getElementById("occClock").textContent=
+      `${String(n.getHours()).padStart(2,"0")}:${String(n.getMinutes()).padStart(2,"0")}:${String(n.getSeconds()).padStart(2,"0")}`;
+    if (n.getSeconds()%5===0){occRenderTiles();occRenderVeh();}
+  },1000);
+}
+function closeOpsCenter(){
+  OCC.on=false;
+  document.getElementById("occ").classList.remove("show");
+  document.getElementById("occ").setAttribute("aria-hidden","true");
+  if (OCC.raf){cancelAnimationFrame(OCC.raf);OCC.raf=null;}
 }
 function openOpsConsole(id){
   const now=new Date(),tt=now.getHours()+now.getMinutes()/60;
@@ -5271,14 +5490,63 @@ async function openOpsModal(target){
   document.getElementById("opsBody").innerHTML=`<div class="ops-note">${LANG==="ja"?"共有台帳を読み込み中…":"Loading ledger…"}</div>`;
   document.getElementById("opsBackdrop").classList.add("show");
   try{await loadDayArchive(dateKey(d));}catch(e){}
-  document.getElementById("opsBody").innerHTML=opsReportHTML(d);
+  const J0=LANG==="ja";
+  const on=stGet("mb_ops")==="1";
+  const jump=`<div class="att-sec">${J0?"運営センター（全施設の一元監視・動的運行画面）":"Operations center"}</div>
+    <button class="btn" id="opsCenterBtn" style="width:100%;justify-content:center;font-size:13px;padding:9px">🖥 ${J0?"運営センターを開く":"Open Operations Center"}</button>
+    <div class="att-sec">${J0?"施設別コンソール（施設を選ぶと開きます）":"Per-attraction console"}</div>
+    <div class="ops-jump">${SPOTS.filter(s=>s.type==="a").map(s=>`<button class="btn" data-moc="${s.id}">🛠 ${J0?s.ja:s.en}</button>`).join("")}
+    ${ENTERTAINMENT.map(e=>`<button class="btn" data-moc="${e.id}">🎭 ${J0?e.ja:e.en}</button>`).join("")}</div>
+    <div class="att-sec">${J0?"運営モード":"Ops mode"}</div>
+    <div class="role-bar"><span>${J0?"詳細画面に運営管理ボタンを表示":"Show console button"}</span>
+      <button class="btn" id="opsToggle">${on?(J0?"ON（クリックでOFF）":"ON"):(J0?"OFF（クリックでON）":"OFF")}</button>
+      <span class="role-note">${J0?"ONの間、ヘッダーに🏢バッジが出ます":""}</span></div>`;
+  document.getElementById("opsBody").innerHTML=jump+opsReportHTML(d);
+  {
+    const ocb=document.getElementById("opsCenterBtn");
+    if (ocb) ocb.addEventListener("click",()=>{
+      document.getElementById("opsBackdrop").classList.remove("show");
+      setTimeout(openOpsCenter,80);
+    });
+  }
+  document.getElementById("opsBody").querySelectorAll("[data-moc]").forEach(bt=>bt.addEventListener("click",()=>{
+    document.getElementById("opsBackdrop").classList.remove("show");
+    setTimeout(()=>openOpsConsole(bt.dataset.moc),80);
+  }));
+  {
+    const tg=document.getElementById("opsToggle");
+    if (tg) tg.addEventListener("click",()=>{
+      const nowOn=stGet("mb_ops")==="1";
+      if (nowOn){try{localStorage.removeItem("mb_ops");}catch(e){}}
+      else stSet("mb_ops","1");
+      updateOpsBadge();
+      openOpsModal(d);
+    });
+  }
   const cb=document.getElementById("opsCopy");
   if (cb) cb.addEventListener("click",()=>{
     const txt=document.getElementById("opsBody").innerText.replace(/\n{3,}/g,"\n\n");
     try{navigator.clipboard.writeText(txt);cb.textContent=LANG==="ja"?"✓ コピーしました":"✓ Copied";}catch(e){}
   });
 }
-document.getElementById("btnOps").addEventListener("click",()=>{try{stSet("mb_ops","1");}catch(e){}openOpsModal();});
+function updateOpsBadge(){
+  const b2=document.getElementById("opsBadge");
+  if (b2) b2.classList.toggle("on",stGet("mb_ops")==="1");
+}
+document.getElementById("btnOps").addEventListener("click",()=>{try{stSet("mb_ops","1");}catch(e){}updateOpsBadge();openOpsModal();});
+document.getElementById("opsBadge").addEventListener("click",()=>openOpsModal());
+{
+  const bindOcc=()=>{
+    const c=document.getElementById("occClose");
+    if (c&&!c.dataset.bound){c.dataset.bound=1;c.addEventListener("click",closeOpsCenter);}
+  };
+  bindOcc();
+  document.addEventListener("DOMContentLoaded",bindOcc);
+  window.addEventListener("load",bindOcc);
+  window.__bindOcc=bindOcc;
+}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&OCC.on)closeOpsCenter();});
+updateOpsBadge();
 document.getElementById("opsClose").addEventListener("click",()=>document.getElementById("opsBackdrop").classList.remove("show"));
 document.getElementById("opsBackdrop").addEventListener("click",e=>{if(e.target.id==="opsBackdrop")document.getElementById("opsBackdrop").classList.remove("show");});
 document.getElementById("opsDate").addEventListener("change",e=>{
@@ -5812,5 +6080,27 @@ setInterval(tickClock,1000);
 setInterval(fetchWeather,600000);
 setInterval(fetchQuake,300000);
 </script>
+<div id="occ" aria-hidden="true">
+  <div class="occ-top">
+    <div class="occ-brand">MALLOWBROOK <b>OPERATIONS CENTER</b><span class="occ-sim">SIMULATION / NOT A SAFETY SYSTEM</span></div>
+    <div class="occ-kpi" id="occKpi"></div>
+    <div class="occ-clock"><span id="occClock">--:--:--</span><button class="occ-x" id="occClose">✕ CLOSE</button></div>
+  </div>
+  <div class="occ-main">
+    <div class="occ-left">
+      <div class="occ-h">ATTRACTIONS <i id="occCount"></i></div>
+      <div class="occ-tiles" id="occTiles"></div>
+      <div class="occ-h">ALERTS</div>
+      <div class="occ-alerts" id="occAlerts"></div>
+    </div>
+    <div class="occ-right">
+      <div class="occ-h" id="occSelName">—</div>
+      <canvas id="occRadar"></canvas>
+      <div class="occ-legend" id="occLegend"></div>
+      <div class="occ-h">VEHICLES</div>
+      <div class="occ-veh" id="occVeh"></div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
