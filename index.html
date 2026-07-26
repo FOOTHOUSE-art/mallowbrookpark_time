@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>const APP_VERSION="v37",APP_DATE="2026-07-26";</script>
+<script>const APP_VERSION="v41",APP_DATE="2026-07-26";</script>
 <title>MALLOWBROOK PARK｜リアルタイム運営情報</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Cinzel:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -324,6 +324,32 @@ body.nocomments .ticker2 .ticker-text{visibility:hidden}
 .tb-red{color:#8a2c1e;background:#f2d8d0}.tb-gray{color:#5a6470;background:#e2e6ea}
 .tk-bar{display:inline-block;width:70px;height:7px;background:#e4dcc4;border-radius:4px;vertical-align:middle;overflow:hidden}
 .tk-bar span{display:block;height:100%;background:linear-gradient(90deg,#b08a2a,#ffd75e);border-radius:4px}
+#mocBackdrop{z-index:120}
+#entBackdrop,#menuBackdrop{z-index:115}
+.h-band{display:flex;gap:1px;flex-wrap:wrap;margin:4px 0 6px}
+.h-cell{width:6px;height:16px;border-radius:2px;background:#d8d0bc;display:inline-block}
+.h-ok{background:#4f9968}.h-delay{background:#cf9c2c}.h-hold{background:#8a8fa0}.h-evac{background:#bf4a2e}.h-closed{background:#c9bfa8}.h-other{background:#e0d8c4}
+.h-legend{display:flex;align-items:center;gap:4px;font-size:10px;color:#8a7a55;flex-wrap:wrap}
+.h-legend .h-cell{width:10px;height:10px;margin-left:6px}
+.role-bar{display:flex;align-items:center;gap:8px;font-size:11px;color:#6a5a30;background:rgba(160,130,60,.10);
+  border-radius:8px;padding:4px 9px;margin-bottom:4px;flex-wrap:wrap}
+.role-bar select{font-size:11px;padding:1px 5px;border-radius:6px;border:1px solid #c8b88a;background:#fbf6e8}
+.role-lv{font-weight:800;color:#2a4a86}
+.role-note{color:#8a7a55}
+.moc-tabs{display:flex;gap:5px;overflow-x:auto;margin:6px 0 2px}
+.moc-tab{flex:0 0 auto;font-size:11px;font-weight:800;padding:3px 11px;border-radius:999px;cursor:pointer;
+  border:1px solid #c8b88a;background:#f7f0dc;color:#6a5a30;white-space:nowrap}
+.moc-tab.on{background:#2a4a86;color:#fff;border-color:#2a4a86}
+.fac-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:5px;margin:4px 0 8px}
+.fac{font-size:11px;padding:4px 9px;border-radius:8px;background:#eef2ea;color:#3a5a3a;display:flex;justify-content:space-between;gap:6px}
+.fac b{font-weight:800}
+.fac.warn{background:#f6ecd2;color:#8a6a1a}
+.fac.ng{background:#f4dcd4;color:#8a3020}
+.moc-map{display:flex;align-items:center;gap:3px;flex-wrap:wrap;margin:4px 0 8px}
+.moc-blk{font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px;background:#e8e0c8;color:#6a5a30;border:1px solid #c8b88a}
+.moc-blk.on{background:#2a4a86;color:#fff;border-color:#2a4a86}
+.moc-map i{font-style:normal;color:#b0a480;font-size:10px}
+.moc-btn{margin-top:10px;width:100%;justify-content:center}
 .ops-tag{display:inline-block;font-size:9.5px;font-weight:800;color:#6a4a1a;background:#f0e0b0;border:1px dashed #b08a2a;
   border-radius:6px;padding:1px 8px;margin-bottom:4px}
 .ops-note{font-size:11.5px;line-height:1.75;color:#4a4030;background:rgba(160,130,60,.07);border-radius:8px;padding:6px 10px}
@@ -608,6 +634,11 @@ body.sky-late{background-image:radial-gradient(ellipse at 50% -10%,#131d38 0%,#0
   </div>
   <div id="opsBody"></div>
 </div></div>
+<div class="sheet-backdrop" id="mocBackdrop"><div class="sheet" style="max-width:min(880px,96vw)">
+  <button class="sheet-close" id="mocClose" aria-label="閉じる">✕</button>
+  <div class="sh-name" id="mocTitle">🛠 運営管理</div>
+  <div id="mocBody"></div>
+</div></div>
 <div class="sheet-backdrop" id="entBackdrop"><div class="sheet" style="max-width:min(720px,96vw)">
   <button class="sheet-close" id="entClose" aria-label="閉じる">✕</button>
   <div class="sh-name" id="entTitle">🎟 入園状況</div>
@@ -688,18 +719,18 @@ body.sky-late{background-image:radial-gradient(ellipse at 50% -10%,#131d38 0%,#0
 /* ================= スポット定義 =================
    人気度: 大時計塔チェイス > ランナウェイ・レール ＝ ダムビルダー > グランドギア・ホイール > 空飛ぶ修理工場 */
 const SPOTS = [
-  {id:"chase",   type:"a", big:true,  ja:"大時計塔チェイス 〜マロウのいたずら〜", en:"Clocktower Chase: Mallow's Mischief", areaJa:"メインストリート", areaEn:"Main Street", x:51.0, y:57.0, pop:1.00, waitCapMin:140},
-  {id:"rail",    type:"a", big:true,  ja:"コークハーバー・ランナウェイ・レール", en:"Cork Harbor Runaway Rail", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:83.0, y:84.0, pop:0.86, waitCapMin:120},
-  {id:"dam",     type:"a", big:true,  ja:"ビバのドタバタ・ダムビルダー", en:"Viva's Slapstick Dam Builder", areaJa:"マロウとビバのいたずら横丁", areaEn:"Mallow & Viva's Mischief Alley", x:27.5, y:24.5, pop:0.86, waitCapMin:120},
-  {id:"wheel",   type:"a", big:true,  ja:"ペニーのグランドギア・ホイール", en:"Penny's Grand Gear Wheel", areaJa:"ペニーのギアワークス", areaEn:"Penny's Gearworks", x:92.0, y:35.0, pop:0.72, waitCapMin:100},
-  {id:"factory", type:"a", big:true,  ja:"ペニーの空飛ぶ修理工場", en:"Penny's Flying Repair Works", areaJa:"ペニーのギアワークス", areaEn:"Penny's Gearworks", x:80.0, y:18.0, pop:0.62, waitCapMin:90},
-  {id:"voyage",  type:"a", ja:"キャプテン・コークの海の航海", en:"Captain Cork's Sea Voyage", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:75.0, y:51.0, pop:0.46, waitCapMin:70},
-  {id:"steam",   type:"a", cat:"wellness", ja:"マローブルック・スチームハーバー", en:"Mallowbrook Steam Harbor", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:80.5, y:56.0, pop:0.40, waitCapMin:60},
-  {id:"train",   type:"a", ja:"マロウのいたずら汽車", en:"Mallow's Mischief Express", areaJa:"マロウとビバのいたずら横丁", areaEn:"Mallow & Viva's Mischief Alley", x:23.5, y:28.5, pop:0.42, waitCapMin:60},
-  {id:"base",    type:"a", ja:"マロウのひみつ基地", en:"Mallow's Secret Hideout", areaJa:"マロウとビバのいたずら横丁", areaEn:"Mallow & Viva's Mischief Alley", x:10.0, y:32.0, pop:0.30, waitCapMin:45},
-  {id:"canoe",   type:"a", sunset:true, ja:"マロウのカヌー体験", en:"Mallow's Canoe Adventure", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:65.0, y:71.0, pop:0.28, waitCapMin:45},
-  {id:"stardust",type:"a", ja:"ポピーの星屑の小道", en:"Poppy's Stardust Path", areaJa:"ポピーの月明かりの森", areaEn:"Poppy's Moonlight Forest", x:44.5, y:79.0, pop:0.22, waitCapMin:35},
-  {id:"moss",    type:"a", ja:"フォレスト・モス・クッション・トレイル", en:"Forest Moss Cushion Trail", areaJa:"ポピーの月明かりの森", areaEn:"Poppy's Moonlight Forest", x:53.0, y:93.0, pop:0.18, waitCapMin:30},
+  {id:"chase",   type:"a", big:true,  ja:"大時計塔チェイス 〜マロウのいたずら〜", en:"Clocktower Chase: Mallow's Mischief", areaJa:"メインストリート", areaEn:"Main Street", x:51.0, y:57.0, pop:1.00, waitCapMin:220},
+  {id:"rail",    type:"a", big:true,  ja:"コークハーバー・ランナウェイ・レール", en:"Cork Harbor Runaway Rail", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:83.0, y:84.0, pop:0.86, waitCapMin:180},
+  {id:"dam",     type:"a", big:true,  ja:"ビバのドタバタ・ダムビルダー", en:"Viva's Slapstick Dam Builder", areaJa:"マロウとビバのいたずら横丁", areaEn:"Mallow & Viva's Mischief Alley", x:27.5, y:24.5, pop:0.86, waitCapMin:170},
+  {id:"wheel",   type:"a", big:true,  ja:"ペニーのグランドギア・ホイール", en:"Penny's Grand Gear Wheel", areaJa:"ペニーのギアワークス", areaEn:"Penny's Gearworks", x:92.0, y:35.0, pop:0.72, waitCapMin:130},
+  {id:"factory", type:"a", big:true,  ja:"ペニーの空飛ぶ修理工場", en:"Penny's Flying Repair Works", areaJa:"ペニーのギアワークス", areaEn:"Penny's Gearworks", x:80.0, y:18.0, pop:0.62, waitCapMin:125},
+  {id:"voyage",  type:"a", ja:"キャプテン・コークの海の航海", en:"Captain Cork's Sea Voyage", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:75.0, y:51.0, pop:0.46, waitCapMin:95},
+  {id:"steam",   type:"a", cat:"wellness", ja:"マローブルック・スチームハーバー", en:"Mallowbrook Steam Harbor", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:80.5, y:56.0, pop:0.40, waitCapMin:70},
+  {id:"train",   type:"a", ja:"マロウのいたずら汽車", en:"Mallow's Mischief Express", areaJa:"マロウとビバのいたずら横丁", areaEn:"Mallow & Viva's Mischief Alley", x:23.5, y:28.5, pop:0.42, waitCapMin:80},
+  {id:"base",    type:"a", ja:"マロウのひみつ基地", en:"Mallow's Secret Hideout", areaJa:"マロウとビバのいたずら横丁", areaEn:"Mallow & Viva's Mischief Alley", x:10.0, y:32.0, pop:0.30, waitCapMin:55},
+  {id:"canoe",   type:"a", sunset:true, ja:"マロウのカヌー体験", en:"Mallow's Canoe Adventure", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:65.0, y:71.0, pop:0.28, waitCapMin:50},
+  {id:"stardust",type:"a", ja:"ポピーの星屑の小道", en:"Poppy's Stardust Path", areaJa:"ポピーの月明かりの森", areaEn:"Poppy's Moonlight Forest", x:44.5, y:79.0, pop:0.22, waitCapMin:40},
+  {id:"moss",    type:"a", ja:"フォレスト・モス・クッション・トレイル", en:"Forest Moss Cushion Trail", areaJa:"ポピーの月明かりの森", areaEn:"Poppy's Moonlight Forest", x:53.0, y:93.0, pop:0.18, waitCapMin:35},
   /* ---- レストラン（増強版マップの15店舗） ---- */
   {id:"hayate",    type:"r", ja:"カフェはやて", en:"Café Hayate", areaJa:"灯台時計塔付近", areaEn:"Lighthouse Plaza", x:62.5, y:51.0, pop:1.00, waitCapMin:90},
   {id:"brasserie", type:"r", ja:"クロックライト・ブラッスリー", en:"Clocklight Brasserie", areaJa:"灯台時計塔付近", areaEn:"Lighthouse Plaza", x:37.0, y:47.0, pop:0.75, waitCapMin:75},
@@ -988,6 +1019,37 @@ function showEffect(d,tt){
   return {mul,harborSurge};
 }
 /* 客層在園比による施設別の需要調整(ファミリー系は15時台の子連れ離脱後に軽くなる) */
+/* ===== 施設諸元(実在パーク水準)。ゲスト向け待ち時間は表示モデルのまま、
+   処理能力は列人数・稼働率・運営指標の算出に用いる ===== */
+const RIDE_SPEC={
+  chase:   {ja:"ダークライド",   cap:1700, seats:8,  trains:18, spare:2, ride:6,  dispatch:0.30, queueCap:6500, preshow:[50,50]},
+  rail:    {ja:"ファミリーコースター",cap:1400, seats:20, trains:5,  spare:1, ride:3,  dispatch:0.85, queueCap:4500},
+  dam:     {ja:"急流ライド",     cap:1900, seats:8,  trains:24, spare:3, ride:5,  dispatch:0.25, queueCap:5600},
+  wheel:   {ja:"観覧車",         cap:860,  seats:6,  trains:36, spare:0, ride:15, dispatch:0.42, queueCap:2000},
+  factory: {ja:"ライド",         cap:1200, seats:16, trains:12, spare:1, ride:4,  dispatch:0.80, queueCap:2600},
+  voyage:  {ja:"ボートライド",   cap:1600, seats:20, trains:14, spare:2, ride:8,  dispatch:0.75, queueCap:2700},
+  train:   {ja:"周回鉄道",       cap:1800, seats:120,trains:3,  spare:1, ride:12, dispatch:4.0,  queueCap:2500},
+  steam:   {ja:"屋内展望・回遊", cap:1500, seats:0,  trains:0,  spare:0, ride:20, dispatch:0,    queueCap:900,  hold:600},
+  base:    {ja:"プレイグラウンド",cap:0,   seats:0,  trains:0,  spare:0, ride:30, dispatch:0,    queueCap:400,  hold:250},
+  stardust:{ja:"遊歩道",         cap:0,    seats:0,  trains:0,  spare:0, ride:15, dispatch:0,    queueCap:300,  hold:400},
+  moss:    {ja:"裸足体験",       cap:0,    seats:0,  trains:0,  spare:0, ride:20, dispatch:0,    queueCap:200,  hold:120},
+  canoe:   {ja:"予約制ボート",   cap:220,  seats:3,  trains:12, spare:2, ride:20, dispatch:0.82, queueCap:200},
+};
+/* 表示待ち時間から実効指標を逆算(表示=実測+安全マージンのため実測も保持) */
+/* 待ち時間の基準スケール(従来のwaitCapMin相当)。表示上限(waitCapMin)とは役割を分離 */
+const WAIT_SCALE={chase:112,rail:104,dam:100,wheel:88,factory:84,voyage:68,steam:56,train:60,base:42,canoe:44,stardust:33,moss:28};
+const WAIT_PAD=0.15;                       /* 表示は実測より約15%多め(5分単位で切り上げ) */
+function padWait(actual,capMin){
+  if (actual<=0) return 0;
+  const v=Math.ceil(actual*(1+WAIT_PAD)/5)*5;
+  return Math.min(capMin||240,v);          /* 表示上限は施設ごとの上限値(最大220分) */
+}
+function unpadWait(shown){return Math.round(shown/(1+WAIT_PAD));}
+function queueCountOf(id,shownWait){
+  const sp=RIDE_SPEC[id];
+  if (!sp||!sp.cap) return null;
+  return Math.round(unpadWait(shownWait)/60*sp.cap/10)*10;
+}
 const FAMILY_SPOTS=new Set(["train","dam","base","pumpkin","icecream","canoe"]);
 const ADULT_SPOTS=new Set(["wheel","stillhouse","grove","steam","wharfgrill","stardust","moss","brasserie"]);
 function cohortSpotMul(spot,d,att,tt){
@@ -1707,6 +1769,8 @@ function inspectionsOf(id,d){
 }
 function spotStatus(s,d,tt){
   {
+    const ev0=evacWindowOf(s,d,tt);
+    if (ev0) return {st:"evac",ev:ev0};
     const trV=troubleVisible(d,troubleOf(d));
     const tr0=trV?troublePublic(d,trV,tt):null;
     if (tr0){
@@ -2048,7 +2112,7 @@ function calcWait(spot,d,tt,inPark,redist){
   const fx=showEffect(d,tt);
   if (spot.type==="a"){
     const prof=(PROFILE[spot.id]||((x)=>0.45+g(x,13.8,3.0)))(tt,ctx);
-    w=spot.pop*spot.waitCapMin*crowd*prof*redist*wxSpotMul(spot.id)*fx.mul*cohortSpotMul(spot,d,{total:1},tt);
+    w=spot.pop*(WAIT_SCALE[spot.id]??spot.waitCapMin)*crowd*prof*redist*wxSpotMul(spot.id)*fx.mul*cohortSpotMul(spot,d,{total:1},tt);
     /* 開園直後は在園がまだ少ないため待ちも立ち上がりから伸びる(開園待ち列が直行するチェイス・レールは除く) */
     const oh2=openH(d);
     if (tt<oh2+1.25&&spot.id!=="chase"&&spot.id!=="rail"){
@@ -2061,7 +2125,7 @@ function calcWait(spot,d,tt,inPark,redist){
     const oh2=openH(d);
     const rprof=(RPROFILE[spot.id]||mealFactor)(tt,ctx);
     const crowdResp=(0.12+0.88*Math.pow(crowd,1.35))*(1+1.1*Math.max(0,crowd-0.78));  /* 入園者数への強い感応 */
-    w=spot.pop*spot.waitCapMin*crowdResp*rprof*0.72*fx.mul*cohortSpotMul(spot,d,{total:1},tt)*wxSpotMul(spot.id);
+    w=spot.pop*(WAIT_SCALE[spot.id]??spot.waitCapMin)*crowdResp*rprof*0.72*fx.mul*cohortSpotMul(spot,d,{total:1},tt)*wxSpotMul(spot.id);
     if (spot.areaJa==="コークハーバー") w*=fx.harborSurge;   /* 夜ショー後の港の夕食ラッシュ */
     if (spot.cat!=="service"){
       const lo=loOf(spot.id);
@@ -2070,7 +2134,13 @@ function calcWait(spot,d,tt,inPark,redist){
   }
   const mKey=dateKey(d)+"-"+Math.floor(tt)+"-"+Math.round((tt%1)*60)+"-"+spot.id;
   w*=0.88+rand01(mKey)*0.24;
-  return Math.round(Math.min(spot.waitCapMin,Math.max(5,w))/5)*5;
+  const actual=Math.round(Math.min(spot.waitCapMin/(1+WAIT_PAD),Math.max(5,w))/5)*5;   /* 実測(運営指標用) */
+  return padWait(actual,spot.waitCapMin);                                 /* 案内表示は多めに */
+}
+/* 運営コンソール用: パディング前の実測待ち時間 */
+function calcWaitActual(spot,d,tt,inPark,redist){
+  const shown=calcWait(spot,d,tt,inPark,redist);
+  return shown==null?null:Math.round(unpadWait(shown)/5)*5;
 }
 
 /* ================= 閉園中ユニーク事象エンジン（日付シードで決定的） ================= */
@@ -2255,6 +2325,21 @@ function newsItems(now,att,rw,residual){
     else if (rw.resume&&tt>=rw.resume&&tt<rw.resume+0.25) urgent.push(J?"🎫 当日券の販売を再開しました":"🎫 Same-day sales resumed");
     if (rw.reentry&&tt>=rw.reentry.start&&(rw.reentry.release==null||tt<rw.reentry.release))
       urgent.push(J?"⚠ 混雑のため入場を再度制限しています":"⚠ Restricted again due to crowding");
+  }
+  {
+    /* 避難対応・優先搭乗券の案内(発生済みのみ) */
+    for (const s of SPOTS.filter(x=>x.type==="a")){
+      const ev=evacWindowOf(s,now,tt);
+      if (ev){
+        urgent.push(J?`⚠ ${s.ja}は${ev.label}のため一時停止しています。係員の誘導に従ってご移動ください`
+                     :`⚠ ${s.en}: paused, please follow staff guidance`);
+        if (ev.clearQueue) urgent.push(J?`🎟 ${s.ja}: 待機列のお客様に優先搭乗券をお配りしています（当日中・時間指定なし）`
+                                        :`🎟 ${s.en}: recovery passes are being issued`);
+      } else {
+        const rp=recoveryPassOf(s,now,tt);
+        if (rp&&tt<rp.at+1.5) items.push(J?`🎟 ${s.ja}の優先搭乗券をお持ちの方は、再開後にPP入口からご案内します`:"");
+      }
+    }
   }
   {
     const trTv=troubleVisible(now,troubleOf(now));
@@ -2559,6 +2644,420 @@ function openMenuSheet(){
   });
   document.getElementById("menuBackdrop").classList.add("show");
 }
+/* ================= MALLOWBROOK Operations Console (MOC) ================= */
+const OP_CODES={PRE_OPEN:["OP-00","開業準備"],OPEN:["OP-10","通常運営"],DELAYED:["OP-20","遅延運転"],
+  OPERATIONAL_HOLD:["OP-30","運転一時停止"],TEMP_CLOSED:["OP-40","一時運休"],RECOVERY_TEST:["OP-50","復旧確認"],
+  REOPENING:["OP-60","再開準備"],LIMITED_OPERATION:["OP-70","制限運転"],EVACUATING:["OP-80","避難対応"],
+  CLOSED:["OP-90","営業終了"],MAINTENANCE:["--","点検中"],WEATHER_HOLD:["--","天候待機"]};
+const FAULT_CODES={powerW:["PWR-001","受電設備異常"],powerA:["PWR-014","配電系統異常"],waterW:["ENV-002","上水供給停止"],
+  waterA:["ENV-011","給水系統異常"],fire:["ENV-031","小規模出火(鎮火済)"],sensor:["BLK-007","位置検知センサー不一致"],
+  plumb:["ENV-021","給排水設備不良"],parts:["VEH-042","部品交換対応"]};
+/* 既存のトラブル・点検・天候・営業時間から運営状態を導出(ゲスト画面と必ず一致) */
+/* 避難(EVAC)判定: 決定論トラブル・長時間のシステム調整から自動発生。
+   長時間調整(30分超)は待機列を全員退出とし、優先搭乗券(リカバリーパス)を配布する */
+const EVAC_MIN_INSP=0.5;          /* この時間を超える調整は全員退出の対象(30分) */
+function evacWindowOf(spot,d,tt){
+  const st0=(function(){
+    const trV=troubleVisible(d,troubleOf(d));
+    return trV?troublePublic(d,trV,tt):null;
+  })();
+  /* (a) トラブル起因 */
+  if (st0&&troubleAffects(st0,spot,d,tt)){
+    const kind=st0.kind;
+    const evacKinds={powerW:"power",powerA:"power",fire:"fire",sensor:"fault",parts:"fault"};
+    const scen=evacKinds[kind];
+    if (scen){
+      const sp=RIDE_SPEC[spot.id]||{};
+      const trains=sp.trains||0;
+      const dur=Math.max(8,Math.min(35,Math.round(trains*3.5/Math.max(1,Math.min(4,Math.ceil(trains/3))))))/60;
+      if (tt>=st0.start&&tt<st0.start+dur) return {scen,start:st0.start,end:st0.start+dur,src:"trouble",label:st0.labelJa};
+    }
+  }
+  /* (b) 長時間のシステム調整 */
+  const wins=inspectionsOf(spot.id,d)||[];
+  for (const w of wins){
+    const pub=inspPublic(d,w);
+    if (!pub) continue;
+    const len=w.actualEnd-w.start;
+    if (len>=EVAC_MIN_INSP){
+      const dur=12/60;
+      if (tt>=w.start+0.1&&tt<w.start+0.1+dur)
+        return {scen:"fault",start:w.start+0.1,end:w.start+0.1+dur,src:"insp",label:"長時間のシステム調整",clearQueue:true,until:pub.ann};
+    }
+  }
+  return null;
+}
+/* 優先搭乗券(リカバリーパス): 全員退出時に配布。当日有効・時間指定なし */
+function recoveryPassOf(spot,d,tt){
+  const wins=inspectionsOf(spot.id,d)||[];
+  for (const w of wins){
+    if (!inspPublic(d,w)) continue;
+    if (w.actualEnd-w.start>=EVAC_MIN_INSP&&tt>=w.start+0.1){
+      const att=dailyAttendance(d);
+      const shown=calcWait(spot,d,Math.max(openH(d)+0.1,w.start-0.05),inParkOf(d,w.start,att),redistFactor(d,w.start))||0;
+      const issued=queueCountOf(spot.id,shown)||Math.round((RIDE_SPEC[spot.id]?.queueCap||500)*0.4);
+      return {issued,at:w.start+0.1,valid:"当日中・時間指定なし",reason:"長時間のシステム調整による全員退出"};
+    }
+  }
+  return null;
+}
+function opStateOf(spot,d,tt){
+  const st=spotStatus(spot,d,tt);
+  const oh=openH(d);
+  {
+    const ev=evacWindowOf(spot,d,tt);
+    if (ev) return {id:"EVACUATING",note:`${ev.label}／${ev.clearQueue?"待機列は全員退出・優先搭乗券を配布":"車上ゲストの降車誘導中"}`,evac:ev};
+  }
+  if (tt>=CLOSE_H) return {id:"CLOSED",note:""};
+  if (tt<oh) return {id:"PRE_OPEN",note:"点検・試運転"};
+  if (st.st==="maint") return {id:"MAINTENANCE",note:"大型メンテナンス期間"};
+  if (st.st==="evac"){
+    const J2=LANG==="ja";
+    return {s:J2?"係員がご案内しています（一時停止）":"Staff guidance in progress",shortS:J2?"案内中":"Guided",cls:"w-maint"};
+  }
+  if (st.st==="trouble"){
+    const tr=st.tr;
+    const f=FAULT_CODES[tr.kind]||["--",tr.labelJa];
+    if (tt>=tr.annEnd-0.17) return {id:"RECOVERY_TEST",note:`${f[0]} ${f[1]}／復旧確認中`,fault:f};
+    return {id:"TEMP_CLOSED",note:`${f[0]} ${f[1]}／復旧見込み ${fmtT(tr.annEnd)}`,fault:f};
+  }
+  if (st.st==="insp") return {id:"OPERATIONAL_HOLD",note:st.until?`再開見込み ${fmtT(st.until)}`:"調整中",fault:FAULT_CODES.sensor};
+  if (st.st==="prep") return {id:"PRE_OPEN",note:"開園準備"};
+  if (st.st!=="open") return {id:"TEMP_CLOSED",note:statusShort(st)||""};
+  if (!spot.indoor&&WX.ok&&(WX.wind>=12||["storm"].includes(WX.condKey))) return {id:"WEATHER_HOLD",note:"強風・雷のため待機"};
+  const att=dailyAttendance(d);
+  const shown=calcWait(spot,d,tt,inParkOf(d,tt,att),redistFactor(d,tt))||0;
+  const sp=RIDE_SPEC[spot.id];
+  if (sp&&sp.cap&&shown>=(spot.waitCapMin*0.85)) return {id:"DELAYED",note:"処理能力を超える需要"};
+  return {id:"OPEN",note:""};
+}
+function congestionLv(shown){return shown>=90?5:shown>=60?4:shown>=30?3:shown>=15?2:1;}
+/* 車両のブロック占有シミュレーション(日付+分シードで全端末一致) */
+function vehicleStates(spot,d,tt){
+  const sp=RIDE_SPEC[spot.id];
+  if (!sp||!sp.trains) return null;
+  const blocks=["LOAD","S1","S2","S3","S4","FINALE","UNLOAD","回送"];
+  const cycle=sp.ride+2.0;                                   /* 乗車+乗降 */
+  const gap=cycle/sp.trains;                                  /* 理論間隔(分) */
+  const minute=Math.floor(tt*60);
+  const st=opStateOf(spot,d,tt);
+  const running=st.id==="OPEN"||st.id==="DELAYED"||st.id==="LIMITED_OPERATION";
+  const active=running?sp.trains-Math.round(sp.spare*(st.id==="LIMITED_OPERATION"?1:0.4)):0;
+  const out=[];
+  for (let i=0;i<sp.trains;i++){
+    const idx=i+1;
+    if (i>=active){
+      out.push({id:idx,block:i>=sp.trains-sp.spare?"整備側線":"回送",n:0,state:running?"予備":"停止",delay:0});
+      continue;
+    }
+    const phase=((minute/gap)+i*(blocks.length/active))%blocks.length;
+    const bi=Math.floor(phase)%blocks.length;
+    const r=rand01("veh-"+spot.id+"-"+idx+"-"+dateKey(d)+"-"+minute);
+    const held=r<0.06;                                        /* 前方ブロック占有で停止 */
+    const load=Math.round(sp.seats*(0.78+rand01("ld-"+spot.id+idx+minute)*0.22));
+    out.push({id:idx,block:blocks[bi],n:blocks[bi]==="回送"?0:load,
+      state:held?"停止(前方占有)":(blocks[bi]==="LOAD"?"搭乗中":blocks[bi]==="UNLOAD"?"降車中":"走行中"),
+      delay:held?Math.round(rand01("dl-"+spot.id+idx+minute)*90):0});
+  }
+  return {blocks,list:out,gap,cycle,active};
+}
+/* プレショー(該当機のみ): 部屋別の在室・上映残り */
+function preshowState(spot,d,tt){
+  const sp=RIDE_SPEC[spot.id];
+  if (!sp||!sp.preshow) return null;
+  const cycleMin=4.5, minute=Math.floor(tt*60);
+  return sp.preshow.map((cap,i)=>{
+    const ph=((minute+ i*cycleMin/2)%cycleMin)/cycleMin;
+    const filling=ph<0.55;
+    const n=Math.round(cap*(filling?ph/0.55:1)*(0.85+rand01("ps-"+spot.id+i+minute)*0.15));
+    return {room:String.fromCharCode(65+i),cap,n:Math.min(cap,n),
+      left:Math.max(0,Math.round((1-ph)*cycleMin*60)),
+      state:filling?"入場中":"上映中"};
+  });
+}
+/* 設備状態と点検スケジュール(日付シード。異常は既存トラブル/点検と連動) */
+const FACILITIES=[["Motor","駆動モーター"],["PLC","制御装置"],["Brake","ブレーキ"],["ShowControl","ショー制御"],
+  ["Lighting","照明"],["Projection","映像"],["Power","電源"],["UPS","無停電電源"],["Network","通信"],["EStop","非常停止回路"]];
+function facilityStates(spot,d,tt){
+  const st=opStateOf(spot,d,tt);
+  return FACILITIES.map(([k,ja],i)=>{
+    const r=rand01("fac-"+spot.id+k+dateKey(d));
+    let s="正常",cls="ok";
+    if (st.id==="TEMP_CLOSED"&&st.fault&&((k==="Power"&&st.fault[0].startsWith("PWR"))||(k==="PLC"&&st.fault[0].startsWith("BLK")))){s="異常";cls="ng";}
+    else if (st.id==="OPERATIONAL_HOLD"&&k==="PLC"){s="確認中";cls="warn";}
+    else if (r<0.04){s="要注意";cls="warn";}
+    return {k,ja,s,cls};
+  });
+}
+function maintSchedule(spot,d){
+  const day=Math.floor(d/86400000);
+  return [
+    ["日次","営業前・営業後点検",`${fmtT(openH(d)-2)}／${fmtT(CLOSE_H+0.5)}`],
+    ["週次","全車輪・安全バー・制御確認",["月","火","水","木","金","土","日"][(hash32(spot.id)%7)]+"曜"],
+    ["月次","制御盤・油圧・ブレーキ・通信",`毎月${(hash32(spot.id+"m")%25)+1}日`],
+    ["半年","全分解点検",(hash32(spot.id+"h")%2?"2月／8月":"3月／9月")],
+    ["年次","長期休園整備",`${(hash32(spot.id+"y")%3)+1}月`],
+  ];
+}
+/* 統計: 時間別の待ち・乗車・稼働率 */
+function opsStats(spot,d,tt){
+  const sp=RIDE_SPEC[spot.id]||{};
+  const att=dailyAttendance(d),oh=openH(d);
+  const rows=[];
+  for (let x=Math.ceil(oh);x<=Math.min(Math.floor(tt),CLOSE_H-1);x++){
+    const ip=inParkOf(d,x+0.5,att);
+    const w=calcWait(spot,d,x+0.5,ip,redistFactor(d,x+0.5));
+    const s2=opStateOf(spot,d,x+0.5);
+    const run=(s2.id==="OPEN"||s2.id==="DELAYED"||s2.id==="LIMITED_OPERATION");
+    rows.push({h:x,w:w||0,ridden:run?(sp.cap||0):0,state:(OP_CODES[s2.id]||["--"])[0]});
+  }
+  return rows;
+}
+/* ショー系(劇場・ハーバーショー・パレード)の入替制運営 */
+const SHOW_SPEC={
+  "lulu-jazz":{ja:"劇場",seats:650,openMin:20,guideMin:30,turnover:"完全入替制"},
+  "lantern-mystique":{ja:"ハーバーショー",standing:12000,openMin:60,guideMin:90,turnover:"立見管理"},
+  "summer-muscle":{ja:"特設ステージ",standing:6000,openMin:45,guideMin:60,turnover:"立見管理"},
+  "mallowbrook-story-parade":{ja:"パレード",route:"パレードルート",speed:"約2km/h",turnover:"沿道整理"},
+};
+function showOpsHTML(e,d,tt){
+  const J=LANG==="ja";
+  const sp=SHOW_SPEC[e.id]||{};
+  const times=showTimes(e,d)||[];
+  const nxt=times.find(s=>tt<s);
+  const st=showStatus(e,d,tt);
+  const att=dailyAttendance(d),inPark=inParkOf(d,tt,att);
+  const seats=sp.seats||sp.standing||0;
+  const demand=Math.round(inPark*(e.category==="harbor_show"?0.18:e.category==="parade"?0.12:0.04));
+  const fill=seats?Math.min(100,Math.round(demand/seats*100)):null;
+  const jt=e.id==="lulu-jazz"&&nxt!=null?jazzTicketStatus(nxt,tt,inPark):null;
+  const rows=[
+    [J?"運営形態":"Format",sp.ja||"—",sp.turnover||""],
+    [J?"収容":"Capacity",sp.seats?`${sp.seats}${J?"席":""}`:(sp.standing?`${J?"立見":""}${sp.standing.toLocaleString()}${J?"人":""}`:sp.route||"—"),sp.speed||""],
+    [J?"次回公演":"Next",nxt!=null?fmtT(nxt):(J?"本日終了":"—"),nxt!=null?`${J?"案内開始":"guide"} ${fmtT(nxt-(sp.guideMin||30)/60)}／${J?"開場":"open"} ${fmtT(nxt-(sp.openMin||20)/60)}`:""],
+    [J?"現在の状態":"Status",(function(){const x=showStatusText(e,st);return x?x.txt:"—";})(),st.st==="wxcancel"?cancelReason(e,st.start??0,tt,d):""],
+    [J?"見込み観覧":"Expected",`${demand.toLocaleString()}${J?"人":""}`,fill!=null?`${J?"充足率":"fill"} ${fill}%${fill>=100?(J?"・立見/入替調整":""):""}`:""],
+    ...(jt?[[J?"最前列整理券":"Front-row tickets",jt.st==="dist"?(J?`配布中（残り${Math.round(jt.left*100)}%）`:"distributing"):jt.st==="done"?(J?"配布終了":"ended"):(J?`${fmtT(jt.at)}から`:"soon"),J?"各公演90分前から配布":""]]:[]),
+    [J?"ポーター配置":"Porters",`${Math.max(4,Math.round((seats||3000)/180))}${J?"名":""}`,J?"入替・立見管理・安全区域確保":""],
+  ];
+  const logs=times.map(s=>{
+    const c=weatherCancelled(e,s,tt,d);
+    return [fmtT(s),c?"OP-40":(s<tt?"OP-10":"OP-00"),c?cancelReason(e,s,tt,d):(s<tt?(J?"実施済":"done"):(J?"予定":"scheduled"))];
+  });
+  return `<div class="ops-tag">${J?"社内シミュレーション画面":"Internal"}</div>
+    <div class="att-sec">${J?"公演運営":"Show operations"}　${fmtT(tt)}</div>
+    <table class="att-tbl">${rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="src">${r[2]}</td></tr>`).join("")}</table>
+    <div class="att-sec">${J?"本日の公演":"Today's performances"}</div>
+    <table class="att-tbl">${logs.map(l=>`<tr><td>${l[0]}</td><td>${l[1]}</td><td class="src">${l[2]}</td></tr>`).join("")}</table>`;
+}
+/* ===== 権限管理(役割切替。静的サイトのため認証ではなく操作範囲の制御と記録) ===== */
+const ROLES={operator:["Operator","ポーター(運転操作)",1],lead:["Lead","リードポーター",2],
+  manager:["Manager","デューティマネージャー",3],engineer:["Engineering","技術担当",3]};
+function currentRole(){try{return stGet("mb_role")||"operator";}catch(e){return "operator";}}
+function setRole(r){try{stSet("mb_role",r);}catch(e){}}
+function roleLevel(){return (ROLES[currentRole()]||ROLES.operator)[2];}
+function canDo(minLv){return roleLevel()>=minLv;}
+/* ===== EVAC(避難)手順。シナリオ別に車両位置から所要を算出 ===== */
+const EVAC_SCENARIOS={
+  power:{ja:"停電",steps:["非常灯点灯確認","全車両の位置確定","ゲスト放送(第1報)","車上待機の指示","徒歩避難路の照明確認","車両ごとの降車誘導","集合場所での人数確認","医務・要配慮ゲストの確認","運営本部へ完了報告"]},
+  fault:{ja:"機器故障",steps:["非常停止の確認","車両位置の確定","ゲスト放送(第1報)","技術担当の到着待ち","復旧可否の判断","徒歩避難または自走復帰","降車誘導","人数確認","報告"]},
+  quake:{ja:"地震",steps:["全ライド即時停止","落下物の確認","ゲスト放送(第1報)","車上待機(揺れ収束まで)","構造点検の実施","避難路の安全確認","降車誘導","集合場所へ誘導","点検完了まで運休"]},
+  weather:{ja:"荒天",steps:["運転見合わせ判断","屋外車両の退避","ゲスト放送","屋内待避所へ誘導","風速・落雷の監視","再開判断","車両点検","再開準備","運営再開"]},
+  fire:{ja:"小規模出火",steps:["初期消火・通報","該当エリアの隔離","全車両の停止","ゲスト放送(第1報)","風上への避難誘導","消防到着・引継ぎ","鎮火確認","人数確認","当該施設は終日休止"]},
+};
+function evacHTML(spot,d,tt,scen){
+  const J=LANG==="ja";
+  const live=evacWindowOf(spot,d,tt);
+  const pass=recoveryPassOf(spot,d,tt);
+  const sc=EVAC_SCENARIOS[scen]||EVAC_SCENARIOS.fault;
+  const veh=vehicleStates(spot,d,tt);
+  const sp=RIDE_SPEC[spot.id]||{};
+  const onboard=veh?veh.list.reduce((a,v)=>a+v.n,0):0;
+  const blocks=veh?veh.list.filter(v=>v.n>0).length:0;
+  const perVeh=3.5;                                  /* 1編成あたりの降車誘導 約3.5分 */
+  const eta=Math.round(blocks*perVeh/Math.max(1,Math.min(4,Math.ceil(blocks/3))));
+  const started=window.__evacStart||null;
+  const elapsed=started?Math.round((Date.now()-started)/60000):0;
+  const doneN=started?Math.min(sc.steps.length,Math.floor(elapsed/Math.max(1,Math.round(eta/sc.steps.length)))+1):0;
+  const liveRows=live?`<table class="att-tbl">
+      <tr class="att-key"><td>${J?"実発生":"LIVE"}</td><td><b>OP-80</b> ${J?"避難対応中":"EVACUATING"}</td><td class="src">${live.label}／${fmtT(live.start)}〜${fmtT(live.end)}</td></tr>
+      ${live.clearQueue?`<tr><td>${J?"待機列":"Queue"}</td><td>${J?"全員退出":"cleared"}</td><td class="src">${J?"係員が順次ご案内":""}</td></tr>`:""}
+      ${pass?`<tr><td>${J?"優先搭乗券":"Recovery pass"}</td><td>${pass.issued.toLocaleString()}${J?"枚 配布":""}</td><td class="src">${pass.valid}／${J?"再開見込み":"reopen"} ${live.until?fmtT(live.until):"—"}</td></tr>`:""}
+    </table>`:"";
+  return `<div class="ops-tag">${live?(J?"⚠ 実発生（自動）":"LIVE"):(J?"避難対応シミュレーション（訓練）":"EVAC drill")}</div>${liveRows}
+    <div class="att-sec">${J?"避難シナリオ":"Scenario"}</div>
+    <div class="chip-row">${Object.keys(EVAC_SCENARIOS).map(k=>`<span class="chip${k===scen?" on":""}" data-ev="${k}">${EVAC_SCENARIOS[k].ja}</span>`).join("")}</div>
+    <table class="att-tbl">
+      <tr><td>${J?"運営状態":"State"}</td><td><b>OP-80</b>　${J?"避難対応":"EVACUATING"}</td><td class="src">${sc.ja}</td></tr>
+      <tr><td>${J?"車上ゲスト":"Onboard"}</td><td>${onboard}${J?"人":""}</td><td class="src">${blocks}${J?"編成が区間に停止中":""}</td></tr>
+      <tr><td>${J?"降車誘導の見込み":"Est. time"}</td><td>${eta}${J?"分":"m"}</td><td class="src">${J?`1編成あたり約${perVeh}分・並行${Math.min(4,Math.ceil(blocks/3))}班`:""}</td></tr>
+      <tr><td>${J?"必要ポーター":"Porters"}</td><td>${Math.max(6,blocks*2)}${J?"名":""}</td><td class="src">${J?"誘導・照明・最終確認":""}</td></tr>
+    </table>
+    <div class="att-sec">${J?"手順":"Steps"}</div>
+    <table class="att-tbl">${sc.steps.map((s,i)=>`<tr><td>${i+1}</td><td>${started&&i<doneN?"✅":"⬜"}</td><td class="src">${s}</td></tr>`).join("")}</table>
+    <div style="display:flex;gap:6px;margin-top:8px">
+      ${canDo(2)?`<button class="btn" id="evacStart">${started?(J?"⏹ 訓練終了":"Stop"):(J?"▶ 避難手順を開始（訓練）":"Start drill")}</button>`:`<span class="ops-note">${J?"避難手順の開始はLead以上の権限が必要です":"Lead+ required"}</span>`}
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:#8a7a55">${J?"※ 本画面は訓練・記録用です。実際の非常停止・安全装置の解除は現地の認証済み制御盤でのみ行います。":""}</div>`;
+}
+/* 履歴: サーバー台帳(data/days/*.json の ops5/opsStates)から当日・過去日を振り返る */
+function historyHTML(spot,d){
+  const J=LANG==="ja";
+  const key=dateKey(d);
+  const led=(SHARED.dayOps5||{})[key];
+  const stt=(SHARED.dayStates||{})[key];
+  const rec=stt&&stt[spot.id]?stt[spot.id]:null;
+  if (!led&&!rec) return `<div class="ops-note">${J?"共有台帳がまだありません。GitHub Actionsを有効にすると、5分粒度の運営記録がここに蓄積されます（導入日以降）。":"No ledger yet."}</div>`;
+  const oh=openH(d);
+  /* 状態推移の帯 */
+  const cols=[];
+  if (rec&&rec.slots){
+    rec.slots.forEach(s=>{
+      const c=s.op==="OP-10"?"h-ok":s.op==="OP-20"?"h-delay":s.op==="OP-30"?"h-hold":s.op==="OP-80"?"h-evac":s.op==="OP-40"?"h-closed":"h-other";
+      cols.push(`<span class="h-cell ${c}" title="${fmtT(s.t)} ${s.op}${s.w?" 待ち"+s.w+"分":""}"></span>`);
+    });
+  } else if (led&&led.slots){
+    led.slots.forEach(s=>{
+      const w=s.w&&s.w[spot.id];
+      const c=w==null?"h-closed":w>=90?"h-delay":"h-ok";
+      cols.push(`<span class="h-cell ${c}" title="${fmtT(s.t)} ${w!=null?w+"分":"休止"}"></span>`);
+    });
+  }
+  const rows=[];
+  if (rec&&rec.summary){
+    const s=rec.summary;
+    rows.push([J?"稼働率":"Utilization",`${s.util??"—"}%`,J?`乗車 ${(s.ridden||0).toLocaleString()}人`:""]);
+    rows.push([J?"ダウンタイム":"Downtime",`${s.downMin||0}${J?"分":"m"}`,s.faults&&s.faults.length?s.faults.join("／"):""]);
+    rows.push([J?"最大待ち":"Max wait",`${s.maxWait||0}${J?"分":"m"}`,s.maxAt!=null?fmtT(s.maxAt):""]);
+    if (s.evac) rows.push([J?"避難対応":"EVAC",`${s.evac.count}${J?"件":""}`,s.evac.detail||""]);
+  }
+  return `<div class="att-sec">${J?"状態推移（5分ごと）":"State timeline"}</div>
+    <div class="h-band">${cols.join("")}</div>
+    <div class="h-legend"><span class="h-cell h-ok"></span>${J?"通常":"open"}<span class="h-cell h-delay"></span>${J?"遅延":"delay"}<span class="h-cell h-hold"></span>${J?"調整":"hold"}<span class="h-cell h-evac"></span>${J?"避難":"evac"}<span class="h-cell h-closed"></span>${J?"休止":"closed"}</div>
+    ${rows.length?`<div class="att-sec">${J?"当日サマリー":"Summary"}</div><table class="att-tbl">${rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="src">${r[2]}</td></tr>`).join("")}</table>`:""}
+    <div style="margin-top:6px;font-size:11px;color:#8a7a55">${J?"※ 台帳はGitHubに無期限で蓄積され、どの端末からも同じ記録を振り返れます。":""}</div>`;
+}
+function opsConsoleHTML(spot,d,tt){
+  const J=LANG==="ja";
+  const sp=RIDE_SPEC[spot.id]||{};
+  const att=dailyAttendance(d);
+  const inPark=inParkOf(d,tt,att);
+  const shown=calcWait(spot,d,tt,inPark,redistFactor(d,tt));
+  const actual=calcWaitActual(spot,d,tt,inPark,redistFactor(d,tt));
+  const st=opStateOf(spot,d,tt);
+  const code=OP_CODES[st.id]||["--",st.id];
+  const q=shown!=null?queueCountOf(spot.id,shown):null;
+  const lv=shown!=null?congestionLv(shown):1;
+  const veh=vehicleStates(spot,d,tt);
+  /* 本日の乗車数と稼働率(実効処理能力×稼働時間) */
+  let ridden=0,down=0;
+  const oh=openH(d);
+  for (let x=oh;x<=Math.min(tt,CLOSE_H);x+=1/12){
+    const s2=opStateOf(spot,d,x);
+    if (s2.id==="OPEN"||s2.id==="DELAYED"||s2.id==="LIMITED_OPERATION") ridden+=(sp.cap||0)/12;
+    else if (x>=oh&&(s2.id==="TEMP_CLOSED"||s2.id==="OPERATIONAL_HOLD"||s2.id==="WEATHER_HOLD")) down+=5;
+  }
+  const elapsed=Math.max(0.1,Math.min(tt,CLOSE_H)-oh);
+  const util=sp.cap?Math.round(ridden/(sp.cap*elapsed)*100):null;
+  const rows=[
+    [J?"運営状態":"State",`<b>${code[0]}</b>　${code[1]}`,st.note||""],
+    [J?"混雑レベル":"Level",`Lv${lv}`,[ "","通常","フル稼働","全編成投入・列整理","演出追加","シングルライダー運用"][lv]],
+    [J?"案内待ち時間":"Posted wait",shown!=null?`${shown}${J?"分":"m"}`:"—",J?(actual!=null?`実測 約${actual}分（案内は安全側に${Math.round(WAIT_PAD*100)}%上乗せ）`:"営業時間外"):""],
+    [J?"待機列人数":"Queue",q!=null?`${q.toLocaleString()}${J?"人":""}`:"—",sp.queueCap?`${J?"容量":"cap"} ${sp.queueCap.toLocaleString()}（${Math.round((q||0)/sp.queueCap*100)}%）`:""],
+    [J?"処理能力":"Capacity",sp.cap?`${sp.cap.toLocaleString()}${J?"人/時":"/h"}`:(sp.hold?`${J?"滞在管理":"hold"} ${sp.hold}${J?"人":""}`:"—"),sp.ja||""],
+    [J?"編成・定員":"Trains",sp.trains?`${sp.trains}${J?"編成":""}×${sp.seats}${J?"人":""}${sp.spare?`（予備${sp.spare}）`:""}`:"—",veh?`${J?"稼働":"active"} ${veh.active}${J?"編成":""}`:""],
+    [J?"運転間隔":"Dispatch",veh?`${Math.round(veh.gap*60)}${J?"秒":"s"}`:"—",sp.ride?`${J?"乗車":"ride"} ${sp.ride}${J?"分":"m"}`:""],
+    [J?"本日の乗車数":"Ridden today",sp.cap?`${Math.round(ridden).toLocaleString()}${J?"人":""}`:"—",util!=null?`${J?"稼働率":"util"} ${util}%`:""],
+    ...(recoveryPassOf(spot,d,tt)?[[J?"優先搭乗券":"Recovery pass",`${recoveryPassOf(spot,d,tt).issued.toLocaleString()}${J?"枚":""}`,J?"長時間調整による全員退出のため配布":"issued"]]:[]),
+    [J?"ダウンタイム":"Downtime",`${Math.round(down)}${J?"分":"m"}`,st.fault?`${st.fault[0]} ${st.fault[1]}`:""],
+  ];
+  const vehHtml=veh?`<div class="att-sec">${J?"車両・運行状況（ブロック占有方式）":"Vehicles"}</div>
+    <div class="moc-map">${veh.blocks.map(bk=>`<span class="moc-blk${veh.list.some(v=>v.block===bk)?" on":""}">${bk}</span>`).join("<i>▸</i>")}</div>
+    <table class="att-tbl"><tr class="att-hd"><td>${J?"車両":"Veh"}</td><td>${J?"現在ブロック":"Block"}</td><td class="src">${J?"乗車／状態":"Load / state"}</td></tr>
+    ${veh.list.map(v=>`<tr><td>V${String(v.id).padStart(2,"0")}</td><td>${v.block}</td><td class="src">${v.n?v.n+"/"+sp.seats+(J?"人":""):"—"}　${v.state}${v.delay?`（+${v.delay}秒）`:""}</td></tr>`).join("")}</table>`:"";
+  const logs=[];
+  logs.push([fmtT(oh),J?"営業開始":"Open",J?"始業点検・試運転 完了":"pre-checks done"]);
+  const trv=troubleVisible(d,troubleOf(d));
+  if (trv&&troubleAffects(trv,spot,d,tt)) logs.push([fmtT(trv.start),(FAULT_CODES[trv.kind]||["--"])[0],`${trv.labelJa}／${J?"復旧見込み":"ETA"} ${fmtT(troublePublic(d,trv,tt).annEnd)}`]);
+  const wins=inspectionsOf(spot.id,d)||[];
+  wins.forEach(w=>{const pub=inspPublic(d,w);if(pub)logs.push([fmtT(w.start),"OP-30",J?`システム調整（再開見込み ${fmtT(pub.ann)}）`:"hold"]);});
+  if (tt>=CLOSE_H) logs.push([fmtT(CLOSE_H),"OP-90",J?"営業終了・終業点検":"closed"]);
+  opsLogList(spot.id).forEach(l=>logs.push([l.t,l.code,`${l.msg}（${l.by}）`]));
+  logs.sort((a,b)=>a[0].localeCompare(b[0]));
+  const ps=preshowState(spot,d,tt);
+  const facs=facilityStates(spot,d,tt);
+  const stats=opsStats(spot,d,tt);
+  const psHtml=ps?`<div class="att-sec">${J?"プレショー":"Pre-show"}</div>
+    <table class="att-tbl"><tr class="att-hd"><td>${J?"部屋":"Room"}</td><td>${J?"在室":"In room"}</td><td class="src">${J?"状態／残り":"State"}</td></tr>
+    ${ps.map(r=>`<tr><td>Room ${r.room}</td><td>${r.n}/${r.cap}</td><td class="src">${r.state}　${J?"残り":"left"} ${r.left}${J?"秒":"s"}</td></tr>`).join("")}</table>`:"";
+  const facHtml=`<div class="att-sec">${J?"設備状態":"Facilities"}</div>
+    <div class="fac-grid">${facs.map(f=>`<span class="fac ${f.cls}">${f.ja}<b>${f.s}</b></span>`).join("")}</div>
+    <div class="att-sec">${J?"保守スケジュール":"Maintenance"}</div>
+    <table class="att-tbl">${maintSchedule(spot,d).map(m=>`<tr><td>${m[0]}</td><td>${m[2]}</td><td class="src">${m[1]}</td></tr>`).join("")}</table>`;
+  const statHtml=stats.length?`<div class="att-sec">${J?"時間別統計":"Hourly stats"}</div>
+    <table class="att-tbl"><tr class="att-hd"><td>${J?"時刻":"Hour"}</td><td>${J?"待ち":"Wait"}</td><td class="src">${J?"乗車／状態":"Ridden / state"}</td></tr>
+    ${stats.map(s=>`<tr><td>${s.h}:00</td><td>${s.w}${J?"分":"m"}</td><td class="src">${s.ridden?s.ridden.toLocaleString()+(J?"人":""):"—"}　${s.state}</td></tr>`).join("")}</table>`:"";
+  return `<div class="ops-tag">${J?"社内シミュレーション画面／安全制御装置ではありません":"Internal simulation"}</div>
+    <div class="moc-tabs">${["概要","プレショー","設備・保守","統計","避難(EVAC)","履歴"].map((t2,i)=>`<span class="moc-tab${i===(window.__mocTab||0)?" on":""}" data-t="${i}">${t2}</span>`).join("")}</div>
+    <div class="moc-pane" data-p="1" style="display:${(window.__mocTab||0)===1?"block":"none"}">${psHtml||`<div class="ops-note">${J?"この施設にプレショーはありません":"n/a"}</div>`}</div>
+    <div class="moc-pane" data-p="2" style="display:${(window.__mocTab||0)===2?"block":"none"}">${facHtml}</div>
+    <div class="moc-pane" data-p="3" style="display:${(window.__mocTab||0)===3?"block":"none"}">${statHtml||`<div class="ops-note">${J?"営業開始後に集計されます":"n/a"}</div>`}</div>
+    <div class="moc-pane" data-p="5" style="display:${(window.__mocTab||0)===5?"block":"none"}">${historyHTML(spot,d)}</div>
+    <div class="moc-pane" data-p="4" style="display:${(window.__mocTab||0)===4?"block":"none"}">${evacHTML(spot,d,tt,(evacWindowOf(spot,d,tt)||{}).scen||window.__evacScen||"fault")}</div>
+    <div class="moc-pane" data-p="0" style="display:${(window.__mocTab||0)===0?"block":"none"}">
+    <div class="att-sec">${J?"ダッシュボード":"Dashboard"}　${fmtT(tt)}</div>
+    <table class="att-tbl">${rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="src">${r[2]}</td></tr>`).join("")}</table>
+    ${vehHtml}
+    <div class="att-sec">${J?"本日のログ":"Logs"}</div>
+    <table class="att-tbl">${logs.map(l=>`<tr><td>${l[0]}</td><td>${l[1]}</td><td class="src">${l[2]}</td></tr>`).join("")}</table></div>`;
+}
+function opsLog(id,code,msg){
+  try{
+    const k="mb_opslog_"+dateKey(new Date());
+    const arr=JSON.parse(stGet(k)||"[]");
+    const now=new Date();
+    arr.push({t:fmtT(now.getHours()+now.getMinutes()/60),id,code,msg,by:(ROLES[currentRole()]||["","--"])[1]});
+    stSet(k,JSON.stringify(arr.slice(-200)));
+  }catch(e){}
+}
+function opsLogList(id){
+  try{
+    const arr=JSON.parse(stGet("mb_opslog_"+dateKey(new Date()))||"[]");
+    return arr.filter(x=>x.id===id);
+  }catch(e){return [];}
+}
+function openOpsConsole(id){
+  const now=new Date(),tt=now.getHours()+now.getMinutes()/60;
+  const spot=SPOTS.find(s=>s.id===id);
+  const ev=ENTERTAINMENT.find(e=>e.id===id);
+  if (!spot&&!ev) return;
+  document.getElementById("mocTitle").textContent="🛠 "+(LANG==="ja"?(spot?spot.ja:ev.ja):(spot?spot.en:ev.en))+"　"+(LANG==="ja"?"運営管理":"Operations");
+  const J2=LANG==="ja";
+  const roleBar=`<div class="role-bar"><span>${J2?"担当":"Role"}</span>
+    <select id="mocRole">${Object.keys(ROLES).map(r=>`<option value="${r}"${currentRole()===r?" selected":""}>${ROLES[r][1]}</option>`).join("")}</select>
+    <span class="role-lv">Lv${roleLevel()}</span>
+    <span class="role-note">${J2?(canDo(2)?"運転操作・避難手順の開始が可能":"閲覧と記録のみ"):""}</span></div>`;
+  document.getElementById("mocBody").innerHTML=roleBar+(spot?opsConsoleHTML(spot,now,tt):showOpsHTML(ev,now,tt));
+  document.getElementById("mocBackdrop").classList.add("show");
+  window.__mocId=id;
+  if ((window.__mocTab||0)===5&&!(SHARED.dayStates||{})[dateKey(now)]){
+    loadDayArchive(dateKey(now)).then(()=>{if((window.__mocTab||0)===5)openOpsConsole(id);}).catch(()=>{});
+  }
+  document.querySelectorAll("#mocBody .moc-tab").forEach(t2=>t2.addEventListener("click",()=>{
+    window.__mocTab=+t2.dataset.t;openOpsConsole(id);
+  }));
+  document.querySelectorAll("#mocBody .chip[data-ev]").forEach(c=>c.addEventListener("click",()=>{
+    window.__evacScen=c.dataset.ev;openOpsConsole(id);
+  }));
+  const eb=document.getElementById("evacStart");
+  if (eb) eb.addEventListener("click",()=>{
+    window.__evacStart=window.__evacStart?null:Date.now();
+    opsLog(id,window.__evacStart?"OP-80":"OP-60",window.__evacStart?"避難手順を開始(訓練)":"避難訓練を終了");
+    openOpsConsole(id);
+  });
+  const rs=document.getElementById("mocRole");
+  if (rs) rs.addEventListener("change",()=>{setRole(rs.value);openOpsConsole(id);});
+}
 function statusShort(st){
   if (st.st==="lo") return LANG==="ja"?"L.O.終了":"Last order done";
   if (st.st==="prep") return LANG==="ja"?"準備中":"Preparing";
@@ -2844,6 +3343,7 @@ function openDetail(id){
     <div class="sh-area">${ar}</div>
     ${live}${dayBars}${tagHtml}
     ${g.tagJa?`<div class="sh-tagline">${LANG==="ja"?g.tagJa:g.tagEn}</div>`:""}
+    ${(OPS_MODE||localStorage.getItem("mb_ops")==="1")&&(SPOTS.find(s=>s.id===id&&s.type==="a")||ENTERTAINMENT.find(e=>e.id===id))?`<button class="btn moc-btn" onclick="openOpsConsole('${id}')">🛠 ${LANG==="ja"?"運営管理コンソール":"Operations console"}</button>`:""}
     ${photoGallery(id)}
     ${g.dJa?`<div class="sh-desc">${LANG==="ja"?g.dJa:g.dEn}</div>`:""}
     ${(ENTERTAINMENT.find(x=>x.id===id)||{}).noteJa?`<div class="sh-area" style="margin-top:-4px;margin-bottom:8px">※ ${LANG==="ja"?ENTERTAINMENT.find(x=>x.id===id).noteJa:"Indoor show: never cancelled due to weather"}</div>`:""}
@@ -3683,6 +4183,7 @@ function genQA(c){
     {q:`スチームハーバーってタオルいる?`,a:`レンタルあるから手ぶらでOKって聞いた`},
     {q:`夜おすすめのアトラクションは?`,a:`星屑の小道!夕暮れから輝き始めるよ`},
     {q:`制限いつ解除される?`,a:c.rw&&c.rw.release?`見込みは${fmtT(c.rw.release)}頃だって`:`今日は制限ないよ〜`},
+    {q:`優先搭乗券もらった`,a:`長時間調整の全員退出で配られるやつだね。再開後にPP入口から入れるよ`},
     {q:`ジャズの整理券って必要?`,a:`観覧自体は自由!最前列エリアだけ整理券制で、各公演90分前から配布だよ`},
     {q:`入場制限中でもホテル泊なら入れる?`,a:`バケーションプラン宿泊者は入園が担保されてるよ。強い`},
     {q:`充電できる場所ある?`,a:`カーゴホールの壁際に何席かあったよ`},
@@ -4296,6 +4797,7 @@ async function loadDayArchive(key){
     SHARED.dayTL[key]=j.hours||null;
     if (j.ops){SHARED.dayOps=SHARED.dayOps||{};SHARED.dayOps[key]=j.ops;}
     if (j.ops5){SHARED.dayOps5=SHARED.dayOps5||{};SHARED.dayOps5[key]=j.ops5;}
+    if (j.opsStates){SHARED.dayStates=SHARED.dayStates||{};SHARED.dayStates[key]=j.opsStates;}
     if (j.ledger){SHARED.dayLedger=SHARED.dayLedger||{};SHARED.dayLedger[key]=j.ledger;}
     return SHARED.dayTL[key];
   }catch(e){return null;}
@@ -4746,6 +5248,9 @@ function openTixModal(){
 }
 document.getElementById("btnTix").addEventListener("click",openTixModal);
 document.getElementById("btnMenu").addEventListener("click",openMenuSheet);
+document.getElementById("mocClose").addEventListener("click",()=>document.getElementById("mocBackdrop").classList.remove("show"));
+document.getElementById("mocBackdrop").addEventListener("click",e=>{if(e.target.id==="mocBackdrop")document.getElementById("mocBackdrop").classList.remove("show");});
+setInterval(()=>{if(document.getElementById("mocBackdrop").classList.contains("show")&&window.__mocId)openOpsConsole(window.__mocId);},15000);
 document.getElementById("entClose").addEventListener("click",()=>document.getElementById("entBackdrop").classList.remove("show"));
 document.getElementById("entBackdrop").addEventListener("click",e=>{if(e.target.id==="entBackdrop")document.getElementById("entBackdrop").classList.remove("show");});
 {
@@ -4773,7 +5278,7 @@ async function openOpsModal(target){
     try{navigator.clipboard.writeText(txt);cb.textContent=LANG==="ja"?"✓ コピーしました":"✓ Copied";}catch(e){}
   });
 }
-document.getElementById("btnOps").addEventListener("click",()=>openOpsModal());
+document.getElementById("btnOps").addEventListener("click",()=>{try{stSet("mb_ops","1");}catch(e){}openOpsModal();});
 document.getElementById("opsClose").addEventListener("click",()=>document.getElementById("opsBackdrop").classList.remove("show"));
 document.getElementById("opsBackdrop").addEventListener("click",e=>{if(e.target.id==="opsBackdrop")document.getElementById("opsBackdrop").classList.remove("show");});
 document.getElementById("opsDate").addEventListener("change",e=>{
@@ -4796,6 +5301,19 @@ document.getElementById("opsExport").addEventListener("click",()=>{
     trouble:troubleVisible(d,troubleOf(d)),
     wxTimeline:SHARED.dayTL[dateKey(d)]||null,
     deviceLog:log?{points:log.t.length,thin:!!log.thin,t:log.t,p:log.p}:null,
+    opsLog:(function(){try{return JSON.parse(stGet("mb_opslog_"+dateKey(d))||"[]");}catch(e){return [];}})(),
+    evac:(function(){
+      const out=[];
+      SPOTS.filter(s=>s.type==="a").forEach(s=>{
+        for (let x=openH(d);x<=CLOSE_H;x+=1/12){
+          const ev=evacWindowOf(s,d,x);
+          if (ev&&!out.some(o=>o.id===s.id&&Math.abs(o.start-ev.start)<0.01))
+            out.push({id:s.id,ja:s.ja,scen:ev.scen,src:ev.src,start:+ev.start.toFixed(3),end:+ev.end.toFixed(3),
+              clearQueue:!!ev.clearQueue,pass:(recoveryPassOf(s,d,ev.end)||{}).issued||0});
+        }
+      });
+      return out;
+    })(),
   };
   const blob=new Blob([JSON.stringify(payload,null,1)],{type:"application/json"});
   const a=document.createElement("a");

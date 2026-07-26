@@ -44,7 +44,7 @@ function buildSandbox(){
   vm.createContext(ctx);
   try{ vm.runInContext(src,ctx,{timeout:30000}); }catch(e){ /* 末尾のDOM配線は無視 */ }
   // const/let はコンテキストに露出しないため、必要なものを引き出す
-  vm.runInContext(`globalThis.__M={SPOTS,CLOSE_H,MAX_CAP,TICKET_LABELS};`,ctx);
+  vm.runInContext(`globalThis.__M={SPOTS,CLOSE_H,MAX_CAP,TICKET_LABELS,OP_CODES,RIDE_SPEC};`,ctx);
   return ctx;
 }
 
@@ -108,6 +108,55 @@ const dayFile=`data/days/${key}.json`;
 let day={date:key,hours:{}};
 try{day=JSON.parse(fs.readFileSync(dayFile,"utf8"));}catch(e){}
 day.ops5={gen:Date.now(),interval:5,spots:spots.map(s=>({id:s.id,ja:s.ja})),slots};
+
+// 全アトラクションの運営状態を5分粒度で記録(振り返り用)
+if (ctx.opStateOf){
+  const allA=M.SPOTS.filter(s=>s.type==="a");
+  const states={};
+  for (const s of allA){
+    const sl=[];let downMin=0,maxWait=0,maxAt=null,ridden=0,evacN=0,evacDetail=[];
+    const faults=new Set();
+    for (let x=Math.floor(oh*12)/12;x<=upto+1e-9;x+=1/12){
+      const t=Math.round(x*720)/720;
+      const st=ctx.opStateOf(s,d,t+0.001);
+      const code=(M.OP_CODES[st.id]||["--"])[0];
+      const w=ctx.calcWait(s,d,t+0.001,ctx.inParkOf(d,t+0.001,att),ctx.redistFactor(d,t+0.001));
+      if (w!=null&&w>maxWait){maxWait=w;maxAt=+t.toFixed(2);}
+      const run=st.id==="OPEN"||st.id==="DELAYED"||st.id==="LIMITED_OPERATION";
+      const spc=M.RIDE_SPEC[s.id]||{};
+      if (run) ridden+=(spc.cap||0)/12;
+      else if (["TEMP_CLOSED","OPERATIONAL_HOLD","WEATHER_HOLD","EVACUATING"].includes(st.id)) downMin+=5;
+      if (st.id==="EVACUATING"){
+        if (!sl.length||sl[sl.length-1].op!=="OP-80"){evacN++;evacDetail.push(`${String(Math.floor(t)).padStart(2,"0")}:${String(Math.round((t%1)*60)).padStart(2,"0")} ${st.evac?st.evac.label:""}`);}
+      }
+      if (st.fault) faults.add(st.fault[0]+" "+st.fault[1]);
+      sl.push({t:+t.toFixed(3),op:code,w:w??null});
+    }
+    const elapsed=Math.max(0.1,Math.min(upto,closeH)-oh);
+    const spc=M.RIDE_SPEC[s.id]||{};
+    const pass=ctx.recoveryPassOf?ctx.recoveryPassOf(s,d,upto):null;
+    states[s.id]={ja:s.ja,slots:sl,summary:{
+      util:spc.cap?Math.round(ridden/(spc.cap*elapsed)*100):null,
+      ridden:Math.round(ridden),downMin,maxWait,maxAt,
+      faults:[...faults],
+      evac:evacN?{count:evacN,detail:evacDetail.join("／")}:null,
+      recoveryPass:pass?pass.issued:0,
+    }};
+  }
+  day.opsStates=states;
+}
+// ショーの実施・中止も記録
+if (ctx.todaysEntertainment&&ctx.showTimes&&ctx.weatherCancelled){
+  const shows=[];
+  ctx.todaysEntertainment(d).forEach(e=>{
+    (ctx.showTimes(e,d)||[]).forEach(t=>{
+      const c=ctx.weatherCancelled(e,t,closeH,d);
+      shows.push({id:e.id,ja:e.ja,t:+t.toFixed(2),cancelled:!!c,
+        reason:c&&ctx.cancelReason?ctx.cancelReason(e,t,closeH,d):null});
+    });
+  });
+  day.shows=shows;
+}
 day.ledger={
   forecastTotal:att.total,
   actualTotal:ctx.actualTotalOf?ctx.actualTotalOf(d,att):att.total,
