@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>const APP_VERSION="v43",APP_DATE="2026-07-26";</script>
+<script>const APP_VERSION="v44",APP_DATE="2026-07-26";</script>
 <title>MALLOWBROOK PARK｜リアルタイム運営情報</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Cinzel:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -794,7 +794,7 @@ const SPOTS = [
   {id:"canteen",   type:"r", ja:"ペニーのギアワークス・キャンティーン", en:"Penny's Gearworks Canteen", areaJa:"ペニーのギアワークス", areaEn:"Penny's Gearworks", x:80.0, y:24.0, pop:0.60, waitCapMin:50},
   {id:"wheelcafe", type:"r", ja:"グランドギア・ホイール・カフェ", en:"Grand Gear Wheel Café", areaJa:"ペニーのギアワークス", areaEn:"Penny's Gearworks", x:84.0, y:38.0, pop:0.45, waitCapMin:40},
   {id:"grove",     type:"r", ja:"ポピーの月明かりのグローブ", en:"Poppy's Moonlight Grove", areaJa:"ポピーの月明かりの森", areaEn:"Poppy's Moonlight Forest", x:48.0, y:82.0, pop:0.58, waitCapMin:60},
-  {id:"stillhouse",type:"r", ja:"ムーンリット・スティルハウス", en:"Moonlit Stillhouse", areaJa:"ポピーの月明かりの森", areaEn:"Poppy's Moonlight Forest", x:25.0, y:87.5, pop:0.50, waitCapMin:50},
+  {id:"stillhouse",type:"r", ja:"ルナリーフ・ムーンリットセラー", en:"LUNA-LEAF Moonlit Cellar", areaJa:"ポピーの月明かりの森", areaEn:"Poppy's Moonlight Forest", x:25.0, y:87.5, pop:0.50, waitCapMin:50},
   {id:"footlight", type:"r", cat:"service", ja:"フットライト・レスト・ステーション", en:"Footlight Rest Station", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:73.0, y:59.5, pop:0.40, waitCapMin:35},
   {id:"wharfgrill",type:"r", ja:"キャプテン・コークのワーフ・グリル", en:"Captain Cork's Wharf Grill", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:84.0, y:53.0, pop:0.70, waitCapMin:70},
   {id:"cargohall", type:"r", ja:"ハーバー・カーゴ・ホール", en:"Harbor Cargo Hall", areaJa:"コークハーバー", areaEn:"Cork Harbor", x:88.0, y:68.5, pop:0.85, waitCapMin:65},
@@ -1264,10 +1264,10 @@ const GUIDE={
   dEn:"A tranquil forest restaurant surrounded by trees and soft lantern light, especially magical from dusk into the evening.",
   menus:["季節の森料理","ロースト料理","デザート"]},
  stillhouse:{styleJa:"バー／ラウンジ",styleEn:"Bar / lounge",cuisineJa:"ウイスキー・ワイン・燻製料理",cuisineEn:"Whisky, wine & smoked dishes",
-  tagJa:"森の奥で静かに灯る、大人のためのスティルハウス。",tagEn:"A quiet stillhouse glowing deep within the moonlit forest.",
-  dJa:"月明かりの森にひっそりと佇む、大人向けのバー。ウイスキーを中心に、ワイン、ノンアルコールカクテル、チーズや燻製料理を提供します。深緑、黒、ゴールド、樽の質感に包まれた静かな夜の隠れ家です。",
-  dEn:"A secluded bar hidden in the Moonlight Forest. Whisky leads the menu, joined by wine, non-alcoholic cocktails, cheese and smoked dishes.",
-  menus:["Moonlit Cask Highball","Crescent Leaf Old Fashioned","Mallowbrook Night Dram","燻製ナッツとチーズ"],
+  tagJa:"にぎやかな一日の終わりに、月の葉がそっと灯る場所へ。",tagEn:"Where the moonlit leaf glows at the end of a lively day.",
+  dJa:"月明かりの森の奥にある、大人の隠れ家。「月の光を浴びた葉は、夜だけ特別な香りを宿す」という言い伝えが残る貯蔵庫で、旅人が見つけたウイスキーの樽と、森の果実を思わせるワインが静かに眠ります。LUNA-LEAF HOLDINGS COMPANY, LIMITED 提供。深緑、黒、ゴールド、樽の質感に包まれた夜の一杯をどうぞ。",
+  dEn:"A hidden cellar deep in the Moonlight Forest, presented by LUNA-LEAF HOLDINGS COMPANY, LIMITED. Legend says leaves bathed in moonlight carry a special scent at night; here whisky casks and forest-fruit wines rest quietly.",
+  menus:["Moonlit Cask Highball／ムーンリット・カスク・ハイボール","Crescent Leaf Old Fashioned／クレセントリーフ・オールドファッションド","Mallowbrook Night Dram／マローブルック・ナイトドラム","Poppy's Moon White／ポピーズ・ムーン・ホワイト","Lantern Forest Red／ランタン・フォレスト・レッド","Luna-Leaf Sparkling／ルナリーフ・スパークリング","Moonleaf Botanical Soda／ムーンリーフ・ボタニカルソーダ","Poppy's Night Tea／ポピーズ・ナイトティー"],
   alcohol:true},
  wharfgrill:{styleJa:"カジュアルレストラン",styleEn:"Casual restaurant",cuisineJa:"シーフード・波止場のグリル料理",cuisineEn:"Seafood & wharf grill",
   tagJa:"海風の波止場で楽しむ、キャプテン自慢のシーフード。",tagEn:"Captain Cork's favorite seafood, served by the wharf.",
@@ -3521,7 +3521,7 @@ function openDetail(id){
   const tags=(LANG==="ja"?g.tagsJa:g.tagsEn)||[];
   const tagHtml=tags.length?`<div class="sh-tags">${tags.map(x=>`<span class="sh-tag${x.includes("足湯")||x.includes("footbath")?" warn":""}">${x}</span>`).join("")}</div>`:"";
   const meta=(g.styleJa)?`<div class="sh-meta">${LANG==="ja"?g.styleJa:g.styleEn}｜${LANG==="ja"?g.cuisineJa:g.cuisineEn}${spot&&spot.type==="r"&&spot.cat!=="service"?"｜L.O. "+fmtT(loOf(id)):""}</div>`:"";
-  const menus=(g.menus&&g.menus.length)?`<div class="sh-menus"><div class="m-title">${t("menuTitle")}</div><ul>${g.menus.slice(0,4).map(m=>`<li>${m}</li>`).join("")}</ul></div>`:"";
+  const menus=(g.menus&&g.menus.length)?`<div class="sh-menus"><div class="m-title">${t("menuTitle")}</div><ul>${g.menus.slice(0,8).map(m=>`<li>${m}</li>`).join("")}</ul></div>`:"";
   let notes="";
   if (id==="footlight") notes=`<div class="sh-note">⚠ ${t("footNote2")}</div>`;
   if (g.alcohol) notes+=`<div class="sh-note">🍸 ${t("alcoholNote")}</div>`;
@@ -4068,7 +4068,7 @@ const MANIACS=[
    `日没${c.sunset}まで、あと${RN(1,5)}艇は出せる`,
    `パドルの角度は45度。後輩たちよ、それだけは守れ`])},
  {n:"ムーンリット常連",col:"#d8c8f0",band:[17,22],L:c=>R([
-   `スティルハウス、今夜の一杯目はMoonlit Cask Highball。決まってる`,
+   `ルナリーフ、今夜の一杯目はMoonlit Cask Highball。決まってる`,
    `森の奥のバーで聞く遠いショーの音、これが正解`,
    `燻製ナッツを${RN(2,4)}皿目。誰か止めてくれ`])},
  {n:"ぬい撮り勢",col:"#ffe0c0",band:[9,21],L:c=>R([
@@ -4278,7 +4278,7 @@ function cctx(){
 }
 /* ============ コメント・ライブラリ（開園中／閉園中で編成を分離） ============ */
 const RIDE_NICK={chase:"チェイス",rail:"レール",dam:"ダムビルダー",wheel:"観覧車",factory:"修理工場",voyage:"航海",train:"汽車",base:"ひみつ基地",canoe:"カヌー",stardust:"星屑の小道",moss:"モストレイル",steam:"スチームハーバー",footlight:"フットライト"};
-const FOOD_SPOTS=["ブラッスリー","パンプキンテーブル","スターライト・ダイニング","ダムキッチン","キャンティーン","ホイールカフェ","グローブ","スティルハウス","ワーフ・グリル","カーゴホール","ルルズ","パーラー","ティールーム"];
+const FOOD_SPOTS=["ブラッスリー","パンプキンテーブル","スターライト・ダイニング","ダムキッチン","キャンティーン","ホイールカフェ","グローブ","ルナリーフ・セラー","ワーフ・グリル","カーゴホール","ルルズ","パーラー","ティールーム"];
 function genSituation(c){
   const p=[];
   if (c.rw&&c.tt>=c.rw.start&&(c.rw.release==null||c.tt<c.rw.release)){
@@ -4305,7 +4305,7 @@ function genSituation(c){
   if (c.muscle&&c.tt>=15&&c.tt<19) p.push(`マッスル・コンテスト盛り上がってる💪`,`推しの筋肉にいいね押してきた`,`Xのいいねで優勝決まるのおもろい`,`ポージングのたびに歓声すごい`);
   const lo1=c.tt>=20.25&&c.tt<21, lo2=c.tt>=20.75&&c.tt<21.5;
   if (lo1) p.push(`ブラッスリーL.O.まであと${Math.max(1,Math.round((21-c.tt)*60))}分、走る`,`ギリギリでテーブル席滑り込んだ、勝ち`,`ディナー難民になりかけたけどワーフ・グリル間に合った`);
-  if (lo2) p.push(`締めのデザート、はやてに駆け込み`,`スティルハウスで最後の一杯。良い夜`,`21:30がカフェのL.O.、覚えた`);
+  if (lo2) p.push(`締めのデザート、はやてに駆け込み`,`ルナリーフで最後の一杯。良い夜`,`21:30がカフェのL.O.、覚えた`);
   p.push(`${c.topName}${c.topWait}分、${R(["行く","勇気いる","おやつ先にする"])}${R(ENDINGS)}`,
     `園内${Math.round(c.inPark/1000)}千人か、${R(["納得の混み","思ったより平和","にぎやか"])}${R(ENDINGS)}`,
     `ゲージ見たら園内${(c.inPark||0).toLocaleString()}人。実感と合ってる`,
@@ -4366,7 +4366,7 @@ function genFamily(c){return R([
   `家族写真、カメラマンさんが「もう1枚!」って${RN(3,6)}回。全部いい笑顔`]);}
 function genFood(c){const f=R(FOOD_SPOTS);return R([
   `${f}のディナー、雰囲気込みで満点`,`${f}行列してるけど回転早い、えらい`,
-  `カーゴホールで家族バラバラのメニュー頼めるの助かる`,`スティルハウスのハイボール、森の音と合う`,
+  `カーゴホールで家族バラバラのメニュー頼めるの助かる`,`ルナリーフのハイボール、森の音と合う`,
   `パンプキンのシチュー、器がかぼちゃで子ども大興奮`,`ワーフ・グリルのフィッシュ&チップス、揚げたては正義`,
   `キャンティーンの歯車ワッフル、ギミック付きで楽しい`,`グローブの夜ディナー、ランタンの灯りが良い仕事してる`,
   `ティールームでアフタヌーンティー、森の音がBGM`,`ダムキッチンのバケツプリン、バケツである必要(ある)`,
