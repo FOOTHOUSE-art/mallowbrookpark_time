@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>const APP_VERSION="v50",APP_DATE="2026-07-26";</script>
+<script>const APP_VERSION="v51",APP_DATE="2026-07-27";</script>
 <title>MALLOWBROOK PARK｜リアルタイム運営情報</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Cinzel:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -450,6 +450,8 @@ body.nocomments .ticker2 .ticker-text{visibility:hidden}
   background:#ffd75e;color:#0a1120;border-radius:50%;font-size:9px;font-weight:800;margin-right:4px}
 .stn-empty{color:#3f5a80;font-size:10px;display:flex;align-items:center;justify-content:center;min-width:120px}
 .stn-fault{border-color:#ff3b30;box-shadow:0 0 0 1px rgba(255,59,48,.4) inset}
+.stn-unload{border-color:#2f7a4a}
+.stn-unload .sc-id{color:#5fd68f}
 .occ-veh table{width:100%;border-collapse:collapse}
 .occ-flow{display:flex;align-items:stretch;gap:4px;margin:6px 0 8px;flex-wrap:wrap}
 .fl-stage{flex:1 1 110px;background:#101a2c;border:1px solid #1e3352;border-radius:6px;padding:5px 7px}
@@ -3572,7 +3574,7 @@ function occDrawRadar(ts){
   if (tb){
     const xs=tb.segs.flatMap(sg=>[sg.a[0],sg.b[0]]), ys=tb.segs.flatMap(sg=>[sg.a[1],sg.b[1]]);
     const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
-    const padL=112,padR=26,padT=22,padB=34;      /* 左は側線ぶん確保 */
+    const padL=124,padR=64,padT=34,padB=44;      /* 左=側線・右=区間ラベル・下=中央情報 */
     const sx=(w-padL-padR)/Math.max(1,(x1-x0)), sy=(hgt-padT-padB)/Math.max(1,(y1-y0));
     const k=Math.min(sx,sy);
     const ox=padL+((w-padL-padR)-(x1-x0)*k)/2, oy=padT+((hgt-padT-padB)-(y1-y0)*k)/2;
@@ -3601,6 +3603,35 @@ function occDrawRadar(ts){
     g.beginPath();g.moveTo(X(sg.a[0]),Y(sg.a[1]));g.lineTo(X(sg.b[0]),Y(sg.b[1]));g.stroke();
     g.globalAlpha=1;
   });
+  /* 搭乗ホーム・降車ホームのプラットフォーム表示 */
+  {
+    const stSegs=tb.segs.filter(sg=>sg.kind==="station");
+    if (stSegs.length){
+      const half=Math.ceil(stSegs.length/2);
+      const drawPlat=(segsArr,label,col)=>{
+        if (!segsArr.length) return;
+        const a=segsArr[0].a,bp=segsArr[segsArr.length-1].b;
+        const mx=(X(a[0])+X(bp[0]))/2, my=(Y(a[1])+Y(bp[1]))/2;
+        const ang=Math.atan2(Y(bp[1])-Y(a[1]),X(bp[0])-X(a[0]));
+        const len=Math.max(46,Math.hypot(X(bp[0])-X(a[0]),Y(bp[1])-Y(a[1]))+18);
+        g.save();g.translate(mx,my);g.rotate(ang);
+        g.fillStyle=col+"22";g.strokeStyle=col;g.lineWidth=1.5;
+        g.beginPath();g.roundRect(-len/2,-17,len,34,5);g.fill();g.stroke();
+        g.setLineDash([3,3]);g.globalAlpha=.6;
+        g.beginPath();g.moveTo(-len/2,-9);g.lineTo(len/2,-9);g.moveTo(-len/2,9);g.lineTo(len/2,9);g.stroke();
+        g.setLineDash([]);g.globalAlpha=1;g.restore();
+        g.fillStyle=col;g.font="bold 9px monospace";g.textAlign="center";
+        g.fillText(label,mx,my-22);g.textAlign="left";
+      };
+      const stype=veh.stype;
+      if (stype==="dual3"){
+        drawPlat(stSegs.slice(0,half),"UNLOAD 降車ホーム","#5fd68f");
+        drawPlat(stSegs.slice(half),"LOAD 搭乗ホーム ①②③","#7fd0ff");
+      } else {
+        drawPlat(stSegs,stype==="twin"?"STATION 乗降ホーム(2線)":"STATION 乗降ホーム","#5fd68f");
+      }
+    }
+  }
   /* 区間ラベル */
   g.font="8px monospace";
   const seen={};
@@ -3891,24 +3922,31 @@ function occRenderStationLive(snap){
   const cars=veh.list.filter(v=>v.s!=null&&isStation(v.kind)&&!v.hold).sort((a,b)=>(a.dwellP||0)-(b.dwellP||0));
   const waiting=veh.list.filter(v=>v.hold);
   const phCol={unload:"#7b9ac4",board:"#3d6fb5",safety:"#ffc85a",ready:"#5fd68f"};
-  const carHTML=(v,order)=>{
+  const carHTML=(v,order,isUnload)=>{
     if (!v) return `<div class="stn-car stn-empty">ホーム空き</div>`;
     const dp=v.dp||{},sm=v.seats||{arr:[],cols:2};
     const secLeft=Math.max(0,Math.round((1-(v.dwellP||0))*veh.gap*60));
-    return `<div class="stn-car${dp.fault?" stn-fault":""}">
-      <div class="sc-id">${order?`<em class="sc-ord">${order}</em>`:""}V${String(v.id).padStart(2,"0")}<span style="color:${phCol[dp.phase]||"#7b9ac4"}">${dp.label||""}</span></div>
+    /* 降車ホーム: 降車の進捗と残り人数を主表示にする */
+    const exitPct=Math.min(100,Math.round((v.dwellP||0)/0.2*100));
+    const remain=Math.max(0,Math.round((v.n||0)*(1-exitPct/100)));
+    const bar=isUnload?exitPct:Math.round((v.dwellP||0)*100);
+    return `<div class="stn-car${dp.fault?" stn-fault":""}${isUnload?" stn-unload":""}">
+      <div class="sc-id">${order?`<em class="sc-ord">${order}</em>`:""}V${String(v.id).padStart(2,"0")}<span style="color:${isUnload?"#5fd68f":(phCol[dp.phase]||"#7b9ac4")}">${isUnload?"降車中":(dp.label||"")}</span></div>
       <div class="stn-seats" style="grid-template-columns:repeat(${sm.cols},1fr)">
         ${(sm.arr||[]).map(x=>`<span class="sb-${x}"></span>`).join("")}</div>
-      <div class="stn-timer ${dp.fault?"late":""}">${dp.fault?`+${dp.delay}s ${dp.faultCode}`:`DISPATCH in ${secLeft}s`}</div>
-      <div class="stn-ready ${sm.ready?"rd-ok":"rd-ng"}">${sm.ready?"READY — 全席施錠確認":dp.phase==="board"?"乗車中 — 安全確認前":dp.phase==="unload"?"降車中":"安全確認中 — 発車ロック"}</div>
-      <div class="stn-phase"><span style="width:${Math.round((v.dwellP||0)*100)}%;background:${phCol[dp.phase]||"#3d6fb5"}"></span></div>
+      <div class="stn-timer ${dp.fault?"late":""}">${isUnload?`降車 ${exitPct}%　残り ${remain}名`:(dp.fault?`+${dp.delay}s ${dp.faultCode}`:`DISPATCH in ${secLeft}s`)}</div>
+      <div class="stn-ready ${isUnload?(exitPct>=100?"rd-ok":"rd-ng"):(sm.ready?"rd-ok":"rd-ng")}">${
+        isUnload?(exitPct>=100?"降車完了 — 忘れ物確認":"安全バー解除済 — 降車誘導中")
+        :(sm.ready?"READY — 全席施錠確認":dp.phase==="board"?"乗車中 — 安全確認前":dp.phase==="unload"?"降車中":"安全確認中 — 発車ロック")}</div>
+      <div class="stn-phase"><span style="width:${bar}%;background:${isUnload?"#5fd68f":(phCol[dp.phase]||"#3d6fb5")}"></span></div>
     </div>`;
   };
   const all=veh.list.filter(v=>v.s!=null&&isStation(v.kind));
   const loadCars=all.filter(v=>v.pos==="load").sort((a,b)=>(a.posIdx||0)-(b.posIdx||0));
   const laneCars=all.filter(v=>v.pos==="lane");
   const bothCars=all.filter(v=>v.pos==="both").sort((a,b)=>(a.posIdx||0)-(b.posIdx||0));
-  const unloadCar=all.find(v=>v.pos==="unload")||null;
+  const unloadCars=all.filter(v=>v.pos==="unload").sort((a,b)=>(b.dwellP||0)-(a.dwellP||0));
+  const unloadCar=unloadCars[0]||null;
   const shown=veh.stype==="dual3"?loadCars:bothCars;
   const boardCar=shown[0]||null;
   const boardN=(test&&!sim)?0:(boardCar?Math.round((sp.seats||0)*Math.min(1,Math.max(0,((boardCar.dwellP||0)-0.2)/0.35))):0);
@@ -3932,7 +3970,7 @@ function occRenderStationLive(snap){
       if (cap===0){rowsArr.push(cur);cur=[];cap=cols;}
     });
     if (cur.length) rowsArr.push(cur);
-    return {rows:rowsArr.slice(0,rows),groups};
+    return {rows:rowsArr.filter(r=>r.length&&r.some(n=>n>0)).map(r=>r.filter(n=>n>0)).slice(0,rows),groups:groups.filter(n=>n>0)};
   })();
   const exitN=(test&&!sim)?0:(unloadCar?Math.round((unloadCar.n||0)*Math.min(1,(unloadCar.dwellP||0)/0.2)):0);
   const dots=(n)=>Array.from({length:Math.min(12,Math.max(0,n))},(_,i)=>
@@ -3956,13 +3994,10 @@ function occRenderStationLive(snap){
       </div>`:`
       <div class="stn-cars">${shown.length?shown.map((v,i)=>carHTML(v,veh.stype==="twin"?i+1:null)).join(""):carHTML(null)}</div>`}
     <div class="stn-side">
-      <div class="stn-h">${veh.stype==="dual3"?"UNLOAD 降車ホーム（独立）":"UNLOAD 降車"} <span class="stn-gate ${unloadCar?"gate-open":"gate-closed"}">${unloadCar?"降車進行中":"待機"}</span></div>
-      <div class="stn-h"><b>停車編成: ${(function(){const us=all.filter(v=>v.pos==="unload");return us.length?us.map(v=>"V"+String(v.id).padStart(2,"0")).join(" ・ "):"なし";})()}</b>
-        <span>${unloadCar?`降車 ${Math.round((unloadCar.dwellP||0)/0.2*100)}%`:""}</span></div>
-      ${veh.stype==="dual3"&&unloadCar?`<div class="stn-seats" style="grid-template-columns:repeat(${unloadCar.seats.cols},1fr);margin:4px 0">
-        ${unloadCar.seats.arr.map(x=>`<span class="sb-${x}"></span>`).join("")}</div>`:""}
+      <div class="stn-h">${veh.stype==="dual3"?"UNLOAD 降車ホーム（独立）":"UNLOAD 降車"} <span class="stn-gate ${unloadCars.length?"gate-open":"gate-closed"}">${unloadCars.length?"降車進行中":"待機"}</span></div>
+      <div class="stn-cars" style="margin:5px 0">${unloadCars.length?unloadCars.map((v,i)=>carHTML(v,null,true)).join(""):carHTML(null)}</div>
       <div class="stn-flowline">${dots(Math.ceil(exitN/2))}</div>
-      <div class="stn-h"><span>降車 ${exitN}/${unloadCar?unloadCar.n:0}名</span><b>${unloadCar?"バー解除済":"—"}</b></div>
+      <div class="stn-h"><span>降車 ${exitN}/${unloadCars.reduce((a,v)=>a+(v.n||0),0)}名</span><b>${unloadCars.length?unloadCars.length+"編成 在線":"—"}</b></div>
       <div class="stn-note">忘れ物確認: ${unloadCar&&unloadCar.dwellP>0.14?"実施中":"—"}　${(ROUTES[s.id]||{}).drive==="waterflow"?"水抜き・清掃 巡回":"車両清掃 巡回"}</div>
       <div class="stn-note">${veh.stype==="dual3"?"搭乗3線＋降車ホーム独立":veh.stype==="twin"?"同一ホーム2線・順次発車":"乗降同一ホーム1線"}／稼働 ${veh.active}編成・待機 ${veh.list.filter(v=>v.side==="wait").length}・整備 ${veh.list.filter(v=>v.side==="maint").length}</div>
     </div></div>`;
