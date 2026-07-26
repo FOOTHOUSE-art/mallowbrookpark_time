@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>const APP_VERSION="v36",APP_DATE="2026-07-26";</script>
+<script>const APP_VERSION="v37",APP_DATE="2026-07-26";</script>
 <title>MALLOWBROOK PARK｜リアルタイム運営情報</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Cinzel:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -204,9 +204,14 @@ main{flex:1 1 auto;min-height:0;display:flex;gap:6px}
 .sh-tag{font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:999px;background:#e8dcba;color:#5a4c2a;border:1px solid #cbb87f}
 .sh-tag.warn{background:#f3d9cf;color:#8a3a22;border-color:#d09a83}
 .sh-tagline{font-family:"Shippori Mincho",serif;font-weight:700;font-size:14px;color:var(--forest);margin-bottom:6px}
-.ph-wrap{display:none;position:relative;width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;
+.chip-row{display:flex;gap:5px;overflow-x:auto;padding:4px 0 2px;-webkit-overflow-scrolling:touch}
+.chip{flex:0 0 auto;font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:999px;cursor:pointer;
+  border:1px solid #c8b88a;background:#f7f0dc;color:#6a5a30;white-space:nowrap;display:flex;align-items:center;gap:4px}
+.chip.on{background:#2a4a86;color:#fff;border-color:#2a4a86}
+.chip i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.ph-wrap{display:none;position:relative;width:100%;padding-top:56.25%;aspect-ratio:auto;border-radius:12px;overflow:hidden;
   margin:2px 0 10px;border:2px solid var(--brass);background:#2a2418;cursor:pointer;box-shadow:0 3px 14px rgba(0,0,0,.25)}
-.ph-track{position:absolute;inset:0}
+.ph-track{position:absolute;top:0;left:0;right:0;bottom:0}
 .ph-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .35s ease}
 .ph-img.ph-on{opacity:1}
 .ph-dots{position:absolute;right:8px;bottom:7px;display:none;gap:5px;z-index:2}
@@ -266,6 +271,24 @@ body.m-sp .clock-plate{order:5}
 .cum-mini.mile{animation:milepulse 1.2s ease 3;border-radius:9px}
 @keyframes milepulse{0%,100%{background:rgba(20,16,6,.45)}50%{background:rgba(90,64,16,.7)}}
 body.m-sp .cum-mini{margin-left:0}
+/* スマホ: ヘッダーを圧縮(ボタンはメニューへ集約・天候/時計/累計を1行に) */
+.sp-menu-btn{display:none}
+body.m-sp .sp-menu-btn{display:inline-flex;align-items:center;justify-content:center;
+  font-size:20px;line-height:1;padding:4px 12px;margin-left:auto}
+body.m-sp .hbtns{display:none}
+body.m-sp header{gap:5px;padding:5px 8px;align-items:center}
+body.m-sp .mascot{width:34px;height:34px}
+body.m-sp .park-en{font-size:13px}
+body.m-sp .park-ja{display:none}
+body.m-sp .wx{order:8;flex:0 0 auto;font-size:11px;gap:4px}
+body.m-sp .wx .wsub{display:none}
+body.m-sp .clock-plate{order:9;flex:0 0 auto;padding:1px 7px}
+body.m-sp .clock-plate .clock-line2{display:none}
+body.m-sp .clock-plate .cd-inline{display:none}
+body.m-sp .cum-mini{order:10;flex:1 1 100%;padding:2px 7px}
+body.m-sp .ver-stamp{display:none}
+.menu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}
+.menu-grid .btn{justify-content:flex-start;font-size:14px;padding:10px 12px;width:100%}
 .ticker2{top:24px;height:24px;background:linear-gradient(180deg,#1d2b1e,#141f16);border-bottom:1px solid #4a7a52}
 .ticker2 .lbl2{color:#9fe0a8;background:rgba(90,200,120,.12);border-right-color:rgba(90,200,120,.4)}
 .cmt-view{position:relative;overflow:hidden;flex:1;min-width:110px;display:flex}
@@ -472,6 +495,7 @@ body.sky-late{background-image:radial-gradient(ellipse at 50% -10%,#131d38 0%,#0
       <div class="clock-line"><span class="clock-time" id="clock">--:--:--</span><span class="cd-inline">(<b id="cd">60</b>s)</span></div>
       <div class="clock-line2"><span class="clock-date" id="dateline">----</span><span class="status-chip" id="parkStatus">--</span></div>
     </div>
+    <button class="btn sp-menu-btn" id="btnMenu" title="メニュー">≡</button>
     <div class="hbtns">
       <button class="btn" id="btnRefresh">⟳ <span id="tRefresh">更新</span></button>
       <button class="btn" id="btnLang" aria-label="Switch language">EN</button>
@@ -584,6 +608,16 @@ body.sky-late{background-image:radial-gradient(ellipse at 50% -10%,#131d38 0%,#0
   </div>
   <div id="opsBody"></div>
 </div></div>
+<div class="sheet-backdrop" id="entBackdrop"><div class="sheet" style="max-width:min(720px,96vw)">
+  <button class="sheet-close" id="entClose" aria-label="閉じる">✕</button>
+  <div class="sh-name" id="entTitle">🎟 入園状況</div>
+  <div id="entBody"></div>
+</div></div>
+<div class="sheet-backdrop" id="menuBackdrop"><div class="sheet" style="max-width:min(560px,96vw)">
+  <button class="sheet-close" id="menuClose" aria-label="閉じる">✕</button>
+  <div class="sh-name">≡ メニュー</div>
+  <div class="menu-grid" id="menuGrid"></div>
+</div></div>
 <div class="sheet-backdrop" id="tixBackdrop"><div class="sheet" style="max-width:min(780px,94vw)">
   <div class="sh-head"><span class="sh-name">🎫 チケット情報</span><button class="btn" id="tixClose">✕</button></div>
   <div id="tixBody" style="padding:10px 14px;font-size:12.5px;line-height:1.7"></div>
@@ -593,6 +627,7 @@ body.sky-late{background-image:radial-gradient(ellipse at 50% -10%,#131d38 0%,#0
     <button class="sheet-close" id="attClose" aria-label="閉じる">✕</button>
     <div class="sh-name" id="attTitle">本日の想定来場者数の根拠</div>
     <div id="attBody"></div>
+    <div class="chip-row" id="attChips"></div>
     <div style="position:relative"><canvas id="attChart" style="width:100%;height:210px;margin-top:8px"></canvas>
     <div id="attTip" class="chart-tip"></div></div>
     <div class="sh-area" id="attNote"></div>
@@ -631,6 +666,7 @@ body.sky-late{background-image:radial-gradient(ellipse at 50% -10%,#131d38 0%,#0
     <div id="calBody"></div>
     <div class="sh-meta" id="calDetail" style="margin-top:8px;min-height:18px"></div>
     <div id="calChartWrap" style="display:none;position:relative;margin-top:6px">
+      <div class="chip-row" id="calChips"></div>
       <canvas id="calChart" style="width:100%;height:180px"></canvas>
       <div id="calTip" class="chart-tip"></div>
       <div id="calChartNote" style="font-size:10px;color:#8a7a55;margin-top:2px"></div>
@@ -2428,6 +2464,101 @@ window.phCheck=function phCheck(id){
   } else {dots.style.display="none";w.onclick=null;}
   show(0);
 };
+/* スマホのメニューシート: ヘッダーから外したボタンをここへ集約 */
+/* 入園状況シート: 待機列の推移・レーン別・並んでいる人の内訳 */
+function openEntranceSheet(){
+  const J=LANG==="ja";
+  const now=new Date(),tt=now.getHours()+now.getMinutes()/60;
+  const att=dailyAttendance(now),rw=restrictionWindow(now,att),oh=openH(now);
+  const q=entranceQueue(now,tt,att,rw);
+  const ei=rw?entranceInfo(now,tt,att,rw):null;
+  const mq=Math.round(morningQueuePeak(now,att)/100)*100;
+  const adm=admitShare(now);
+  const cs=cohortsOf(now), tm=ticketMixOf(now);
+  /* 待機列に並んでいる層(開園待ち=ヘビー・遠方中心 / 制限中=当日券・年パス) */
+  const inQueue=[];
+  if (tt<oh){
+    const wts={heavy:0.42,far:0.26,genH:0.14,kidsH:0.07,inbound:0.06,student:0.05};
+    cs.forEach(c=>{if(wts[c.id])inQueue.push([c.ja,wts[c.id]]);});
+  } else if (ei&&ei.dayQ>=300){
+    cs.forEach(c=>{
+      const m=tm[c.id]?tm[c.id].mix:{};
+      const blocked=(m.day||0)+(m.pass||0);
+      if (blocked>0.05) inQueue.push([c.ja,c.share*blocked]);
+    });
+  }
+  const tot=inQueue.reduce((a,b)=>a+b[1],0)||1;
+  inQueue.forEach(x=>x[1]/=tot);
+  inQueue.sort((a,b)=>b[1]-a[1]);
+  /* 待機列の推移(開園前は列形成、制限中は当日券列) */
+  const series=[];
+  const qHi=tt<oh?oh+0.5:(tt>=CLOSE_H?CLOSE_H:tt+0.01);
+  for (let x=Math.max(5.5,oh-2);x<=qHi;x+=1/6){
+    const v=x<oh?entranceQueue(now,x,att,rw):(rw?(entranceInfo(now,x,att,rw)||{}).dayQ||0:0);
+    series.push({x,v});
+  }
+  const mx=Math.max(1,...series.map(s=>s.v));
+  const bars=series.map(s=>{
+    const hpx=Math.max(2,Math.round(s.v/mx*46));
+    const isHour=Math.abs(s.x-Math.round(s.x))<0.01;
+    return `<div class="db-col" title="${fmtT(s.x)} 約${s.v.toLocaleString()}人"><span class="db-val">${isHour&&s.v>0?Math.round(s.v/1000)+"k":""}</span><div class="db-bar ${s.v>=4000?"db-hi":s.v>=1500?"db-mid":"db-lo"}" style="height:${hpx}px"></div><span class="db-lbl">${isHour?Math.round(s.x):""}</span></div>`;
+  }).join("");
+  const rows=[];
+  if (tt<oh){
+    rows.push([J?"現在の入園待ち":"Queue now",`${q.toLocaleString()}${J?"人":""}`,J?`ピーク見込み ${mq.toLocaleString()}人（${fmtT(oh-0.1)}頃）`:""]);
+    rows.push([J?"列の形成開始":"Formed from",fmtT(oh<9?5.5:6.0),J?"開園の約3時間前から":""]);
+    rows.push([J?"開園":"Opens",fmtT(oh),J?"開園後およそ30分で消化":""]);
+  } else if (ei){
+    rows.push([J?"日付指定・団体レーン":"Dated lane",J?`流れています（待ち約${ei.datedWait??5}分）`:"flowing",J?"制限中もご入園いただけます":""]);
+    rows.push([J?"当日券・年パス":"Same-day & pass",`${(ei.dayQ||0).toLocaleString()}${J?"人 待機":""}`,rw&&rw.relWin?(J?`解除見込み ${fmtT(rw.relWin[0])}〜${fmtT(rw.relWin[1])}頃`:""):""]);
+    if (ei.ret>=300) rows.push([J?"17:00以降入園枠へ転換":"Moved to 17:00+",`${ei.ret.toLocaleString()}${J?"人":""}`,J?"お待ちの方への振替案内":""]);
+  } else {
+    rows.push([J?"現在の入園待ち":"Queue now",q>0?`${q.toLocaleString()}${J?"人":""}`:(J?"スムーズです":"smooth"),J?"入場制限なし":""]);
+  }
+  rows.push([J?"制限中に入園できる比率":"Admitted share",`${Math.round(adm*100)}%`,J?"日付指定・団体・VP・ナイト（年パス除く）":""]);
+  document.getElementById("entTitle").textContent=(J?"🎟 入園状況":"🎟 Entry status")+`　${fmtT(tt)}`;
+  document.getElementById("entBody").innerHTML=
+    `<div class="att-sec">${J?(tt<oh?"開園待ちの見込み（10分ごと）":"待機列の推移（10分ごと）"):"Queue trend"}</div>
+     <div class="db-wrap"><div class="db-row">${bars}</div></div>
+     <div class="att-sec">${J?"現在の状況":"Now"}</div>
+     <table class="att-tbl">${rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="src">${r[2]}</td></tr>`).join("")}</table>
+     ${inQueue.length?`<div class="att-sec">${J?"いま並んでいる方の内訳（推定）":"Who's waiting"}</div>
+     <table class="att-tbl">${inQueue.slice(0,6).map(([ja,p])=>`<tr><td>${ja}</td><td>${Math.round(p*100)}%</td><td class="src">${Math.round((tt<oh?q:(ei?ei.dayQ:0))*p/10)*10}${J?"人":""}</td></tr>`).join("")}</table>`:""}
+     <div style="margin-top:8px;font-size:11px;color:#8a7a55">${J?"※ 入場制限中も、日付指定券・団体券・バケーションプラン・再入園のお客様はご入園いただけます（年間パスポートは除く）。":""}</div>`;
+  document.getElementById("entBackdrop").classList.add("show");
+}
+function renderChips(containerId,redraw){
+  const el=document.getElementById(containerId);
+  if (!el) return;
+  const cols={inpark:"#2a4a86",entries:"#7c9c6a",exits:"#d08a2c",tickets:"#c8862c",cohorts:"#8a5a2a"};
+  const J=LANG==="ja";
+  const labels=J?CHART_SERIES:{inpark:"In park",entries:"Entries",exits:"Exits",tickets:"By ticket",cohorts:"By cohort"};
+  el.innerHTML=Object.keys(CHART_SERIES).map(k=>
+    `<span class="chip${chartSel.includes(k)?" on":""}" data-k="${k}"><i style="background:${cols[k]}"></i>${labels[k]}</span>`).join("");
+  el.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{
+    setChartSel(c.dataset.k);
+    renderChips(containerId,redraw);
+    redraw();
+  }));
+}
+function openMenuSheet(){
+  const g=document.getElementById("menuGrid");
+  const ids=["btnRefresh","btnLang","btnBgm","btnCal","btnTix","btnOps","btnDist","btnView"];
+  g.innerHTML="";
+  ids.forEach(id=>{
+    const src=document.getElementById(id);
+    if (!src) return;
+    const b=document.createElement("button");
+    b.className="btn";
+    b.innerHTML=src.innerHTML;
+    b.addEventListener("click",()=>{
+      document.getElementById("menuBackdrop").classList.remove("show");
+      setTimeout(()=>src.click(),60);
+    });
+    g.appendChild(b);
+  });
+  document.getElementById("menuBackdrop").classList.add("show");
+}
 function statusShort(st){
   if (st.st==="lo") return LANG==="ja"?"L.O.終了":"Last order done";
   if (st.st==="prep") return LANG==="ja"?"準備中":"Preparing";
@@ -4228,6 +4359,19 @@ const attBackdrop=document.getElementById("attBackdrop");
 document.getElementById("attClose").addEventListener("click",()=>attBackdrop.classList.remove("show"));
 attBackdrop.addEventListener("click",e=>{if(e.target===attBackdrop)attBackdrop.classList.remove("show");});
 /* 共通: 任意のcanvasへ日付・モード別のグラフを描画し、ホバー状態を返す */
+const CHART_SERIES={inpark:"在園",entries:"累計入場",exits:"累計退園",tickets:"チケット別入園",cohorts:"客層別在園"};
+let chartSel=(function(){try{const v=JSON.parse(stGet("mb_chartsel")||"null");return v&&v.length?v:["inpark","entries"];}catch(e){return ["inpark","entries"];}})();
+function setChartSel(k){
+  chartSel=chartSel.includes(k)?chartSel.filter(x=>x!==k):[...chartSel,k];
+  if (!chartSel.length) chartSel=["inpark"];
+  try{stSet("mb_chartsel",JSON.stringify(chartSel));}catch(e){}
+}
+const TICKET_COLORS={dated:"#2a6a9c",day:"#c8862c",pass:"#7a4a9c",group:"#3f8a5a",vacation:"#b04a6a",night:"#4a5a8a"};
+const COHORT_COLORS=["#8a5a2a","#a06a3a","#2a6a9c","#4a8ac0","#4f9968","#7ab98a","#b04a6a","#3f8a5a","#c8862c","#7a4a9c"];
+/* 累計退園 = 累計入場 − 在園 */
+function cumExitsAt(d,tt,att,rw){
+  return Math.max(0,cumEntriesModel(d,Math.max(tt,openH(d)+0.001),att,rw,1)-inParkOf(d,tt,att));
+}
 async function drawDayChart(cv,target,mode){
   const tl=(mode!=="future")?await loadDayArchive(dateKey(target)):null;
   const J=LANG==="ja";
@@ -4260,15 +4404,69 @@ async function drawDayChart(cv,target,mode){
   steps.forEach(v=>{ctx.globalAlpha=.25;ctx.beginPath();ctx.moveTo(L,yy(v));ctx.lineTo(Rr,yy(v));ctx.stroke();ctx.globalAlpha=1;
     ctx.fillStyle="#6b7a9c";ctx.fillText((v/10000)+"万",8,yy(v)+7);});
   for(let hh3=Math.ceil(t0);hh3<=22;hh3+=2){ctx.fillStyle="#6b7a9c";ctx.fillText(hh3+":00",xx(hh3)-18,B+26);}
+  const realNow=new Date();
+  const nowTT=realNow.getHours()+realNow.getMinutes()/60;
+  /* チケット別入園(積み上げ面) */
+  if (chartSel.includes("tickets")){
+    const tm=ticketMixOf(now);
+    const kinds=["dated","group","vacation","night","day","pass"];
+    const share={};
+    kinds.forEach(k=>{share[k]=0;for(const id in tm)share[k]+=tm[id].share*(tm[id].mix[k]||0);});
+    const admK=new Set(["dated","group","vacation","night"]);
+    let prev=new Array(0);
+    const step=1/12;
+    let base=[];
+    for(let t=t0;t<=22;t+=step) base.push(0);
+    kinds.forEach(k=>{
+      ctx.beginPath();
+      const pts=[];
+      let i=0;
+      for(let t=t0;t<=22;t+=step,i++){
+        const cum=cumEntriesModel(now,Math.max(t,oh+0.001),att,rwG,1);
+        const restricted=rwG&&t>=rwG.start&&(rwG.release==null||t<rwG.release);
+        let v=cum*share[k];
+        if (restricted&&!admK.has(k)) v=cumEntriesModel(now,rwG.start,att,rwG,1)*share[k];   /* 制限中は停止 */
+        base[i]+=v;
+        pts.push([t,base[i]]);
+      }
+      pts.forEach((p,j)=>j===0?ctx.moveTo(xx(p[0]),yy(p[1])):ctx.lineTo(xx(p[0]),yy(p[1])));
+      for(let j=pts.length-1;j>=0;j--) ctx.lineTo(xx(pts[j][0]),yy(pts[j][1]-(j<base.length?0:0)));
+      ctx.strokeStyle=TICKET_COLORS[k]||"#888";ctx.lineWidth=3;ctx.globalAlpha=0.85;ctx.stroke();ctx.globalAlpha=1;
+    });
+  }
+  /* 客層別在園(積み上げ) */
+  if (chartSel.includes("cohorts")){
+    const cs2=cohortsOf(now);
+    const step=1/12;
+    const acc=[];
+    for(let t=t0;t<=t1;t+=step) acc.push(0);
+    cs2.forEach((c,ci)=>{
+      ctx.beginPath();let i=0;
+      for(let t=t0;t<=t1;t+=step,i++){
+        const alive=cohortAlive(now,att,t);
+        acc[i]+=att.total*(alive[ci]||0);
+        i===0?ctx.moveTo(xx(t),yy(acc[i])):ctx.lineTo(xx(t),yy(acc[i]));
+      }
+      ctx.strokeStyle=COHORT_COLORS[ci%COHORT_COLORS.length];ctx.lineWidth=2;ctx.globalAlpha=0.8;ctx.stroke();ctx.globalAlpha=1;
+    });
+  }
+  /* 累計退園(橙) */
+  if (chartSel.includes("exits")){
+    ctx.strokeStyle="#d08a2c";ctx.lineWidth=3;ctx.setLineDash([2,3]);ctx.beginPath();
+    let st2=false;
+    for(let t=t0;t<=22.7;t+=1/12){const v=cumExitsAt(now,t,att,rwG);st2?ctx.lineTo(xx(t),yy(v)):ctx.moveTo(xx(t),yy(v));st2=true;}
+    ctx.stroke();ctx.setLineDash([]);
+  }
   /* 累計(緑) */
+  if (chartSel.includes("entries")){
   ctx.strokeStyle="#7c9c6a";ctx.lineWidth=3;
   if (mode==="future") ctx.globalAlpha=0.5;
   ctx.beginPath();
   for(let t=t0;t<=22;t+=1/12){const v=cumEntriesModel(now,Math.max(t,oh+0.001),att,rwG,1);t===t0?ctx.moveTo(xx(t),yy(v)):ctx.lineTo(xx(t),yy(v));}
   ctx.stroke();ctx.globalAlpha=1;
+  }
   /* 在園(青) */
-  const realNow=new Date();
-  const nowTT=realNow.getHours()+realNow.getMinutes()/60;
+  if (chartSel.includes("inpark")){
   ctx.strokeStyle="#2a4a86";ctx.lineWidth=4;
   let started=false;
   if (mode==="future"){
@@ -4288,6 +4486,7 @@ async function drawDayChart(cv,target,mode){
     ctx.globalAlpha=0.45;ctx.lineWidth=3;ctx.setLineDash([7,6]);ctx.beginPath();started=false;
     for(let x=Math.max(t0,nowTT);x<=t1;x+=1/12){const v=inParkOf(now,x,att);started?ctx.lineTo(xx(x),yy(v)):ctx.moveTo(xx(x),yy(v));started=true;}
     ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;ctx.lineWidth=4;
+  }
   }
   if (mode==="today"&&nowTT>=t0&&nowTT<=t1){ctx.strokeStyle="#bf4a2e";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(xx(nowTT),T);ctx.lineTo(xx(nowTT),B);ctx.stroke();}
   let wxSum="";
@@ -4359,13 +4558,31 @@ async function openAttendanceDetail(target,mode){
      <table class="att-tbl">${sumRows.map(r=>`<tr${/想定来場者数/.test(r[0])?' class="att-key"':''}><td>${r[0]}</td><td>${r[1]}</td><td class="src">${r[2]}</td></tr>`).join("")}</table>`
     +tixTbl+cohortTbl;
   attBackdrop.classList.add("show");
+  const redrawAtt=async()=>{
+    const hv2=await drawDayChart(document.getElementById("attChart"),now,mode);
+    window.__attHover=hv2;
+    updateAttNote(hv2,mode);
+  };
+  renderChips("attChips",redrawAtt);
   const hv=await drawDayChart(document.getElementById("attChart"),now,mode);
   window.__attHover=hv;
-  document.getElementById("attNote").textContent=(mode==="past"
-    ?(J?"— 青実線=実績（共有記録＋再構成） ／ 緑=累計入場 ／ 赤帯=入場制限 ／ 薄青帯=雨 ／ 灰帯=トラブル対応":"Blue=actual / Green=entries / Red=restriction / Blue band=rain / Grey=incident")
+  window.updateAttNote=function(hv,mode){
+    const J2=LANG==="ja";
+    const seg=[];
+    if (chartSel.includes("inpark")) seg.push(J2?"青=在園":"blue=in park");
+    if (chartSel.includes("entries")) seg.push(J2?"緑=累計入場":"green=entries");
+    if (chartSel.includes("exits")) seg.push(J2?"橙点=累計退園":"orange=exits");
+    if (chartSel.includes("tickets")) seg.push(J2?"チケット種別の積み上げ":"stacked tickets");
+    if (chartSel.includes("cohorts")) seg.push(J2?"客層別の積み上げ":"stacked cohorts");
+    window.__chartLegend=seg.join(" ／ ");
+    document.getElementById("attNote").textContent=(mode==="past"
+    ?(J2?"— 青実線=実績（共有記録＋再構成） ／ 緑=累計入場 ／ 赤帯=入場制限 ／ 薄青帯=雨 ／ 灰帯=トラブル対応":"Blue=actual / Green=entries / Red=restriction / Blue band=rain / Grey=incident")
     :mode==="future"
-    ?(J?"— 薄い点線=予測 ／ 緑=累計入場（モデル） ／ 赤帯=入場制限見込み":"Dashed=forecast / Green=entries / Red=likely restriction")
-    :(J?"— 濃い実線=実績 ／ 薄い点線=予測 ／ 緑=累計入場 ／ 赤帯=入場制限 ／ 薄青帯=雨 ／ 縦線=現在":"Solid=actual / faint dashed=forecast / Green=entries / Red=restriction / Line=now"))+(hv.wxSum||"");
+    ?(J2?"— 薄い点線=予測 ／ 緑=累計入場（モデル） ／ 赤帯=入場制限見込み":"Dashed=forecast / Green=entries / Red=likely restriction")
+    :(J2?"— 濃い実線=実績 ／ 薄い点線=予測 ／ 赤帯=入場制限 ／ 薄青帯=雨 ／ 縦線=現在":"Solid=actual / dashed=forecast / Red=restriction / Line=now"))
+    +(window.__chartLegend?(J2?"　表示中: ":"  shown: ")+window.__chartLegend:"")+(hv.wxSum||"");
+  };
+  updateAttNote(hv,mode);
 }
 document.getElementById("attChart").addEventListener("mousemove",ev=>{
   const hv=window.__attHover;
@@ -4528,6 +4745,15 @@ function openTixModal(){
   document.getElementById("tixBackdrop").classList.add("show");
 }
 document.getElementById("btnTix").addEventListener("click",openTixModal);
+document.getElementById("btnMenu").addEventListener("click",openMenuSheet);
+document.getElementById("entClose").addEventListener("click",()=>document.getElementById("entBackdrop").classList.remove("show"));
+document.getElementById("entBackdrop").addEventListener("click",e=>{if(e.target.id==="entBackdrop")document.getElementById("entBackdrop").classList.remove("show");});
+{
+  const gp=document.getElementById("entQueue");
+  if (gp){gp.style.cursor="pointer";gp.title="タップで入園状況の詳細";gp.addEventListener("click",e=>{e.stopPropagation();openEntranceSheet();});}
+}
+document.getElementById("menuClose").addEventListener("click",()=>document.getElementById("menuBackdrop").classList.remove("show"));
+document.getElementById("menuBackdrop").addEventListener("click",e=>{if(e.target.id==="menuBackdrop")document.getElementById("menuBackdrop").classList.remove("show");});
 /* 運営レポート(社内): 明示ボタンから開き、対象日を選んで表示 */
 async function openOpsModal(target){
   const now=new Date();
@@ -5031,6 +5257,8 @@ function renderCalendar(){
           } else ow.style.display="none";
         }
       }
+      const redrawCal=()=>drawDayChart(document.getElementById("calChart"),d,mode2).then(hv=>{window.__calHover=hv;});
+      renderChips("calChips",redrawCal);
       drawDayChart(document.getElementById("calChart"),d,mode2).then(hv=>{
         window.__calHover=hv;
         document.getElementById("calChartNote").textContent=(mode2==="past"
