@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>const APP_VERSION="v51",APP_DATE="2026-07-27";</script>
+<script>const APP_VERSION="v54",APP_DATE="2026-07-27";</script>
 <title>MALLOWBROOK PARK｜リアルタイム運営情報</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Cinzel:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -680,7 +680,7 @@ body.sky-late{background-image:radial-gradient(ellipse at 50% -10%,#131d38 0%,#0
   <header>
     <div class="mascot" role="img" aria-label="マロウ"></div>
     <div>
-      <div class="park-en">MALLOWBROOK PARK<span id="hSub" style="display:none"></span><span id="tNext" style="display:none"></span><span id="tSec" style="display:none"></span><span id="npText" style="display:none"></span></div>
+      <div class="park-en">MALLOWBROOK PARK<span id="tNext" style="display:none"></span><span id="tSec" style="display:none"></span><span id="npText" style="display:none"></span></div>
       <div class="park-ja" id="hSub">リアルタイム待ち時間</div>
     </div>
     <div class="hspace"></div>
@@ -1204,43 +1204,45 @@ function showEffect(d,tt){
 const ROUTES={
   /* 各点: [x,y,区間種別,標高(0-100)] 区間種別: station/steep_lift/lift/turn/banked/steep_drop/drop/airtime/helix/cruise/water/brake/transfer */
   chase:{drive:"induction",shape:"car",pts:[
-    [16,80,"station",5],[26,80,"cruise",5],[34,76,"turn",8],[42,70,"lift",22],[50,62,"lift",38],
+    [16,80,"load",5],[26,80,"cruise",5],[34,76,"turn",8],[42,70,"lift",22],[50,62,"lift",38],
     [58,56,"turn",40],[66,52,"steep_drop",14],[74,54,"cruise",12],[82,60,"helix",18],[80,70,"turn",16],
-    [70,76,"lift",26],[60,80,"cruise",26],[48,84,"drop",8],[34,86,"brake",5],[22,86,"station",5]],
+    [70,76,"lift",26],[60,80,"cruise",26],[48,84,"drop",8],[34,86,"brake",5],[22,86,"unload",5]],
     scenes:["LOAD","時計塔ホール","歯車回廊","文字盤の上","星屑の間","記憶の書架","フィナーレ","UNLOAD"],
     preshow:true},
   rail:{drive:"chainlift",shape:"train",pts:[
     [12,84,"station",4],[22,84,"turn",5],[30,80,"steep_lift",30],[38,72,"steep_lift",56],[44,62,"cruise",58],
     [50,54,"steep_drop",12],[58,52,"airtime",22],[66,48,"banked",26],[74,52,"drop",10],[82,60,"helix",18],
-    [80,72,"banked",14],[70,80,"drop",6],[58,86,"brake",5],[40,88,"brake",4],[22,88,"station",4]],
+    [80,72,"banked",14],[70,80,"drop",6],[58,86,"brake",5],[40,88,"brake",4],[22,88,"brake",4]],
     scenes:["LOAD","第1旋回","巻上区間","頂上","第1急降下","エアタイム","バンク旋回","第2降下","らせん","ブレーキラン","UNLOAD"]},
   dam:{drive:"waterflow",shape:"boat",pts:[
-    [14,82,"station",6],[24,86,"water",6],[36,90,"turn",6],[48,88,"water",7],[58,84,"steep_lift",34],
+    [14,82,"load",6],[24,86,"water",6],[36,90,"turn",6],[48,88,"water",7],[58,84,"steep_lift",34],
     [66,74,"lift",44],[72,64,"cruise",46],[78,60,"steep_drop",8],[82,70,"water",6],[74,82,"turn",6],
-    [60,90,"water",6],[44,92,"water",6],[28,88,"brake",6],[18,86,"station",6]],
+    [60,90,"water",6],[44,92,"water",6],[28,88,"brake",6],[18,86,"unload",6]],
     scenes:["LOAD","水路","第1旋回","巻上コンベア","頂上","滝","着水","水路","UNLOAD"],preshow:true},
   wheel:{drive:"motor",circle:true,shape:"gondola",pts:null,scenes:["乗降","上昇","頂上","下降"]},
   factory:{drive:"hydraulic",shape:"pod",pts:[
     [28,82,"station",6],[38,78,"turn",10],[48,70,"lift",30],[58,62,"turn",34],[68,58,"cruise",34],
-    [76,64,"drop",18],[70,74,"helix",14],[58,82,"brake",8],[42,86,"station",6]],
+    [76,64,"drop",18],[70,74,"helix",14],[58,82,"brake",8],[42,86,"transfer",6]],
     scenes:["LOAD","旋回","上昇","工房内","下降","らせん","UNLOAD"],preshow:true},
   voyage:{drive:"waterflow",shape:"boat",pts:[
-    [12,76,"station",5],[24,70,"water",5],[38,64,"turn",5],[52,60,"water",5],[66,62,"water",5],
-    [78,70,"turn",5],[70,80,"water",5],[54,86,"water",5],[36,88,"brake",5],[18,84,"station",5]],
+    [12,76,"load",5],[24,70,"water",5],[38,64,"turn",5],[52,60,"water",5],[66,62,"water",5],
+    [78,70,"turn",5],[70,80,"water",5],[54,86,"water",5],[36,88,"brake",5],[18,84,"unload",5]],
     scenes:["出航","港内","灯台沖","霧の海","帰港","UNLOAD"]},
   train:{drive:"motor",shape:"train",pts:[
     [10,88,"station",5],[22,78,"cruise",8],[34,68,"turn",10],[48,58,"cruise",12],[62,56,"cruise",12],
-    [76,60,"turn",10],[84,70,"cruise",8],[76,82,"cruise",6],[58,90,"brake",5],[30,92,"cruise",5],[16,90,"station",5]],
+    [76,60,"turn",10],[84,70,"cruise",8],[76,82,"cruise",6],[58,90,"brake",5],[30,92,"cruise",5],[16,90,"transfer",5]],
     scenes:["駅","メインストリート","横丁","森","ハーバー","車庫線","駅"]},
   canoe:{drive:"manual",shape:"boat",pts:[
     [18,82,"station",4],[32,78,"water",4],[48,74,"water",4],[62,78,"turn",4],[72,86,"water",4],
-    [54,90,"water",4],[34,90,"water",4],[22,86,"station",4]],
+    [54,90,"water",4],[34,90,"water",4],[22,86,"water",4]],
     scenes:["乗艇","水路","滝の水辺","月あかりの波止場","帰港"]},
 };
 /* 動力方式の定義(ご提示の分類に対応) */
-/* ホーム形態: dual3=搭乗/降車が別ホーム＋滞留レーン(3編成同時搭乗・前から順次発車)
-   twin=同一ホーム2線で順次発車 / single=乗降同一ホーム1線 */
-const STATION_TYPE={chase:"dual3",dam:"dual3",voyage:"dual3",rail:"twin",
+/* ホーム形態:
+   dual3 = 独立降車ホーム→滞留レーン→縦列搭乗ホーム(混雑に応じ1〜3編成在線・先頭から順次発車)
+   island= 1線2面(線路の両側にホーム。降車面で降車完了→搭乗面ゲート開→搭乗→安全確認)
+   single= 乗降同一ホーム1線(降車→搭乗→安全確認の逐次) */
+const STATION_TYPE={chase:"dual3",dam:"dual3",voyage:"dual3",rail:"island",
   factory:"single",train:"single",wheel:"single",canoe:"single"};
 /* 目標発車間隔(秒)。上限として運用し、超過は遅延として計上する。
    nullは連続運行や周回時間で律速される施設(観覧車・汽車・カヌー) */
@@ -1541,7 +1543,7 @@ const TOKYO_LAT=35.6895, TOKYO_LON=139.6917;
 /* ================= i18n ================= */
 let LANG="ja";
 const T={
- ja:{sub:"リアルタイム運営情報｜待ち時間・ショー・施設ガイド",crowdNow:"現在の園内来場者数",crowdFc:"本日の混雑予測",attr:"アトラクション",rest:"レストラン",
+ ja:{sub:"リアルタイム待ち時間",crowdNow:"現在の園内来場者数",crowdFc:"本日の混雑予測",attr:"アトラクション",rest:"レストラン",
    sortNow:"待ち時間順",sortFc:"ピーク時(14時)予測",refresh:"今すぐ更新",next:"次回更新まで",sec:"秒",min:"分",
    wait:"待ち時間 約",waitFc:"ピーク時予測 約",open:"営業中 9:00-22:00",before:"開園前（9:00開園）",closed:"本日の営業は終了しました",
    restrict:"入場制限中",restrictBanner:"⚠ ただいま入場制限を実施しています（最大収容 75,000人）",
@@ -1564,7 +1566,7 @@ const T={
    footNote2:"足湯ではありません（送風式のフットケア休憩施設です）",
    ebBefore1:"開催まであと",ebBefore2:"日",ebDuring1:"開催中｜8月31日まであと",ebDuring2:"日",ebLast:"本日最終日",ebEnded:"は終了しました",
    cond:{clear:"快晴",sunny:"晴れ",cloudy:"くもり",fog:"霧",drizzle:"霧雨",rain:"雨",heavyrain:"大雨",snow:"雪",storm:"雷雨"}},
- en:{sub:"Live park info: waits, shows & guide",crowdNow:"Guests in park now",crowdFc:"Today's crowd forecast",attr:"Attractions",rest:"Restaurants",
+ en:{sub:"Live Wait Times",crowdNow:"Guests in park now",crowdFc:"Today's crowd forecast",attr:"Attractions",rest:"Restaurants",
    sortNow:"by wait time",sortFc:"peak (2pm) forecast",refresh:"Refresh now",next:"Next update in",sec:"s",min:"min",
    wait:"Approx. wait ",waitFc:"Peak forecast ",open:"Open 9:00-22:00",before:"Opens at 9:00",closed:"Closed for today",
    restrict:"Entry restricted",restrictBanner:"⚠ Park entry is currently restricted (capacity 75,000)",
@@ -2031,7 +2033,37 @@ function inspectionsOf(id,d){
   }
   return wins;
 }
+/* 安全装置作動イベント(v53): 決定論・園全体で1日1件程度。
+   発生→全編成一時停止(4〜9分・安全確認)→復旧しない場合はシステム調整(OP-30・10〜26分)。
+   ゲスト向けにも「一時停止/調整中」として反映される。30分超の大規模トラブルは既存系が担当 */
+function estopEventOf(spot,d){
+  if (!ROUTES[spot.id]||!RIDE_SPEC[spot.id]) return null;
+  const dk=dateKey(d);
+  if (rand01("esd-"+spot.id+dk)>=0.09) return null;
+  const oh=openH(d);
+  const start=oh+1+rand01("est-"+spot.id+dk)*(CLOSE_H-oh-3);
+  const baseMin=4+rand01("esb-"+spot.id+dk)*5;                 /* 全編成一時停止 4〜9分 */
+  const esc=rand01("ese-"+spot.id+dk)<0.35;                    /* 35%はシステム調整へ移行 */
+  const adjMin=esc?10+rand01("esa-"+spot.id+dk)*16:0;          /* 調整 10〜26分(30分未満) */
+  const t1=start+baseMin/60;
+  return {start,t1,end:t1+adjMin/60,esc};
+}
+function estopPhase(spot,d,tt){
+  const ev=estopEventOf(spot,d);
+  if (!ev||tt<ev.start||tt>=ev.end) return null;
+  return {ev,phase:tt<ev.t1?1:2};
+}
+/* イベントによる停止累計(分)。復旧後は停止時間ぶん運行が後ろ倒しで滑らかに再開する */
+function estopShiftMin(spot,d,tt){
+  const ev=estopEventOf(spot,d);
+  if (!ev||tt<ev.start) return 0;
+  return (Math.min(tt,ev.end)-ev.start)*60;
+}
 function spotStatus(s,d,tt){
+  {
+    const ep=estopPhase(s,d,tt);
+    if (ep) return ep.phase===1?{st:"estop",ep}:{st:"insp",until:ep.ev.end,ep};
+  }
   {
     const ev0=evacWindowOf(s,d,tt);
     if (ev0) return {st:"evac",ev:ev0};
@@ -2984,6 +3016,7 @@ function opStateOf(spot,d,tt){
     const J2=LANG==="ja";
     return {s:J2?"係員がご案内しています（一時停止）":"Staff guidance in progress",shortS:J2?"案内中":"Guided",cls:"w-maint"};
   }
+  if (st.st==="estop") return {id:"OPERATIONAL_HOLD",note:`安全装置作動（${fmtT(st.ep.ev.start)}）・全編成一時停止、安全確認中`,fault:FAULT_CODES.sensor};
   if (st.st==="trouble"){
     const tr=st.tr;
     const f=FAULT_CODES[tr.kind]||["--",tr.labelJa];
@@ -3019,8 +3052,11 @@ function vehicleStates(spot,d,tt,opt){
   const blocks=rt&&rt.scenes?rt.scenes:["LOAD","S1","S2","S3","S4","FINALE","UNLOAD","回送"];
   const cycle=sp.ride+2.0;
   const minute=tt*60;
+  /* 安全装置作動(v53): 発生中は全編成が線路上で停止し時間凍結。復旧後は停止分だけ後ろ倒しで再開 */
+  const esp=(opt&&opt.test)?null:estopPhase(spot,d,tt);
+  const minuteEff=minute-((opt&&opt.test)?0:estopShiftMin(spot,d,tt));
   const st=(opt&&opt.test)?{id:"RECOVERY_TEST"}:opStateOf(spot,d,tt);
-  const running=(opt&&opt.test)||st.id==="OPEN"||st.id==="DELAYED"||st.id==="LIMITED_OPERATION";
+  const running=(opt&&opt.test)||!!esp||st.id==="OPEN"||st.id==="DELAYED"||st.id==="LIMITED_OPERATION";
   const att=dailyAttendance(d);
   const lv=congestionLvRaw(spot.id,d,tt,att);
   const maintN=Math.max(1,Math.round(sp.spare*0.5));                       /* 常時整備中の編成 */
@@ -3031,7 +3067,7 @@ function vehicleStates(spot,d,tt,opt){
   const out=[];
   const testMode=!!(opt&&opt.test);
   const stype=STATION_TYPE[spot.id]||"single";
-  const tracks=stype==="dual3"?3:stype==="twin"?2:1;      /* 搭乗位置の数 */
+  const tracks=stype==="dual3"?3:1;      /* 搭乗ホームの最大在線数(island/singleは1) */
   const faultRate=0.05*(1+(lv-1)*0.16);                 /* 軽微トラブル: 混雑時ほど増える(5%→約8%) */
   for (let i=0;i<sp.trains;i++){
     const idx=i+1;
@@ -3040,51 +3076,63 @@ function vehicleStates(spot,d,tt,opt){
         state:i>=sp.trains-maintN?"点検中":(running?"予備(即投入可)":"停止"),delay:0,s:null,seats:null});
       continue;
     }
-    /* ルート上の位置 s(0-1)。区間ごとに速度が変わる */
-    const s=((minute/cycle)+i/active)%1;
+    /* ルート上の位置 s(0-1)。区間ごとに速度が変わる(イベント中はminuteEffが凍結) */
+    const s=((minuteEff/cycle)+i/active)%1;
     const seg=routeSegAt(spot.id,s);
     const mkey=Math.floor(minute);
     const r=rand01("veh-"+spot.id+"-"+idx+"-"+dateKey(d)+"-"+mkey);
-    const held=!testMode&&r<0.05;
-    /* 走行中の異常: 安全装置が作動して緊急停止(ごく低頻度) */
-    const estop=!testMode&&!isStation(seg.kind)&&rand01("es-"+spot.id+idx+dateKey(d)+Math.floor(minute/6))<0.0012;
+    const held=!testMode&&!esp&&r<0.05;
+    /* 安全装置作動フェーズ1: 全編成が緊急停止 */
+    const estop=!testMode&&!!esp&&esp.phase===1;
     const simMode=opt&&opt.sim;
     const fillRate=simMode?({2:0.55,3:0.78,5:0.98}[opt.simLv||3]||0.78):0.78;
     const load=(testMode&&!simMode)?0:Math.round(sp.seats*(fillRate+rand01("ld-"+spot.id+idx+mkey)*0.18));
-    const dwell=isStation(seg.kind);
-    out.push({id:idx,s,block:seg.name,kind:seg.kind,n:dwell&&seg.kind==="unload"?load:load,
-      state:estop?"緊急停止（安全装置作動）":held?"停止(前方占有)":(isStation(seg.kind)?(seg.p<0.5?"搭乗中":"降車中"):
+    const lapKey=Math.floor(minuteEff/cycle+i/active);         /* 周回ごとに固定・停車中は不変 */
+    const dp=isStation(seg.kind)?dispatchPhaseOf(spot.id,idx,seg,mkey,faultRate,testMode,lapKey):null;
+    const dispLabel=dp?({unload:"降車中",board:"搭乗中",safety:"安全確認",ready:"発車待機"}[dp.phase]||dp.label):null;
+    /* 降車中は空いた席のぶん乗車人数を減らす */
+    const smTmp=seatMapOf(spot.id,idx,load,seg,s,mkey,testMode,dp,estop,lapKey);
+    const nNow=dp&&dp.phase==="unload"&&smTmp?Math.max(0,load-smTmp.exited):
+               dp&&dp.phase==="board"&&smTmp?smTmp.boarded:load;
+    out.push({id:idx,s,block:seg.name,kind:seg.kind,n:nNow,lk:lapKey,
+      state:estop?"緊急停止（安全装置作動・全編成停止）":(esp&&esp.phase===2)?"システム調整中（運転見合わせ）":held?"停止(前方占有)":(dp?dispLabel:
             (seg.kind==="steep_lift"||seg.kind==="lift")?"巻上中":
             (seg.kind==="steep_drop"||seg.kind==="drop")?"降下中":
             seg.kind==="airtime"?"エアタイム":seg.kind==="helix"?"らせん":
             (seg.kind==="turn"||seg.kind==="banked")?"旋回中":seg.kind==="brake"?"制動中":"走行中"),
-      delay:held?Math.round(rand01("dl-"+spot.id+idx+mkey)*90):0,
-      estop,
-      seats:seatMapOf(spot.id,idx,load,seg,s,mkey,testMode,dispatchPhaseOf(spot.id,idx,seg,mkey,faultRate,testMode),estop),
+      delay:esp?Math.round((tt-esp.ev.start)*3600):held?Math.round((15+rand01("dl-"+spot.id+idx+lapKey)*60)*(1-seg.p)):0,
+      estop,frozen:!!esp,
+      seats:smTmp,
       power:powerStateOf(spot.id,seg,s,idx,mkey),
       kindJa:SEG_JA[seg.kind]||seg.kind,
-      speed:Math.round((SEG_SPEED[seg.kind]||1)*22+(seg.kind==="steep_drop"?36:0)),
+      speed:esp?0:Math.round((SEG_SPEED[seg.kind]||1)*22+(seg.kind==="steep_drop"?36:0)),
       z:Math.round((seg.seg?seg.seg.z0+(seg.seg.z1-seg.seg.z0)*seg.p:5)),
       dwellP:isStation(seg.kind)?seg.p:null,
-      dp:isStation(seg.kind)?dispatchPhaseOf(spot.id,idx,seg,mkey,faultRate,testMode):null});
+      dp});
   }
-  /* ホーム構成に応じた在線の割当 */
+  /* ホーム構成に応じた在線の割当(v52: 区間種別で判定 / v53: 残り秒は周回シード×進捗のカウントダウン) */
   const inStation=out.filter(v=>v.s!=null&&isStation(v.kind)).sort((a,b)=>(b.dwellP||0)-(a.dwellP||0));
-  if (stype==="dual3"){
-    /* 降車ホーム(進行が進んだ側)→滞留レーン→搭乗ホーム3線 */
-    inStation.forEach((v,i)=>{
-      if (v.dwellP<0.28){v.pos="unload";v.posIdx=0;}
-      else if (i<3){v.pos="load";v.posIdx=i;v.order=i+1;}
-      else if (i<6){v.pos="lane";v.posIdx=i-3;v.state="滞留レーン待機";v.hold=true;
-        v.delay=Math.max(v.delay,8+Math.round(rand01("ln-"+spot.id+v.id+Math.floor(minute))*22));}
+  if (esp){ /* イベント中は乗降・入線を行わない(全編成停止のまま) */
+    if (esp.phase===2) out.forEach(v=>{if(v.s!=null)v.hold=true;});
+  }
+  else if (stype==="dual3"){
+    /* 独立降車ホーム(unload区間)と縦列搭乗ホーム(load区間・混雑に応じ1〜3編成在線) */
+    const berths=lv>=4?3:lv>=2?2:1;
+    let li=0;
+    inStation.forEach(v=>{
+      if (v.kind==="unload"){v.pos="unload";v.posIdx=0;return;}
+      if (li<berths){v.pos="load";v.posIdx=li;v.order=li+1;li++;}
+      else if (li<berths+3){v.pos="lane";v.posIdx=li-berths;v.state="滞留レーン待機";v.hold=true;
+        v.delay=Math.max(0,Math.round((8+rand01("ln-"+spot.id+v.id+v.lk)*22)*(1-(v.dwellP||0))));li++;}
       else {v.state="入線待ち";v.hold=true;v.pos="approach";
-        v.delay=Math.max(v.delay,12+Math.round(rand01("hold-"+spot.id+v.id+Math.floor(minute))*38));}
+        v.delay=Math.max(0,Math.round((12+rand01("hold-"+spot.id+v.id+v.lk)*38)*(1-(v.dwellP||0))));}
     });
   } else {
+    /* island(1線2面)・single(乗降同一1線): 在線は1編成、後続は先頭の進捗に応じて入線待ちが減る */
     inStation.forEach((v,i)=>{
       if (i<tracks){v.pos="both";v.posIdx=i;v.order=i+1;}
       else {v.state="入線待ち";v.hold=true;v.pos="approach";
-        v.delay=Math.max(v.delay,10+Math.round(rand01("hold-"+spot.id+v.id+Math.floor(minute))*35));}
+        v.delay=Math.max(0,Math.round((1-(inStation[0].dwellP||0))*gap*60));}
     });
   }
   /* 側線の編成に位置を与える */
@@ -3094,20 +3142,27 @@ function vehicleStates(spot,d,tt,opt){
     if (v.block==="整備側線"){v.side="maint";v.sideIdx=mi++;}
     else {v.side="wait";v.block="待機線";v.sideIdx=wi++;}
   });
-  /* 目標間隔に対する実績: 安全確認の遅延ぶんが上乗せされる */
+  /* 目標間隔に対する実績(v53): 直近12便の移動平均。便ごとの遅延は周回シードで決定論生成 */
   const target=DISPATCH_TARGET[spot.id]??null;
   const theo=gap*60;
-  const faultTrains=out.filter(v=>v.dp&&v.dp.fault).length;
-  const dwellCars=Math.max(1,out.filter(v=>v.s!=null&&isStation(v.kind)).length);
-  const avgFaultDelay=(faultTrains/dwellCars)*28;                 /* 遅延便の平均+28秒 */
-  const holdN=out.filter(v=>v.hold).length;
-  const actual=theo+avgFaultDelay+holdN*1.2;
-  const overRate=Math.min(100,Math.round((faultRate*100)+(holdN>0?holdN*3:0)));
+  const lapNow=Math.floor(minuteEff/Math.max(0.2,gap));
+  let accD=0,ovN=0,safN=0;
+  for (let k=0;k<12;k++){
+    const key="dsp-"+spot.id+"-"+(lapNow-k);
+    const f=rand01(key)<faultRate;                              /* 安全確認由来の遅延便 */
+    const fd=f?12+rand01(key+"f")*25:0;
+    const hd=rand01(key+"h")<0.10?2+rand01(key+"h2")*5:0;       /* 乗降側の小遅延 */
+    const dd=fd+hd;accD+=dd;
+    if (dd>Math.max(3,(target!=null?target:theo)*0.12)){ovN++;if(f)safN++; }
+  }
+  const actual=theo+accD/12;
+  const overRate=Math.min(100,Math.round(ovN/12*100));
   return {blocks,list:out,gap,cycle,active,lv,drive:(rt&&rt.drive)||"motor",max:sp.trains,spare:sp.spare,
     test:testMode,tracks,stype,faultRate,inStation:inStation.slice(0,tracks),
+    esp,
     target,theo:Math.round(theo),actual:Math.round(actual),overRate,
     over:target!=null&&actual>target,
-    safetyRate:Math.round(faultRate*100)};
+    safetyRate:Math.round(safN/12*100)};
 }
 /* ルート上の位置→区間(速度プロファイル込み) */
 const _routeCache={};
@@ -3160,48 +3215,76 @@ function routePointAt(id,s){
   const p=(s-seg.t0)/Math.max(1e-6,seg.t1-seg.t0);
   return [seg.a[0]+(seg.b[0]-seg.a[0])*p,seg.a[1]+(seg.b[1]-seg.a[1])*p,seg.kind];
 }
-/* 座席マップ: 空席/着席/安全バー/ベルト。搭乗中は順次施錠、降車時は一括解除 */
-/* 停車フェーズ: 降車→乗車→安全確認→READY。軽微トラブル時のみREADYが遅れる */
-function dispatchPhaseOf(id,vid,seg,mkey,faultRate,testMode){
-  const p=seg.p;
-  const fault=!testMode&&rand01("flt-"+id+vid+mkey)<faultRate;
-  const seatIdx=Math.floor(rand01("fseat-"+id+vid+mkey)*(RIDE_SPEC[id]?.seats||8));
-  let phase,label;
-  if (p<0.20){phase="unload";label="降車";}
-  else if (p<0.55){phase="board";label="乗車";}
-  else if (p<0.85||fault){phase="safety";label=fault?"安全確認（センサー不一致）":"安全確認";}
-  else {phase="ready";label="発車準備完了";}
+/* 座席マップ: 空席/着席/安全バー/ベルト。乗降は「一斉＋数秒の誤差」で座席ごとに揺らぐ */
+/* 停車フェーズ(v52): 区間種別で分岐。
+   load(縦列搭乗ホーム)   = 搭乗→安全確認→READY
+   unload(独立降車ホーム) = 降車のみ
+   station(単一/1線2面)   = 降車→搭乗→安全確認→READY の逐次 */
+function dispatchPhaseOf(id,vid,seg,mkey,faultRate,testMode,lapKey){
+  const p=seg.p, lk=lapKey!=null?lapKey:mkey;
+  const fault=!testMode&&rand01("flt-"+id+vid+lk)<faultRate;
+  const seatIdx=Math.floor(rand01("fseat-"+id+vid+lk)*(RIDE_SPEC[id]?.seats||8));
+  let phase,label,pp=0;                       /* pp=フェーズ内進捗0-1 */
+  if (seg.kind==="unload"){
+    phase="unload";label="降車";pp=Math.min(1,p/0.6);        /* 後半は滞留レーンへの回送 */
+  } else if (seg.kind==="load"){
+    if (p<0.55){phase="board";label="搭乗";pp=p/0.55;}
+    else if (p<0.85||fault){phase="safety";label=fault?"安全確認（センサー不一致）":"安全確認";pp=Math.min(1,(p-0.55)/0.30);}
+    else {phase="ready";label="発車準備完了";pp=1;}
+  } else {                                     /* station: 降車→搭乗の逐次 */
+    if (p<0.30){phase="unload";label="降車";pp=p/0.30;}
+    else if (p<0.62){phase="board";label="搭乗";pp=(p-0.30)/0.32;}
+    else if (p<0.88||fault){phase="safety";label=fault?"安全確認（センサー不一致）":"安全確認";pp=Math.min(1,(p-0.62)/0.26);}
+    else {phase="ready";label="発車準備完了";pp=1;}
+  }
   const ready=phase==="ready";
-  return {phase,label,ready,fault,faultSeat:fault?seatIdx:null,
+  return {phase,label,ready,pp,fault,faultSeat:fault?seatIdx:null,
     faultCode:fault?"RST-014 安全バーセンサー不一致":null,
-    delay:fault?15+Math.round(rand01("fdl-"+id+vid+mkey)*30):0};
+    delay:fault?15+Math.round(rand01("fdl-"+id+vid+lk)*30):0};
 }
 function isStation(kind){return kind==="station"||kind==="load"||kind==="unload";}
-function seatMapOf(id,vid,load,seg,s,mkey,testMode,dp,estop){
+function seatMapOf(id,vid,load,seg,s,mkey,testMode,dp,estop,lapKey){
   const sp=RIDE_SPEC[id];
   if (!sp||!sp.seats) return null;
   const cols=sp.seats>=16?4:2, rows=Math.ceil(sp.seats/cols);
-  const arr=[];
+  const lk=lapKey!=null?lapKey:mkey;
+  /* 座席ごとの乗降オフセット(フェーズ内進捗0-1)。ほぼ同時＋数秒の誤差:
+     系統誤差=奥列・通路遠い席ほど遅い / 個体差=シード乱数 / 例外=低頻度で大きく遅れる(忘れ物等) */
+  const off=(i,tag)=>{
+    const row=Math.floor(i/cols), aisle=Math.min(i%cols,cols-1-(i%cols));
+    const sys=(row/Math.max(1,rows-1))*0.05+aisle*0.02;              /* 系統誤差(約0-2秒) */
+    const ind=rand01("so-"+tag+"-"+id+vid+i+lk)*0.13;                /* 個体差(約0-4秒) */
+    const exc=rand01("sx-"+tag+"-"+id+vid+i+lk)<0.03?0.5:0;          /* 例外3%(+10秒超) */
+    return Math.min(0.97,0.08+sys+ind+exc);
+  };
+  const arr=[];let boarded=0,exited=0;
   for (let i=0;i<sp.seats;i++){
     const occupied=i<load;
     let st="empty";
     if (occupied){
       if (estop) st=i===0?"fault":"locked";                 /* 緊急停止中は施錠のまま安全確認 */
       else if (isStation(seg.kind)&&dp){
-        if (dp.phase==="unload") st=seg.p>0.12?"released":"locked";
-        else if (dp.phase==="board") st="seated";
-        else if (dp.phase==="safety"){
-          if (dp.fault&&i===dp.faultSeat) st="fault";
-          else {const r=rand01("seat-"+id+vid+i+mkey);st=r<0.75?"locked":"belt";}
+        if (dp.phase==="unload"){
+          if (dp.pp>=off(i,"u")){st="empty";exited++;}       /* 降車済(席が空く) */
+          else st=dp.pp>0.06?"released":"locked";            /* バー解除→立ち上がり */
         }
-        else st="locked";
+        else if (dp.phase==="board"){
+          if (dp.pp>=off(i,"b")){st="seated";boarded++;}     /* 着席済 */
+          else st="empty";                                    /* 案内中 */
+        }
+        else if (dp.phase==="safety"){
+          boarded++;
+          if (dp.fault&&i===dp.faultSeat) st="fault";
+          else st=dp.pp>=off(i,"l")*0.9?"locked":"belt";     /* ベルト確認→施錠へ収束 */
+        }
+        else {st="locked";boarded++;}
       } else st="locked";                                     /* 走行中は常に施錠(緑) */
     }
     arr.push(st);
   }
   const readyN=arr.filter(x=>x==="locked").length;
   const ready=dp?(dp.ready&&!dp.fault):(load===0||readyN>=load);
-  return {rows,cols,arr,ready,load,phase:dp?dp.label:null,fault:dp?dp.fault:false,faultCode:dp?dp.faultCode:null};
+  return {rows,cols,arr,ready,load,boarded,exited,phase:dp?dp.label:null,fault:dp?dp.fault:false,faultCode:dp?dp.faultCode:null};
 }
 /* 動力状態(方式別の指標) */
 function powerStateOf(id,seg,s,vid,mkey){
@@ -3227,11 +3310,11 @@ function powerStateOf(id,seg,s,vid,mkey){
 function preshowState(spot,d,tt){
   const sp=RIDE_SPEC[spot.id];
   if (!sp||!sp.preshow) return null;
-  const cycleMin=4.5, minute=Math.floor(tt*60);
+  const cycleMin=4.5, m=tt*60, mkey=Math.floor(m);   /* v53: 位相は連続時刻、揺らぎシードのみ分丸め */
   return sp.preshow.map((cap,i)=>{
-    const ph=((minute+ i*cycleMin/2)%cycleMin)/cycleMin;
+    const ph=((m+ i*cycleMin/2)%cycleMin)/cycleMin;
     const filling=ph<0.55;
-    const n=Math.round(cap*(filling?ph/0.55:1)*(0.85+rand01("ps-"+spot.id+i+minute)*0.15));
+    const n=Math.round(cap*(filling?ph/0.55:1)*(0.85+rand01("ps-"+spot.id+i+mkey)*0.15));
     return {room:String.fromCharCode(65+i),cap,n:Math.min(cap,n),
       left:Math.max(0,Math.round((1-ph)*cycleMin*60)),
       state:filling?"入場中":"上映中"};
@@ -3561,14 +3644,15 @@ function occDrawRadar(ts){
   const cv=document.getElementById("occRadar");
   if (!cv||!OCC.on) return;
   const w=cv.clientWidth||600,hgt=cv.clientHeight||300;
-  if (cv.width!==w*2){cv.width=w*2;cv.height=hgt*2;}
+  if (cv.width!==w*2||cv.height!==hgt*2){cv.width=w*2;cv.height=hgt*2;}   /* v54: 高さ変化でも再設定(残像防止) */
   const g=cv.getContext("2d");g.setTransform(2,0,0,2,0,0);
-  g.clearRect(0,0,w,hgt);
-  const snap=occSnap(true);
+  g.clearRect(0,0,cv.width,cv.height);   /* バッファ全域を必ずクリア */
+  const snap=occSnap(false);   /* v53: 重いモデル計算は80msキャッシュ。位置は下で毎フレーム外挿 */
   const s=snap.s, veh=snap.veh, tt=snap.tt, d=snap.d, test=OCC.test;
   const tb=s?routeTable(s.id):null;
   occRenderStationLive(snap);      /* STATIONも同じスナップショットで更新 */
   occRenderCardsLive(snap);
+  occLiveNumbers(snap);            /* v53: フロー数値・プレショー残り秒の軽量更新 */
   /* ルートの外接矩形に合わせて自動スケール(余白を最小化) */
   let X=x=>x,Y=y=>y;
   if (tb){
@@ -3603,11 +3687,12 @@ function occDrawRadar(ts){
     g.beginPath();g.moveTo(X(sg.a[0]),Y(sg.a[1]));g.lineTo(X(sg.b[0]),Y(sg.b[1]));g.stroke();
     g.globalAlpha=1;
   });
-  /* 搭乗ホーム・降車ホームのプラットフォーム表示 */
+  /* 搭乗ホーム・降車ホームのプラットフォーム表示(v52: 区間種別で描画) */
   {
+    const loadSegs=tb.segs.filter(sg=>sg.kind==="load");
+    const unloadSegs=tb.segs.filter(sg=>sg.kind==="unload");
     const stSegs=tb.segs.filter(sg=>sg.kind==="station");
-    if (stSegs.length){
-      const half=Math.ceil(stSegs.length/2);
+    if (loadSegs.length||unloadSegs.length||stSegs.length){
       const drawPlat=(segsArr,label,col)=>{
         if (!segsArr.length) return;
         const a=segsArr[0].a,bp=segsArr[segsArr.length-1].b;
@@ -3625,10 +3710,11 @@ function occDrawRadar(ts){
       };
       const stype=veh.stype;
       if (stype==="dual3"){
-        drawPlat(stSegs.slice(0,half),"UNLOAD 降車ホーム","#5fd68f");
-        drawPlat(stSegs.slice(half),"LOAD 搭乗ホーム ①②③","#7fd0ff");
+        drawPlat(unloadSegs,"UNLOAD 降車ホーム","#5fd68f");
+        drawPlat(loadSegs,"LOAD 搭乗ホーム（縦列）","#7fd0ff");
       } else {
-        drawPlat(stSegs,stype==="twin"?"STATION 乗降ホーム(2線)":"STATION 乗降ホーム","#5fd68f");
+        drawPlat(stSegs.length?stSegs:loadSegs.concat(unloadSegs),
+          stype==="island"?"STATION 1線2面ホーム":"STATION 乗降ホーム","#5fd68f");
       }
     }
   }
@@ -3640,14 +3726,17 @@ function occDrawRadar(ts){
     g.fillStyle="#7b9ac4";
     g.fillText(sg.name,X(sg.a[0])+4,Y(sg.a[1])-6);
   });
-  /* 車両(形状は施設の性質に合わせる) */
+  /* 車両(形状は施設の性質に合わせる)。位置はスナップショットから毎フレーム外挿(v53) */
   const shape=(ROUTES[s.id]||{}).shape||"car";
+  const cycMin=((RIDE_SPEC[s.id]||{}).ride||6)+2.0;
+  const dtMin=Math.max(0,Math.min(0.12,(performance.now()-snap.ts)/60000));
   OCC.hit=[];
   veh.list.forEach(v=>{
     if (v.s==null) return;
-    const p=routePointAt(s.id,v.s);
+    const sd=(v.frozen||v.hold||v.estop||v.state.includes("停止"))?v.s:(v.s+dtMin/cycMin)%1;
+    const p=routePointAt(s.id,sd);
     if (!p) return;
-    const p2=routePointAt(s.id,(v.s+0.006)%1)||p;
+    const p2=routePointAt(s.id,(sd+0.006)%1)||p;
     const x=X(p[0]),y=Y(p[1]);
     const ang=Math.atan2(Y(p2[1])-y,X(p2[0])-x);
     const col=v.hold?"#ffc85a":v.state.includes("停止")?"#ff6b60":
@@ -3848,16 +3937,12 @@ function occRenderPanels(){
   const hasPre=!!(ROUTES[s.id]||{}).preshow&&sp.preshow;
   const guests=OCC.mode==="sim"?1:(test?0:1);          /* 無人試運転はゲスト0 */
   const simQ=OCC.mode==="sim"?Math.round((sp.queueCap||1000)*({2:0.25,3:0.55,5:0.9}[OCC.simLv||3]||0.55)):null;
-  const stages=[["キューライン",simQ!=null?simQ:Math.round(q*guests),sp.queueCap||0]];
-  if (hasPre) stages.push(["プレショー待機",Math.round(pre*0.6*guests),pre||0]);
-  stages.push(["搭乗ホーム",Math.round(sp.seats*2*guests),sp.seats*3],
-    ["ライド乗車中",onboard,sp.seats*veh.active],
-    ["降車・退場",Math.round(sp.seats*1.2*guests),sp.seats*2]);
+  const stages=occFlowStages(s,veh,sp,d,tt,{test,sim:OCC.mode==="sim",simQ,guests,q,pre,hasPre,onboard});
   const flow=`<div class="occ-flow">${stages.map(([n,v,c],i)=>{
     const pct=c?Math.min(100,Math.round(v/c*100)):0;
     return `<div class="fl-stage${pct>=90?" fl-hot":""}"><div class="fl-n">${n}</div>
-      <div class="fl-v">${v.toLocaleString()}<i>${c?"/"+c.toLocaleString():""}</i></div>
-      <div class="fl-bar"><span style="width:${pct}%"></span></div></div>${i<stages.length-1?'<div class="fl-ar">▸</div>':""}`;
+      <div class="fl-v"><span data-fl="${i}">${v.toLocaleString()}</span><i>${c?"/"+c.toLocaleString():""}</i></div>
+      <div class="fl-bar"><span data-flb="${i}" style="width:${pct}%"></span></div></div>${i<stages.length-1?'<div class="fl-ar">▸</div>':""}`;
   }).join("")}</div>`;
   /* プレショールーム(該当施設のみ) */
   let preHtml="";
@@ -3870,9 +3955,9 @@ function occRenderPanels(){
         const ok=rand01("pre-"+s.id+i+k+Math.floor(tt*12))>0.03;
         return `<span class="pv ${ok?"pv-ok":"pv-ng"}">${k}</span>`;}).join("");
       return `<div class="pre-room">
-        <div class="pre-h">PRE-SHOW ROOM ${r.room} <b>${(OCC.test&&OCC.mode!=="sim")?0:r.n}/${r.cap}</b></div>
-        <div class="pre-bar"><span style="width:${Math.round(prog*100)}%"></span></div>
-        <div class="pre-m">${phase}／残り ${r.left}秒　上映: 時計塔の秘密 v2.1</div>
+        <div class="pre-h">PRE-SHOW ROOM ${r.room} <b data-pre-n="${i}">${(OCC.test&&OCC.mode!=="sim")?0:r.n}/${r.cap}</b></div>
+        <div class="pre-bar"><span data-pre-bar="${i}" style="width:${Math.round(prog*100)}%"></span></div>
+        <div class="pre-m"><span data-pre-m="${i}">${phase}／残り ${r.left}秒</span>　上映: 時計塔の秘密 v2.1</div>
         <div class="pre-dev">${dev}</div></div>`;
     }).join("")}</div>`;
   }
@@ -3926,9 +4011,10 @@ function occRenderStationLive(snap){
     if (!v) return `<div class="stn-car stn-empty">ホーム空き</div>`;
     const dp=v.dp||{},sm=v.seats||{arr:[],cols:2};
     const secLeft=Math.max(0,Math.round((1-(v.dwellP||0))*veh.gap*60));
-    /* 降車ホーム: 降車の進捗と残り人数を主表示にする */
-    const exitPct=Math.min(100,Math.round((v.dwellP||0)/0.2*100));
-    const remain=Math.max(0,Math.round((v.n||0)*(1-exitPct/100)));
+    /* 降車ホーム: 実際に空いた席数から進捗と残り人数を算出(v52) */
+    const exited=sm.exited||0, loadN=sm.load||0;
+    const exitPct=loadN?Math.min(100,Math.round(exited/loadN*100)):100;
+    const remain=Math.max(0,v.n||0);
     const bar=isUnload?exitPct:Math.round((v.dwellP||0)*100);
     return `<div class="stn-car${dp.fault?" stn-fault":""}${isUnload?" stn-unload":""}">
       <div class="sc-id">${order?`<em class="sc-ord">${order}</em>`:""}V${String(v.id).padStart(2,"0")}<span style="color:${isUnload?"#5fd68f":(phCol[dp.phase]||"#7b9ac4")}">${isUnload?"降車中":(dp.label||"")}</span></div>
@@ -3945,11 +4031,16 @@ function occRenderStationLive(snap){
   const loadCars=all.filter(v=>v.pos==="load").sort((a,b)=>(a.posIdx||0)-(b.posIdx||0));
   const laneCars=all.filter(v=>v.pos==="lane");
   const bothCars=all.filter(v=>v.pos==="both").sort((a,b)=>(a.posIdx||0)-(b.posIdx||0));
-  const unloadCars=all.filter(v=>v.pos==="unload").sort((a,b)=>(b.dwellP||0)-(a.dwellP||0));
+  /* island/single: 降車フェーズ中の同一編成を降車面(側)として表示 */
+  const unloadCars=(veh.stype==="dual3"?all.filter(v=>v.pos==="unload")
+    :bothCars.filter(v=>v.dp&&v.dp.phase==="unload")).sort((a,b)=>(b.dwellP||0)-(a.dwellP||0));
   const unloadCar=unloadCars[0]||null;
   const shown=veh.stype==="dual3"?loadCars:bothCars;
-  const boardCar=shown[0]||null;
-  const boardN=(test&&!sim)?0:(boardCar?Math.round((sp.seats||0)*Math.min(1,Math.max(0,((boardCar.dwellP||0)-0.2)/0.35))):0);
+  /* 搭乗案内中の編成(縦列では後方の編成が搭乗中のことが多い)。なければ先頭 */
+  const boardingCar=shown.find(v=>v.dp&&v.dp.phase==="board")||null;
+  const boardCar=boardingCar||shown[0]||null;
+  const gateOpen=!!boardingCar;
+  const boardN=(test&&!sim)?0:(boardingCar&&boardingCar.seats?boardingCar.seats.boarded||0:0);
   /* グループ編成: 1〜5名の組をシードで生成し、列(row)へ順に割り付ける */
   const groupPlan=(function(){
     if (!boardCar||(test&&!sim)) return null;
@@ -3972,12 +4063,12 @@ function occRenderStationLive(snap){
     if (cur.length) rowsArr.push(cur);
     return {rows:rowsArr.filter(r=>r.length&&r.some(n=>n>0)).map(r=>r.filter(n=>n>0)).slice(0,rows),groups:groups.filter(n=>n>0)};
   })();
-  const exitN=(test&&!sim)?0:(unloadCar?Math.round((unloadCar.n||0)*Math.min(1,(unloadCar.dwellP||0)/0.2)):0);
+  const exitN=(test&&!sim)?0:unloadCars.reduce((a,v)=>a+((v.seats&&v.seats.exited)||0),0);
   const dots=(n)=>Array.from({length:Math.min(12,Math.max(0,n))},(_,i)=>
     `<span class="stn-dot" style="left:${(i/12*88+6)}%"></span>`).join("");
   el.innerHTML=`<div class="stn-grid">
     <div class="stn-side">
-      <div class="stn-h">LOAD 搭乗ホーム <span class="stn-gate ${boardCar&&boardCar.dp.phase==="board"?"gate-open":"gate-lock"}">${boardCar&&boardCar.dp.phase==="board"?"GATE OPEN":"GATE LOCKED"}</span></div>
+      <div class="stn-h">${veh.stype==="island"?"LOAD 搭乗面":"LOAD 搭乗ホーム"} <span class="stn-gate ${gateOpen?"gate-open":"gate-lock"}">${gateOpen?`GATE OPEN${veh.stype==="dual3"&&boardingCar?"（V"+String(boardingCar.id).padStart(2,"0")+"）":""}`:"GATE LOCKED"}</span></div>
       <div class="stn-flowline">${dots(Math.ceil(boardN/2))}</div>
       <div class="stn-h"><span>入場 ${boardN}名</span><b>${sim?"ゲスト想定":test?"無人":"通常"}</b></div>
       <div class="stn-note">${(function(){const ap=waiting.filter(v=>v.pos==="approach");return ap.length?`<span style="color:#ffc85a">入線待ち ${ap.length}編成（先頭 V${ap.slice(0,3).map(v=>String(v.id).padStart(2,"0")).join(", V")}${ap.length>3?" 他":""}）</span>`:"入線待ちなし";})()}</div>
@@ -3990,17 +4081,73 @@ function occRenderStationLive(snap){
         <div class="stn-lane"><div class="stn-lane-h">滞留レーン <b>${laneCars.length}編成</b></div>
           <div class="stn-lane-cars">${laneCars.length?laneCars.map(v=>`<span class="ln-car">V${String(v.id).padStart(2,"0")}<i>+${v.delay}s</i></span>`).join(""):`<span class="ln-empty">空き</span>`}</div></div>
         <div class="stn-cars">${shown.length?shown.map((v,i)=>carHTML(v,i+1)).join(""):carHTML(null)}</div>
-        <div class="stn-note" style="text-align:center">3編成同時搭乗・前方から順次発車（①→②→③）</div>
+        <div class="stn-note" style="text-align:center">縦列搭乗（在線${shown.length||0}編成）・先頭①から順次発車。先頭が未READYの間は後続も待機</div>
       </div>`:`
-      <div class="stn-cars">${shown.length?shown.map((v,i)=>carHTML(v,veh.stype==="twin"?i+1:null)).join(""):carHTML(null)}</div>`}
+      <div class="stn-cars">${shown.length?shown.map((v,i)=>carHTML(v,null)).join(""):carHTML(null)}</div>`}
     <div class="stn-side">
-      <div class="stn-h">${veh.stype==="dual3"?"UNLOAD 降車ホーム（独立）":"UNLOAD 降車"} <span class="stn-gate ${unloadCars.length?"gate-open":"gate-closed"}">${unloadCars.length?"降車進行中":"待機"}</span></div>
+      <div class="stn-h">${veh.stype==="dual3"?"UNLOAD 降車ホーム（独立）":veh.stype==="island"?"UNLOAD 降車面":"UNLOAD 降車"} <span class="stn-gate ${unloadCars.length?"gate-open":"gate-closed"}">${unloadCars.length?"降車進行中":"待機"}</span></div>
       <div class="stn-cars" style="margin:5px 0">${unloadCars.length?unloadCars.map((v,i)=>carHTML(v,null,true)).join(""):carHTML(null)}</div>
       <div class="stn-flowline">${dots(Math.ceil(exitN/2))}</div>
-      <div class="stn-h"><span>降車 ${exitN}/${unloadCars.reduce((a,v)=>a+(v.n||0),0)}名</span><b>${unloadCars.length?unloadCars.length+"編成 在線":"—"}</b></div>
+      <div class="stn-h"><span>降車 ${exitN}/${unloadCars.reduce((a,v)=>a+((v.seats&&v.seats.load)||v.n||0),0)}名</span><b>${unloadCars.length?unloadCars.length+"編成 在線":"—"}</b></div>
       <div class="stn-note">忘れ物確認: ${unloadCar&&unloadCar.dwellP>0.14?"実施中":"—"}　${(ROUTES[s.id]||{}).drive==="waterflow"?"水抜き・清掃 巡回":"車両清掃 巡回"}</div>
-      <div class="stn-note">${veh.stype==="dual3"?"搭乗3線＋降車ホーム独立":veh.stype==="twin"?"同一ホーム2線・順次発車":"乗降同一ホーム1線"}／稼働 ${veh.active}編成・待機 ${veh.list.filter(v=>v.side==="wait").length}・整備 ${veh.list.filter(v=>v.side==="maint").length}</div>
+      <div class="stn-note">${veh.stype==="dual3"?"独立降車ホーム＋縦列搭乗ホーム（1〜3編成）":veh.stype==="island"?"1線2面（降車面→搭乗面の順で案内）":"乗降同一ホーム1線（降車→搭乗の逐次）"}／稼働 ${veh.active}編成・待機 ${veh.list.filter(v=>v.side==="wait").length}・整備 ${veh.list.filter(v=>v.side==="maint").length}</div>
     </div></div>`;
+}
+/* 館内フロー各段の値(v53: モデル直結)。搭乗ホーム=在線編成の着席数合計、降車=空いた席数合計 */
+function occFlowStages(s,veh,sp,d,tt,o){
+  const stages=[["キューライン",o.simQ!=null?o.simQ:Math.round((o.q||0)*o.guests),sp.queueCap||0]];
+  const rooms=o.hasPre?(preshowState(s,d,tt)||[]):[];
+  if (o.hasPre){
+    const waitN=Math.round(rooms.reduce((a,r)=>a+(r.state==="入場中"?Math.max(0,r.cap-r.n):r.cap*0.45),0))*o.guests;
+    stages.push(["プレショー待機",waitN,o.pre||0]);
+  }
+  const stCars=veh.list.filter(v=>v.s!=null&&isStation(v.kind));
+  const platN=stCars.filter(v=>v.kind!=="unload"&&!(v.dp&&v.dp.phase==="unload"))
+    .reduce((a,v)=>a+((v.seats&&v.seats.boarded)||0),0);
+  const platCap=sp.seats*(veh.stype==="dual3"?3:1);
+  const exitN=stCars.filter(v=>v.kind==="unload"||(v.dp&&v.dp.phase==="unload"))
+    .reduce((a,v)=>a+((v.seats&&v.seats.exited)||0),0);
+  const onboard=o.onboard!=null?o.onboard:veh.list.reduce((a,v)=>a+(v.n||0),0);
+  stages.push(["搭乗ホーム",platN,platCap],
+    ["ライド乗車中",onboard,sp.seats*veh.active],
+    ["降車・退場",exitN,sp.seats*2]);
+  return stages;
+}
+/* 250ms軽量アップデータ(v53): DOM再構築なしでフロー数値・プレショー残り秒を差し替え */
+function occLiveNumbers(snap){
+  const {s,veh,d,tt}=snap;
+  if (!s||!veh) return;
+  const nowMs=performance.now();
+  if (OCC.numLast&&nowMs-OCC.numLast<250) return;
+  OCC.numLast=nowMs;
+  const sp=RIDE_SPEC[s.id]||{};
+  const test=OCC.test,sim=OCC.mode==="sim";
+  const hasPre=!!(ROUTES[s.id]||{}).preshow&&sp.preshow;
+  const att=dailyAttendance(d);
+  const shown=test?null:calcWait(s,d,tt,inParkOf(d,tt,att),redistFactor(d,tt));
+  const q=test?0:(shown!=null?queueCountOf(s.id,shown)||0:0);
+  const guests=sim?1:(test?0:1);
+  const simQ=sim?Math.round((sp.queueCap||1000)*({2:0.25,3:0.55,5:0.9}[OCC.simLv||3]||0.55)):null;
+  const pre=sp.preshow?sp.preshow.reduce((a,c)=>a+c,0):0;
+  const stages=occFlowStages(s,veh,sp,d,tt,{test,sim,simQ,guests,q,pre,hasPre});
+  stages.forEach(([n,v,c],i)=>{
+    const el=document.querySelector(`[data-fl="${i}"]`);
+    if (el&&el.textContent!==v.toLocaleString()) el.textContent=v.toLocaleString();
+    const bar=document.querySelector(`[data-flb="${i}"]`);
+    if (bar) bar.style.width=(c?Math.min(100,Math.round(v/c*100)):0)+"%";
+  });
+  if (hasPre){
+    (preshowState(s,d,tt)||[]).forEach((r,i)=>{
+      const prog=1-r.left/(4.5*60);
+      const phase=r.state==="入場中"?"入場":prog>0.85?"退出":"上映";
+      const m=document.querySelector(`[data-pre-m="${i}"]`);
+      if (m) m.textContent=`${phase}／残り ${r.left}秒`;
+      const b=document.querySelector(`[data-pre-bar="${i}"]`);
+      if (b) b.style.width=Math.round(prog*100)+"%";
+      const nn=document.querySelector(`[data-pre-n="${i}"]`);
+      if (nn) nn.textContent=`${(test&&!sim)?0:r.n}/${r.cap}`;
+    });
+  }
 }
 /* 編成カードグリッド(全編成を一望・状態色分け) */
 function occRenderCardsLive(snap){
@@ -4021,50 +4168,6 @@ function occRenderCardsLive(snap){
       <div class="vc-s">${v.state}${v.delay?` <b>+${v.delay}s</b>`:""}</div></div>`;
   }).join("");
   box.querySelectorAll(".vc").forEach(c=>c.addEventListener("click",()=>{OCC.selVeh=+c.dataset.v;occRenderCardsLive(occSnap(true));}));
-}
-/* STATION: 搭乗・降車の動的表示(レーダー下に常設) */
-function occRenderStation(s,veh,sp,d,tt){
-  const el=document.getElementById("occStation");
-  if (!el) return;
-  if (!veh){el.innerHTML=`<div class="stn-note">滞在型施設のため乗降場はありません</div>`;return;}
-  const test=OCC.test, sim=OCC.mode==="sim";
-  const stationCars=veh.list.filter(v=>isStation(v.kind));
-  const loading=stationCars.find(v=>v.dwellP!=null&&v.dwellP<0.5)||stationCars[0];
-  const unloading=stationCars.find(v=>v.dwellP!=null&&v.dwellP>=0.5);
-  const secLeft=loading?Math.max(0,Math.round((1-(loading.dwellP||0))*veh.gap*60)):0;
-  const late=loading&&loading.delay>0;
-  const seatsHtml=(v)=>{
-    if (!v||!v.seats) return "";
-    const sm=v.seats;
-    return `<div class="stn-seats" style="grid-template-columns:repeat(${sm.cols},1fr)">
-      ${sm.arr.map(x=>`<span class="sb-${x}"></span>`).join("")}</div>`;
-  };
-  const dots=(n,cls)=>Array.from({length:Math.min(14,n)},(_,i)=>
-    `<span class="stn-dot ${cls}" style="left:${(i/14*100)}%;animation-delay:${i*0.12}s"></span>`).join("");
-  const boardN=(test&&!sim)?0:(loading?Math.round((sp.seats||0)*Math.min(1,(loading.dwellP||0)*2)):0);
-  const exitN=(test&&!sim)?0:(unloading?Math.round((unloading.n||0)*((unloading.dwellP-0.5)*2)):0);
-  const gateOpen=loading&&(loading.dwellP||0)<0.62;
-  el.innerHTML=`<div class="stn-grid">
-    <div class="stn-side">
-      <div class="stn-h">LOAD 搭乗ホーム <span class="stn-gate ${gateOpen?"gate-open":"gate-lock"}">${gateOpen?"GATE OPEN":"GATE LOCKED"}</span></div>
-      <div class="stn-flowline">${dots(Math.ceil(boardN/2),"")}</div>
-      <div class="stn-h"><span>入場 ${boardN}名</span><b>${sim?"ゲスト想定":test?"無人":"通常"}</b></div>
-      <div class="stn-note">グルーピング: ${(test&&!sim)?"—":`2名×${Math.max(0,Math.round(boardN/4))}組・単独${Math.max(0,Math.round(boardN*0.15))}名`}　車椅子対応: 待機${(test&&!sim)?0:(rand01("wc-"+s.id+Math.floor(tt*12))<0.12?1:0)}名</div>
-    </div>
-    <div class="stn-car">
-      <div class="sc-id">${loading?`V${String(loading.id).padStart(2,"0")}`:"—"} 停車中</div>
-      ${seatsHtml(loading)}
-      <div class="stn-timer ${late?"late":""}">${late?`+${loading.delay}s DELAY`:`DISPATCH in ${secLeft}s`}</div>
-      <div class="stn-ready ${loading&&loading.seats&&loading.seats.ready?"rd-ok":"rd-ng"}">
-        ${loading&&loading.seats&&loading.seats.ready?"READY — 安全バー・ベルト施錠完了":"DISPATCH PERMISSION DISABLED"}</div>
-      <div class="stn-phase"><span style="width:${Math.round((loading?loading.dwellP||0:0)*100)}%"></span></div>
-    </div>
-    <div class="stn-side">
-      <div class="stn-h">UNLOAD 降車ホーム <span class="stn-gate ${unloading?"gate-open":"gate-closed"}">${unloading?"降車進行中":"待機"}</span></div>
-      <div class="stn-flowline">${dots(Math.ceil(exitN/2),"")}</div>
-      <div class="stn-h"><span>降車 ${exitN}/${unloading?unloading.n:0}名</span><b>${unloading?"解除済":"—"}</b></div>
-      <div class="stn-note">忘れ物確認: ${unloading&&unloading.dwellP>0.8?"実施中":"—"}　${(ROUTES[s.id]||{}).drive==="waterflow"?"水抜き・清掃: 巡回":"車両清掃: 巡回"}</div>
-    </div></div>`;
 }
 /* シアター型の空席表示 */
 function occTheaterHTML(e,d,tt){
@@ -4224,6 +4327,7 @@ function openOpsConsole(id){
   if (rs) rs.addEventListener("change",()=>{setRole(rs.value);openOpsConsole(id);});
 }
 function statusShort(st){
+  if (st.st==="estop") return LANG==="ja"?"安全確認のため一時停止":"Paused for safety check";
   if (st.st==="lo") return LANG==="ja"?"L.O.終了":"Last order done";
   if (st.st==="prep") return LANG==="ja"?"準備中":"Preparing";
   return st.st==="maint"?t("stMaintS"):st.st==="insp"?t("stInspS"):st.st==="quake"?t("stQuakeS"):st.st==="sunset"?t("stSunsetS"):null;
