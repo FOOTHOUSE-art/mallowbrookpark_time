@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>const APP_VERSION="v54",APP_DATE="2026-07-27";</script>
+<script>const APP_VERSION="v55",APP_DATE="2026-07-27";</script>
 <title>MALLOWBROOK PARK｜リアルタイム運営情報</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Cinzel:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -364,7 +364,31 @@ body.nocomments .ticker2 .ticker-text{visibility:hidden}
 .st-evac{border-left-color:#ff3b30;animation:occBlink 1s steps(2) infinite}.st-evac .t-s{color:#ff6b60}
 .st-pre{border-left-color:#3d6fb5}.st-pre .t-s{color:#7fb0ee}
 @keyframes occBlink{50%{background:#2a1420}}
-.occ-alerts{flex:0 0 auto;max-height:26vh;overflow:auto;font-size:11px;line-height:1.65}
+.occ-alerts{flex:0 0 auto;max-height:15vh;overflow:auto;font-size:10.5px;line-height:1.5}
+.al-line{padding:3px 8px;border-radius:5px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.al-ok{color:#5fd68f;cursor:default}
+.stn-cars{display:grid;grid-auto-flow:column;grid-auto-columns:172px;gap:8px;overflow-x:auto}
+.stn-car{min-width:0;overflow:hidden;min-height:118px}
+.stn-empty{display:flex;align-items:center;justify-content:center}
+.stn-timer{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ln-slot{opacity:.35;color:#5f81ad}
+.fl-x{font-size:9px;color:#8fd0ff;min-height:11px;margin-top:1px}
+.occ-h2{font-size:9px;letter-spacing:.14em;color:#5f81ad;margin-top:9px}
+.po-wrap{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.po-chip{font-size:9.5px;background:#12233c;border:1px solid #27436b;border-radius:5px;padding:2px 7px;color:#bcd3ef}
+.po-chip b{color:#ffd75e;font-weight:600;margin-right:4px}
+.po-chip i{font-style:normal;color:#7fd0ff}
+.sys-wrap{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.sys-chip{font-size:9.5px;background:#0f1e34;border:1px solid #27436b;border-radius:5px;padding:2px 8px;color:#bcd3ef;display:flex;align-items:center;gap:5px}
+.sys-dot{width:7px;height:7px;border-radius:50%;background:#5fd68f;box-shadow:0 0 5px #5fd68f66}
+.sys-ng .sys-dot{background:#ff5f52;box-shadow:0 0 7px #ff5f52}
+.sys-ng{color:#ffb3ab}
+.stn-gp{margin-top:5px}
+.gp-line{font-size:9.5px;color:#9db8d9;line-height:1.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gp-line b{color:#7fd0ff;margin-right:4px}
+.gp-pp{font-style:normal;background:#3a2f0e;color:#ffd75e;border-radius:4px;padding:0 5px;margin-left:4px}
+.gp-idle{font-style:normal;color:#3f5a80}
+.pre-po{font-size:9px;color:#9db8d9;margin-top:3px}
 .occ-alerts div{padding:3px 6px;border-left:3px solid #2e4a72;background:#0d1524;margin-bottom:3px;border-radius:0 4px 4px 0}
 .occ-alerts .a-crit{border-left-color:#ff3b30;color:#ffb9b2}
 .occ-alerts .a-warn{border-left-color:#d8a02c;color:#ffd89a}
@@ -2048,16 +2072,104 @@ function estopEventOf(spot,d){
   const t1=start+baseMin/60;
   return {start,t1,end:t1+adjMin/60,esc};
 }
-function estopPhase(spot,d,tt){
+/* ダークライド安全センサー(v55): チェイス/海の航海/空飛ぶ修理工場。
+   お客様の乗り出し・手荷物落下を検知して1〜3分の全編成停止→安全確認→再開(日1〜2件程度) */
+function safetyWindowsOf(spot,d){
+  const list=[];
   const ev=estopEventOf(spot,d);
-  if (!ev||tt<ev.start||tt>=ev.end) return null;
-  return {ev,phase:tt<ev.t1?1:2};
+  if (ev) list.push({start:ev.start,t1:ev.t1,end:ev.end,kind:"estop"});
+  return list.concat(sensorEventsOf(spot,d).map(e=>({start:e.start,t1:e.end,end:e.end,kind:"sensor",cause:e.cause})))
+    .sort((a,b)=>a.start-b.start);
 }
-/* イベントによる停止累計(分)。復旧後は停止時間ぶん運行が後ろ倒しで滑らかに再開する */
+function estopPhase(spot,d,tt){
+  for (const wv of safetyWindowsOf(spot,d))
+    if (tt>=wv.start&&tt<wv.end) return {ev:wv,phase:tt<wv.t1?1:2,kind:wv.kind,cause:wv.cause};
+  return null;
+}
+/* 全イベントの停止累計(分)。復旧後は停止時間ぶん運行が後ろ倒しで滑らかに再開する */
 function estopShiftMin(spot,d,tt){
-  const ev=estopEventOf(spot,d);
-  if (!ev||tt<ev.start) return 0;
-  return (Math.min(tt,ev.end)-ev.start)*60;
+  let m=0;
+  for (const wv of safetyWindowsOf(spot,d)) if (tt>wv.start) m+=(Math.min(tt,wv.end)-wv.start)*60;
+  return m;
+}
+/* ライドエリア安全センサー(v55): ダークライド系(チェイス/海の航海/空飛ぶ修理工場)で
+   手や身体の乗り出し・手荷物落下を検知→エリア停止1〜3分→安全確認→再開。日1〜2件 */
+const SENSOR_SPOTS=new Set(["chase","voyage","factory"]);
+function sensorEventsOf(spot,d){
+  if (!SENSOR_SPOTS.has(spot.id)) return [];
+  const dk=dateKey(d), oh=openH(d), out=[];
+  const n=rand01("sn-"+spot.id+dk)<0.55?(rand01("sn2-"+spot.id+dk)<0.45?2:1):0;
+  for (let k=0;k<n;k++){
+    const start=oh+0.7+rand01("sns-"+spot.id+dk+k)*(CLOSE_H-oh-1.5);
+    const dur=(1+rand01("snd-"+spot.id+dk+k)*2)/60;               /* 1〜3分 */
+    const cause=rand01("snc-"+spot.id+dk+k)<0.55?"お客様の手や身体の乗り出しを検知":"お手荷物・携行品の落下を検知";
+    out.push({start,end:start+dur,cause});
+  }
+  return out.sort((a,b)=>a.start-b.start);
+}
+/* 全停止イベントの統合(安全装置+ライドセンサー)。phase: estop1/estop2/sensor */
+/* v55: 停止イベントは safetyWindowsOf/estopPhase に一本化(センサー・安全装置とも同一情報源) */
+function stopEventOf(spot,d,tt){ return estopPhase(spot,d,tt); }
+function stopShiftMin(spot,d,tt){ return estopShiftMin(spot,d,tt); }
+/* 演出・仕掛けの動作監視(v55): 区間(シーン)ごとに ok/deg/ng。日付シードの決定論 */
+function effectStatusOf(spotId,d,segIdx){
+  const r=rand01("fx-"+spotId+dateKey(d)+"-"+segIdx);
+  return r<0.96?"ok":r<0.99?"deg":"ng";
+}
+function effectSummaryOf(spotId,d){
+  const tb=routeTable(spotId);if(!tb)return null;
+  let ok=0,deg=0,ng=0,ngNames=[];
+  tb.segs.forEach((sg,i)=>{if(isStation(sg.kind))return;
+    const st=effectStatusOf(spotId,d,i);
+    if(st==="ok")ok++;else if(st==="deg")deg++;else{ng++;ngNames.push(sg.name);}});
+  return {ok,deg,ng,ngNames};
+}
+/* システム状態(v55): 油圧/空気圧/電源電圧/PLCリンク。決定論の微振動+低頻度の異常窓 */
+function sysStateOf(spot,d,tt){
+  const water=(ROUTES[spot.id]||{}).drive==="waterflow";
+  const dk=dateKey(d), m=tt*60;
+  const osc=(k,amp)=>Math.sin(m*1.7+rand01("sy-"+spot.id+k+dk)*20)*amp
+                    +Math.sin(m*0.31+k.length)*amp*0.5;
+  const warnK=["hyd","air","vol","plc"].find(k=>{
+    const r=rand01("syw-"+spot.id+k+dk);
+    if (r>=0.06) return false;
+    const st=openH(d)+1+rand01("syt-"+spot.id+k+dk)*(CLOSE_H-openH(d)-2);
+    return tt>=st&&tt<st+0.3;                                     /* 18分の注意窓 */
+  });
+  return [
+    water?{k:"hyd",label:"ポンプ流量",v:(118+osc("hyd",4)).toFixed(0),unit:"m³/h",ok:warnK!=="hyd"}
+         :{k:"hyd",label:"油圧",v:(14.2+osc("hyd",0.35)).toFixed(1),unit:"MPa",ok:warnK!=="hyd"},
+    {k:"air",label:"空気圧",v:(0.70+osc("air",0.02)).toFixed(2),unit:"MPa",ok:warnK!=="air"},
+    {k:"vol",label:"電源電圧",v:(400+osc("vol",2.2)).toFixed(0),unit:"V",ok:warnK!=="vol"},
+    {k:"plc",label:"PLCリンク",v:(warnK==="plc"?(96+osc("plc",2)).toFixed(1):"100"),unit:"%",ok:warnK!=="plc"}
+  ];
+}
+/* ポーター配置(v55): 縦列在線数・編成定員に応じて最適化。フェーズ連動の作業ステータス */
+function portersOf(s,veh,d,tt,rooms){
+  const sp=RIDE_SPEC[s.id]||{};
+  if (!veh) return null;
+  const seats=sp.seats||8;
+  const perTrain=seats>=100?3:seats>=20?2:1;                       /* 編成定員→バー確認の担当数 */
+  const shown=veh.list.filter(v=>v.s!=null&&isStation(v.kind)&&(v.pos==="load"||v.pos==="both"))
+    .sort((a,b)=>(a.posIdx||0)-(b.posIdx||0));
+  const stopEv=veh.esp?true:false;
+  const st=(v)=>{const dp=v&&v.dp||{};
+    return stopEv?"安全確認対応中":!v?"待機":dp.phase==="board"?"搭乗案内・バー確認":dp.phase==="safety"?"全席施錠の最終確認":dp.phase==="ready"?"出発合図 準備":dp.phase==="unload"?"降車誘導":"待機";};
+  const out=[];
+  out.push({pos:"搭乗ゲート",n:2,st:stopEv?"安全確認対応中":shown.some(v=>v.dp&&v.dp.phase==="board")?"グルーピング・案内中":"ゲート整列管理"});
+  const berths=veh.stype==="dual3"?Math.max(1,shown.length):1;
+  for (let b=0;b<berths;b++) out.push({pos:`搭乗${berths>1?"枠"+(b+1):"ホーム"}`,n:perTrain,st:st(shown[b])});
+  if (veh.stype==="dual3") out.push({pos:"滞留レーン",n:1,st:stopEv?"安全確認対応中":(veh.list.some(v=>v.pos==="lane")?"入線誘導中":"待機")});
+  const unl=veh.list.filter(v=>v.pos==="unload"||(v.pos==="both"&&v.dp&&v.dp.phase==="unload"));
+  out.push({pos:"降車ホーム",n:2,st:stopEv?"安全確認対応中":unl.length?(unl.some(v=>v.seats&&v.seats.exited>=(v.seats.load||0))?"忘れ物確認・清掃":"降車誘導中"):"待機"});
+  if (rooms&&rooms.length){
+    rooms.forEach(r=>{
+      const prog=1-r.left/(4.5*60);
+      const stp=stopEv?"安全確認対応中":r.state==="入場中"?(prog<0.35?"入場案内中":"スピール（前説）実施中"):prog>0.85?"退出誘導中":"上映監視";
+      out.push({pos:`プレショー${r.room}室`,n:2,st:stp});
+    });
+  }
+  return out;
 }
 function spotStatus(s,d,tt){
   {
@@ -3016,7 +3128,7 @@ function opStateOf(spot,d,tt){
     const J2=LANG==="ja";
     return {s:J2?"係員がご案内しています（一時停止）":"Staff guidance in progress",shortS:J2?"案内中":"Guided",cls:"w-maint"};
   }
-  if (st.st==="estop") return {id:"OPERATIONAL_HOLD",note:`安全装置作動（${fmtT(st.ep.ev.start)}）・全編成一時停止、安全確認中`,fault:FAULT_CODES.sensor};
+  if (st.st==="estop") return {id:"OPERATIONAL_HOLD",note:st.ep.kind==="sensor"?`ライドエリア安全センサー作動（${st.ep.cause}）・全編成一時停止、安全確認中`:`安全装置作動（${fmtT(st.ep.ev.start)}）・全編成一時停止、安全確認中`,fault:FAULT_CODES.sensor};
   if (st.st==="trouble"){
     const tr=st.tr;
     const f=FAULT_CODES[tr.kind]||["--",tr.labelJa];
@@ -3052,9 +3164,9 @@ function vehicleStates(spot,d,tt,opt){
   const blocks=rt&&rt.scenes?rt.scenes:["LOAD","S1","S2","S3","S4","FINALE","UNLOAD","回送"];
   const cycle=sp.ride+2.0;
   const minute=tt*60;
-  /* 安全装置作動(v53): 発生中は全編成が線路上で停止し時間凍結。復旧後は停止分だけ後ろ倒しで再開 */
-  const esp=(opt&&opt.test)?null:estopPhase(spot,d,tt);
-  const minuteEff=minute-((opt&&opt.test)?0:estopShiftMin(spot,d,tt));
+  /* 停止イベント(v55統合): 安全装置作動+ライドエリア安全センサー。発生中は全編成停止・時間凍結 */
+  const esp=(opt&&opt.test)?null:stopEventOf(spot,d,tt);
+  const minuteEff=minute-((opt&&opt.test)?0:stopShiftMin(spot,d,tt));
   const st=(opt&&opt.test)?{id:"RECOVERY_TEST"}:opStateOf(spot,d,tt);
   const running=(opt&&opt.test)||!!esp||st.id==="OPEN"||st.id==="DELAYED"||st.id==="LIMITED_OPERATION";
   const att=dailyAttendance(d);
@@ -3077,7 +3189,7 @@ function vehicleStates(spot,d,tt,opt){
       continue;
     }
     /* ルート上の位置 s(0-1)。区間ごとに速度が変わる(イベント中はminuteEffが凍結) */
-    const s=((minuteEff/cycle)+i/active)%1;
+    const s=(((minuteEff/cycle)-i/active)%1+1)%1;   /* v55: 昇順運行(V01が先頭) */
     const seg=routeSegAt(spot.id,s);
     const mkey=Math.floor(minute);
     const r=rand01("veh-"+spot.id+"-"+idx+"-"+dateKey(d)+"-"+mkey);
@@ -3087,7 +3199,7 @@ function vehicleStates(spot,d,tt,opt){
     const simMode=opt&&opt.sim;
     const fillRate=simMode?({2:0.55,3:0.78,5:0.98}[opt.simLv||3]||0.78):0.78;
     const load=(testMode&&!simMode)?0:Math.round(sp.seats*(fillRate+rand01("ld-"+spot.id+idx+mkey)*0.18));
-    const lapKey=Math.floor(minuteEff/cycle+i/active);         /* 周回ごとに固定・停車中は不変 */
+    const lapKey=Math.floor(minuteEff/cycle-i/active);         /* 周回ごとに固定・停車中は不変 */
     const dp=isStation(seg.kind)?dispatchPhaseOf(spot.id,idx,seg,mkey,faultRate,testMode,lapKey):null;
     const dispLabel=dp?({unload:"降車中",board:"搭乗中",safety:"安全確認",ready:"発車待機"}[dp.phase]||dp.label):null;
     /* 降車中は空いた席のぶん乗車人数を減らす */
@@ -3095,7 +3207,7 @@ function vehicleStates(spot,d,tt,opt){
     const nNow=dp&&dp.phase==="unload"&&smTmp?Math.max(0,load-smTmp.exited):
                dp&&dp.phase==="board"&&smTmp?smTmp.boarded:load;
     out.push({id:idx,s,block:seg.name,kind:seg.kind,n:nNow,lk:lapKey,
-      state:estop?"緊急停止（安全装置作動・全編成停止）":(esp&&esp.phase===2)?"システム調整中（運転見合わせ）":held?"停止(前方占有)":(dp?dispLabel:
+      state:estop?(esp.kind==="sensor"?"緊急停止（エリア安全センサー作動）":"緊急停止（安全装置作動・全編成停止）"):(esp&&esp.phase===2)?"システム調整中（運転見合わせ）":held?"停止(前方占有)":(dp?dispLabel:
             (seg.kind==="steep_lift"||seg.kind==="lift")?"巻上中":
             (seg.kind==="steep_drop"||seg.kind==="drop")?"降下中":
             seg.kind==="airtime"?"エアタイム":seg.kind==="helix"?"らせん":
@@ -3623,7 +3735,16 @@ function occRenderTiles(){
     const st=showStatus(e,now,tt);
     if (st.st==="wxcancel") al.push(["a-warn",`公演中止 ${e.ja} ${fmtT(st.start||0)}：${cancelReason(e,st.start||0,tt,now)}`]);
   });
-  document.getElementById("occAlerts").innerHTML=al.length?al.map(a=>`<div class="${a[0]}">${a[1]}</div>`).join(""):`<div class="a-info">異常なし ALL NORMAL</div>`;
+  {
+    const el=document.getElementById("occAlerts");
+    const crit=al.some(a=>a[0]==="a-crit"),warn2=al.some(a=>a[0]==="a-warn");
+    if (crit) sndBeep("crit"); else if (warn2) sndBeep("warn");
+    if (!al.length) el.innerHTML=`<div class="al-line al-ok">✅ ALL CLEAR — 異常なし</div>`;
+    else {
+      const open=!!OCC.alertsOpen;
+      el.innerHTML=`<div class="al-line ${crit?"a-crit":warn2?"a-warn":"a-info"}" onclick="OCC.alertsOpen=!OCC.alertsOpen;if(typeof occRenderTiles==='function')occRenderTiles()">⚠ ${al.length}件 ${open?"▾ 閉じる":"▸ "+al[0][1]}</div>${open?al.map(a=>`<div class="${a[0]}">${a[1]}</div>`).join(""):""}`;
+    }
+  }
 }
 /* 実ルートに沿った動的運行画面(60fps・区間別の速度プロファイル) */
 /* 1フレーム1回だけ状態を計算し、レーダー/STATION/編成カードで共有する */
@@ -3640,7 +3761,59 @@ function occSnap(force){
   OCC.snap={ts,tt,d,s,veh,sel:OCC.sel};
   return OCC.snap;
 }
+/* v55: レーダー用の路線図スタイル座標(45°正規化・内容は省略しない) */
+const _octCache={};
+function octTable(id){
+  if (_octCache[id]) return _octCache[id];
+  const tb=routeTable(id);if(!tb)return null;
+  const segs=tb.segs;let cx=segs[0].a[0],cy=segs[0].a[1];
+  const out=[];
+  segs.forEach(sg=>{
+    const dx=sg.b[0]-sg.a[0],dy=sg.b[1]-sg.a[1];
+    const len=Math.hypot(dx,dy)||0.001;
+    const ang=Math.round(Math.atan2(dy,dx)/(Math.PI/4))*(Math.PI/4);
+    const nx=cx+len*Math.cos(ang),ny=cy+len*Math.sin(ang);
+    out.push(Object.assign({},sg,{a:[cx,cy],b:[nx,ny]}));
+    cx=nx;cy=ny;
+  });
+  out[out.length-1].b=[out[0].a[0],out[0].a[1]];   /* 周回を閉じる */
+  const t={segs:out,total:tb.total};_octCache[id]=t;return t;
+}
+function octPointAt(id,s){
+  const t=octTable(id);if(!t)return null;
+  const sg=t.segs.find(x=>s>=x.t0&&s<x.t1)||t.segs[t.segs.length-1];
+  const p=(s-sg.t0)/Math.max(1e-6,(sg.t1-sg.t0));
+  return [sg.a[0]+(sg.b[0]-sg.a[0])*p, sg.a[1]+(sg.b[1]-sg.a[1])*p];
+}
+/* v55: 異常時の音通知(WebAudio合成・運営センター表示中のみ・🔔で消音可) */
+const SND={on:true,ctx:null,last:{}};
+function sndEnsureBtn(){
+  if (SND.btn) return;
+  const c=document.getElementById("occClose");
+  if (!c) return;
+  const b=document.createElement("button");
+  b.id="sndBell";b.textContent="🔔";b.title="異常時の音通知";b.className=c.className;
+  b.style.marginRight="6px";
+  b.onclick=()=>{SND.on=!SND.on;b.textContent=SND.on?"🔔":"🔕";};
+  c.parentElement.insertBefore(b,c);SND.btn=b;
+}
+function sndBeep(kind){
+  if (!SND.on||!OCC.on) return;
+  try{if(!SND.ctx)SND.ctx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){return;}
+  const c=SND.ctx;if(!c)return;
+  const now=performance.now();
+  if (SND.last[kind]&&now-SND.last[kind]<9000) return;
+  SND.last[kind]=now;
+  const t=c.currentTime;
+  const mk=(f,at,dur)=>{const o=c.createOscillator(),gn=c.createGain();o.frequency.value=f;o.type="sine";
+    gn.gain.setValueAtTime(0.0001,t+at);gn.gain.exponentialRampToValueAtTime(0.10,t+at+0.02);
+    gn.gain.exponentialRampToValueAtTime(0.0001,t+at+dur);
+    o.connect(gn);gn.connect(c.destination);o.start(t+at);o.stop(t+at+dur+0.05);};
+  if (kind==="warn") mk(880,0,0.18);
+  else {mk(660,0,0.22);mk(520,0.28,0.22);mk(660,0.56,0.22);}
+}
 function occDrawRadar(ts){
+  sndEnsureBtn();
   const cv=document.getElementById("occRadar");
   if (!cv||!OCC.on) return;
   const w=cv.clientWidth||600,hgt=cv.clientHeight||300;
@@ -3649,7 +3822,7 @@ function occDrawRadar(ts){
   g.clearRect(0,0,cv.width,cv.height);   /* バッファ全域を必ずクリア */
   const snap=occSnap(false);   /* v53: 重いモデル計算は80msキャッシュ。位置は下で毎フレーム外挿 */
   const s=snap.s, veh=snap.veh, tt=snap.tt, d=snap.d, test=OCC.test;
-  const tb=s?routeTable(s.id):null;
+  const tb=s?octTable(s.id):null;   /* v55: 路線図スタイル */
   occRenderStationLive(snap);      /* STATIONも同じスナップショットで更新 */
   occRenderCardsLive(snap);
   occLiveNumbers(snap);            /* v53: フロー数値・プレショー残り秒の軽量更新 */
@@ -3726,6 +3899,17 @@ function occDrawRadar(ts){
     g.fillStyle="#7b9ac4";
     g.fillText(sg.name,X(sg.a[0])+4,Y(sg.a[1])-6);
   });
+  /* v55: コース演出・ロボット・仕掛けの動作監視(●緑=正常/琥珀=劣化/赤=停止) */
+  tb.segs.forEach((sg,si)=>{
+    if (["station","load","unload","brake","transfer"].includes(sg.kind)) return;
+    const mx=(X(sg.a[0])+X(sg.b[0]))/2,my=(Y(sg.a[1])+Y(sg.b[1]))/2;
+    const fst=effectStatusOf(s.id,d,si);
+    const fxCol=fst==="ng"?"#ff5f52":fst==="deg"?"#ffc85a":"#5fd68f";
+    if (fxCol!=="#5fd68f"||si%2===0){
+      g.fillStyle=fxCol;g.beginPath();g.arc(mx,my-13,3,0,Math.PI*2);g.fill();
+      if (fxCol==="#ff5f52"){g.strokeStyle="#ff5f52";g.globalAlpha=.5;g.beginPath();g.arc(mx,my-13,6,0,Math.PI*2);g.stroke();g.globalAlpha=1;}
+    }
+  });
   /* 車両(形状は施設の性質に合わせる)。位置はスナップショットから毎フレーム外挿(v53) */
   const shape=(ROUTES[s.id]||{}).shape||"car";
   const cycMin=((RIDE_SPEC[s.id]||{}).ride||6)+2.0;
@@ -3734,19 +3918,22 @@ function occDrawRadar(ts){
   veh.list.forEach(v=>{
     if (v.s==null) return;
     const sd=(v.frozen||v.hold||v.estop||v.state.includes("停止"))?v.s:(v.s+dtMin/cycMin)%1;
-    const p=routePointAt(s.id,sd);
+    const p=octPointAt(s.id,sd);
     if (!p) return;
-    const p2=routePointAt(s.id,(sd+0.006)%1)||p;
+    const p2=octPointAt(s.id,(sd+0.006)%1)||p;
     const x=X(p[0]),y=Y(p[1]);
     const ang=Math.atan2(Y(p2[1])-y,X(p2[0])-x);
-    const col=v.hold?"#ffc85a":v.state.includes("停止")?"#ff6b60":
-      (v.kind==="steep_lift"||v.kind==="lift")?"#ffc85a":
-      (v.kind==="steep_drop"||v.kind==="drop"||v.kind==="airtime")?"#ff9f7a":
-      isStation(v.kind)?"#5fd68f":v.kind==="brake"?"#dfe8f5":v.kind==="water"?"#4fc3d9":"#7fd0ff";
+    /* v55: 状態色 — 走行=緑/搭乗=水色/降車=薄グレー/停止=赤/異常=赤発光 */
+    const boardish=v.dp&&(v.dp.phase==="board"||v.dp.phase==="safety"||v.dp.phase==="ready");
+    const col=v.estop?"#ff3b30":
+      (v.hold||v.state.includes("停止")||v.state.includes("待ち")||v.state.includes("待機")||v.state.includes("調整"))?"#ff5f52":
+      (v.kind==="load"||(boardish&&v.kind!=="unload"))?"#7fd0ff":
+      (v.kind==="unload"||(v.dp&&v.dp.phase==="unload"))?"#c7d0dc":"#5fd68f";
     if (v.state.includes("停止")){
       g.fillStyle="rgba(255,80,64,.20)";g.beginPath();g.arc(x,y,12+Math.sin(ts/200)*3,0,Math.PI*2);g.fill();
     }
     g.save();g.translate(x,y);g.rotate(ang);
+    if (v.estop){g.shadowColor="#ff3b30";g.shadowBlur=12+Math.sin(ts/140)*7;}   /* v55: 異常は赤発光 */
     g.fillStyle=col;
     if (shape==="train"||shape==="car"){
       const wdt=shape==="train"?26:20,hh=13;
@@ -3937,11 +4124,12 @@ function occRenderPanels(){
   const hasPre=!!(ROUTES[s.id]||{}).preshow&&sp.preshow;
   const guests=OCC.mode==="sim"?1:(test?0:1);          /* 無人試運転はゲスト0 */
   const simQ=OCC.mode==="sim"?Math.round((sp.queueCap||1000)*({2:0.25,3:0.55,5:0.9}[OCC.simLv||3]||0.55)):null;
-  const stages=occFlowStages(s,veh,sp,d,tt,{test,sim:OCC.mode==="sim",simQ,guests,q,pre,hasPre,onboard});
-  const flow=`<div class="occ-flow">${stages.map(([n,v,c],i)=>{
+  const stages=occFlowStages(s,veh,sp,d,tt,{test,sim:OCC.mode==="sim",simQ,guests,q,pre,hasPre,onboard,wait:shown});
+  const flow=`<div class="occ-flow">${stages.map(([n,v,c,x],i)=>{
     const pct=c?Math.min(100,Math.round(v/c*100)):0;
     return `<div class="fl-stage${pct>=90?" fl-hot":""}"><div class="fl-n">${n}</div>
       <div class="fl-v"><span data-fl="${i}">${v.toLocaleString()}</span><i>${c?"/"+c.toLocaleString():""}</i></div>
+      <div class="fl-x" data-flx="${i}">${x||""}</div>
       <div class="fl-bar"><span data-flb="${i}" style="width:${pct}%"></span></div></div>${i<stages.length-1?'<div class="fl-ar">▸</div>':""}`;
   }).join("")}</div>`;
   /* プレショールーム(該当施設のみ) */
@@ -3958,7 +4146,8 @@ function occRenderPanels(){
         <div class="pre-h">PRE-SHOW ROOM ${r.room} <b data-pre-n="${i}">${(OCC.test&&OCC.mode!=="sim")?0:r.n}/${r.cap}</b></div>
         <div class="pre-bar"><span data-pre-bar="${i}" style="width:${Math.round(prog*100)}%"></span></div>
         <div class="pre-m"><span data-pre-m="${i}">${phase}／残り ${r.left}秒</span>　上映: 時計塔の秘密 v2.1</div>
-        <div class="pre-dev">${dev}</div></div>`;
+        <div class="pre-dev">${dev}</div>
+        <div class="pre-po">👤2名 <span data-pre-po="${i}">${r.state==="入場中"?(prog<0.35?"入場案内中／スピール準備":"スピール実施中／整列補助"):prog>0.85?"退出誘導中／次回入場準備":"上映監視／機器点検"}</span></div></div>`;
     }).join("")}</div>`;
   }
   /* 動力パネル(先頭の稼働車両) */
@@ -3972,7 +4161,11 @@ function occRenderPanels(){
       <div class="sb-grid" style="grid-template-columns:repeat(${sm.cols},1fr)">
       ${sm.arr.map(x=>`<span class="sb-s sb-${x}" title="${{empty:"空席",seated:"着席",belt:"ベルト確認中",locked:"バー・ベルト施錠",released:"解除(降車)"}[x]}"></span>`).join("")}</div></div>`;
   }).join("");
-  box.innerHTML=flow+preHtml+pw;
+    const po=portersOf(s,veh,d,tt,hasPre?(preshowState(s,d,tt)||[]):[]);
+  const poHtml=po&&po.length?`<div class="occ-h2">PORTERS 配置（${po.reduce((a,p2)=>a+p2.n,0)}名）</div><div class="po-wrap">${po.map(p2=>`<span class="po-chip"><b>${p2.pos}</b>${p2.n}名 <i>${p2.st}</i></span>`).join("")}</div>`:"";
+  const sys=sysStateOf(s,d,tt)||[];
+  const sysHtml=`<div class="occ-h2">SYSTEMS 系統監視</div><div class="sys-wrap">${sys.map(m2=>`<span class="sys-chip${m2.ok?"":" sys-ng"}" data-sys="${m2.k}"><span class="sys-dot"></span>${m2.label} <b data-sysv="${m2.k}">${m2.v}</b>${m2.unit}</span>`).join("")}</div>`;
+  box.innerHTML=flow+preHtml+poHtml+sysHtml+pw;
   const sub=document.getElementById("occVehSub");
   if (sub) sub.textContent=`${veh.active}/${veh.max} 稼働・待機${veh.list.filter(v=>v.side==="wait").length}・整備${veh.list.filter(v=>v.side==="maint").length}・入線待ち${veh.list.filter(v=>v.hold).length}`;
   {
@@ -4040,7 +4233,28 @@ function occRenderStationLive(snap){
   const boardingCar=shown.find(v=>v.dp&&v.dp.phase==="board")||null;
   const boardCar=boardingCar||shown[0]||null;
   const gateOpen=!!boardingCar;
+  /* v55: 面積固定 — 最大構成のスロットを常設し、少ないときは空白表示 */
+  const loadSlots=veh.stype==="dual3"?[0,1,2].map(i=>loadCars.find(v=>v.posIdx===i)||null):[bothCars[0]||null];
+  const laneSlots=[0,1,2].map(i=>laneCars.find(v=>v.posIdx===i)||null);
+  const unloadSlots=veh.stype==="dual3"?[unloadCars[0]||null,unloadCars[1]||null]:[unloadCars[0]||null];
   const boardN=(test&&!sim)?0:(boardingCar&&boardingCar.seats?boardingCar.seats.boarded||0:0);
+  /* v55: 縦列搭乗ぶんのグルーピング(各在線編成の座席列数に合わせて表示・PP組は1/3便) */
+  const gpFor=(car)=>{
+    if (!car||(test&&!sim)||!(car.dp&&(car.dp.phase==="board"||car.dp.phase==="safety"))) return null;
+    const cols=(car.seats&&car.seats.cols)||2;
+    const rows=Math.ceil((sp.seats||8)/cols);
+    const rowsArr=[];
+    for (let rI=0;rI<Math.min(rows,6);rI++){
+      const grp=[];let rem=cols,gi=0;
+      while (rem>0){const g1=Math.min(rem,1+Math.floor(rand01("gp-"+s.id+car.id+car.lk+rI+"-"+gi)*Math.min(4,cols)));grp.push(g1);rem-=g1;gi++;}
+      rowsArr.push(grp);
+    }
+    return {rowsArr,rows,cols,pp:rand01("gpp-"+s.id+car.id+car.lk)<0.34};
+  };
+  const gpHtml=`<div class="stn-gp">${loadSlots.map((v,i)=>{
+    const g2=gpFor(v);
+    return `<div class="gp-line"><b>${veh.stype==="dual3"?"枠"+(i+1):"ホーム"}</b> ${v?"V"+String(v.id).padStart(2,"0"):"—"} ${g2?g2.rowsArr.map(r=>r.join("+")).join(" / ")+(g2.rows>6?" …":"")+(g2.pp?' <em class="gp-pp">PP</em>':""):'<i class="gp-idle">'+(v?(v.dp&&v.dp.ready?"ロック済":"—"):"空き")+"</i>"}</div>`;
+  }).join("")}</div>`;
   /* グループ編成: 1〜5名の組をシードで生成し、列(row)へ順に割り付ける */
   const groupPlan=(function(){
     if (!boardCar||(test&&!sim)) return null;
@@ -4072,21 +4286,20 @@ function occRenderStationLive(snap){
       <div class="stn-flowline">${dots(Math.ceil(boardN/2))}</div>
       <div class="stn-h"><span>入場 ${boardN}名</span><b>${sim?"ゲスト想定":test?"無人":"通常"}</b></div>
       <div class="stn-note">${(function(){const ap=waiting.filter(v=>v.pos==="approach");return ap.length?`<span style="color:#ffc85a">入線待ち ${ap.length}編成（先頭 V${ap.slice(0,3).map(v=>String(v.id).padStart(2,"0")).join(", V")}${ap.length>3?" 他":""}）</span>`:"入線待ちなし";})()}</div>
-      <div class="stn-note">${groupPlan?`グルーピング（V${String(boardCar.id).padStart(2,"0")}）`:"グルーピング"}: ${groupPlan?
-        groupPlan.rows.map((r,i)=>`<span class="gp-row">${i===0?"先頭":(i+1)+"列目"}: <b>${r.join("＋")}</b>名</span>`).join(" ／ "):"—"}</div>
-      <div class="stn-note">待機組: ${groupPlan?groupPlan.groups.slice(0,8).map(n=>`<span class="gp-b">${n}</span>`).join(""):"—"}　単独客は空席へ順次案内</div>
+      ${gpHtml}
+      <div class="stn-note">待機組: ${groupPlan?groupPlan.groups.slice(0,8).map(n=>`<span class="gp-b">${n}</span>`).join(""):"—"}　単独客は空席へ順次案内　<em class="gp-pp">PP</em>=優先搭乗券の組</div>
     </div>
     ${veh.stype==="dual3"?`
       <div class="stn-mid">
         <div class="stn-lane"><div class="stn-lane-h">滞留レーン <b>${laneCars.length}編成</b></div>
-          <div class="stn-lane-cars">${laneCars.length?laneCars.map(v=>`<span class="ln-car">V${String(v.id).padStart(2,"0")}<i>+${v.delay}s</i></span>`).join(""):`<span class="ln-empty">空き</span>`}</div></div>
-        <div class="stn-cars">${shown.length?shown.map((v,i)=>carHTML(v,i+1)).join(""):carHTML(null)}</div>
+          <div class="stn-lane-cars">${laneSlots.map((v,i)=>v?`<span class="ln-car">V${String(v.id).padStart(2,"0")}<i>+${v.delay}s</i></span>`:`<span class="ln-car ln-slot">枠${i+1} 空き</span>`).join("")}</div></div>
+        <div class="stn-cars">${loadSlots.map((v,i)=>carHTML(v,i+1)).join("")}</div>
         <div class="stn-note" style="text-align:center">縦列搭乗（在線${shown.length||0}編成）・先頭①から順次発車。先頭が未READYの間は後続も待機</div>
       </div>`:`
-      <div class="stn-cars">${shown.length?shown.map((v,i)=>carHTML(v,null)).join(""):carHTML(null)}</div>`}
+      <div class="stn-cars">${loadSlots.map(v=>carHTML(v,null)).join("")}</div>`}
     <div class="stn-side">
       <div class="stn-h">${veh.stype==="dual3"?"UNLOAD 降車ホーム（独立）":veh.stype==="island"?"UNLOAD 降車面":"UNLOAD 降車"} <span class="stn-gate ${unloadCars.length?"gate-open":"gate-closed"}">${unloadCars.length?"降車進行中":"待機"}</span></div>
-      <div class="stn-cars" style="margin:5px 0">${unloadCars.length?unloadCars.map((v,i)=>carHTML(v,null,true)).join(""):carHTML(null)}</div>
+      <div class="stn-cars" style="margin:5px 0">${unloadSlots.map(v=>carHTML(v,null,true)).join("")}</div>
       <div class="stn-flowline">${dots(Math.ceil(exitN/2))}</div>
       <div class="stn-h"><span>降車 ${exitN}/${unloadCars.reduce((a,v)=>a+((v.seats&&v.seats.load)||v.n||0),0)}名</span><b>${unloadCars.length?unloadCars.length+"編成 在線":"—"}</b></div>
       <div class="stn-note">忘れ物確認: ${unloadCar&&unloadCar.dwellP>0.14?"実施中":"—"}　${(ROUTES[s.id]||{}).drive==="waterflow"?"水抜き・清掃 巡回":"車両清掃 巡回"}</div>
@@ -4095,11 +4308,20 @@ function occRenderStationLive(snap){
 }
 /* 館内フロー各段の値(v53: モデル直結)。搭乗ホーム=在線編成の着席数合計、降車=空いた席数合計 */
 function occFlowStages(s,veh,sp,d,tt,o){
-  const stages=[["キューライン",o.simQ!=null?o.simQ:Math.round((o.q||0)*o.guests),sp.queueCap||0]];
+  const dk=dateKey(d);
+  const qTot=o.simQ!=null?o.simQ:Math.round((o.q||0)*o.guests);
+  const ppR=0.08+rand01("pp-"+s.id+dk)*0.07;                 /* PP列は通常列の8〜15% */
+  const qPP=Math.round(qTot*ppR),qStd=Math.max(0,qTot-qPP);
+  const w=o.wait!=null&&!o.test?o.wait:null;
+  const stages=[["キューライン（通常）",qStd,sp.queueCap||0,w!=null?w+"分待ち":""],
+                ["PP列（優先）",qPP,Math.round((sp.queueCap||0)*0.15)||0,w!=null?Math.max(5,Math.round(w*0.25/5)*5)+"分待ち":""]];
   const rooms=o.hasPre?(preshowState(s,d,tt)||[]):[];
   if (o.hasPre){
-    const waitN=Math.round(rooms.reduce((a,r)=>a+(r.state==="入場中"?Math.max(0,r.cap-r.n):r.cap*0.45),0))*o.guests;
-    stages.push(["プレショー待機",waitN,o.pre||0]);
+    const inRoom=Math.round(rooms.reduce((a,r)=>a+r.n,0))*o.guests;
+    stages.push(["プレショー在室",inRoom,o.pre||0,""]);
+    const ph=rooms.length?rooms[0].left/(4.5*60):0.5;
+    const postQ=Math.round((sp.seats||8)*1.6+(1-ph)*rooms.reduce((a,r)=>a+r.cap,0)*0.35)*o.guests;
+    stages.push(["ショー後キューライン",postQ,(sp.seats||8)*6,""]);
   }
   const stCars=veh.list.filter(v=>v.s!=null&&isStation(v.kind));
   const platN=stCars.filter(v=>v.kind!=="unload"&&!(v.dp&&v.dp.phase==="unload"))
@@ -4108,9 +4330,9 @@ function occFlowStages(s,veh,sp,d,tt,o){
   const exitN=stCars.filter(v=>v.kind==="unload"||(v.dp&&v.dp.phase==="unload"))
     .reduce((a,v)=>a+((v.seats&&v.seats.exited)||0),0);
   const onboard=o.onboard!=null?o.onboard:veh.list.reduce((a,v)=>a+(v.n||0),0);
-  stages.push(["搭乗ホーム",platN,platCap],
-    ["ライド乗車中",onboard,sp.seats*veh.active],
-    ["降車・退場",exitN,sp.seats*2]);
+  stages.push(["搭乗ホーム",platN,platCap,""],
+    ["ライド乗車中",onboard,sp.seats*veh.active,""],
+    ["降車・退場",exitN,sp.seats*2,""]);
   return stages;
 }
 /* 250ms軽量アップデータ(v53): DOM再構築なしでフロー数値・プレショー残り秒を差し替え */
@@ -4129,12 +4351,20 @@ function occLiveNumbers(snap){
   const guests=sim?1:(test?0:1);
   const simQ=sim?Math.round((sp.queueCap||1000)*({2:0.25,3:0.55,5:0.9}[OCC.simLv||3]||0.55)):null;
   const pre=sp.preshow?sp.preshow.reduce((a,c)=>a+c,0):0;
-  const stages=occFlowStages(s,veh,sp,d,tt,{test,sim,simQ,guests,q,pre,hasPre});
-  stages.forEach(([n,v,c],i)=>{
+  const stages=occFlowStages(s,veh,sp,d,tt,{test,sim,simQ,guests,q,pre,hasPre,wait:shown});
+  stages.forEach(([n,v,c,x],i)=>{
     const el=document.querySelector(`[data-fl="${i}"]`);
     if (el&&el.textContent!==v.toLocaleString()) el.textContent=v.toLocaleString();
     const bar=document.querySelector(`[data-flb="${i}"]`);
     if (bar) bar.style.width=(c?Math.min(100,Math.round(v/c*100)):0)+"%";
+    const fx=document.querySelector(`[data-flx="${i}"]`);
+    if (fx&&fx.textContent!==(x||"")) fx.textContent=x||"";
+  });
+  (sysStateOf(s,d,tt)||[]).forEach(m2=>{
+    const vv=document.querySelector(`[data-sysv="${m2.k}"]`);
+    if (vv) vv.textContent=m2.v;
+    const chip=document.querySelector(`[data-sys="${m2.k}"]`);
+    if (chip) chip.classList.toggle("sys-ng",!m2.ok);
   });
   if (hasPre){
     (preshowState(s,d,tt)||[]).forEach((r,i)=>{
