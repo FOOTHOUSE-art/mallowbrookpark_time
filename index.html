@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>const APP_VERSION="v58",APP_DATE="2026-07-27";</script>
+<script>const APP_VERSION="v62",APP_DATE="2026-07-27";</script>
 <title>MALLOWBROOK PARK｜リアルタイム運営情報</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Cinzel:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -389,6 +389,15 @@ body.nocomments .ticker2 .ticker-text{visibility:hidden}
 .gp-pp{font-style:normal;background:#3a2f0e;color:#ffd75e;border-radius:4px;padding:0 5px;margin-left:4px}
 .gp-idle{font-style:normal;color:#3f5a80}
 .pre-po{font-size:9px;color:#9db8d9;margin-top:3px}
+.gt-wrap{display:flex;gap:10px;margin:6px 0 2px}
+.gt-box{flex:1;min-width:0}
+.gt-h{font-size:10px;color:#7fd0ff;margin-bottom:3px;letter-spacing:.08em}
+.gt-box canvas{width:100%;height:120px;background:#0c1626;border:1px solid #223a5c;border-radius:6px}
+.gt-legend{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:9px;color:#9db8d9;margin:4px 0 8px}
+.gt-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:3px;vertical-align:-1px}
+.gt-tip{position:fixed;z-index:400;background:#101d33;border:1px solid #3a557f;border-radius:6px;
+  padding:5px 9px;font-size:10px;color:#dfe8f5;pointer-events:none;line-height:1.6;box-shadow:0 4px 14px rgba(0,0,0,.5)}
+body.m-sp .gt-wrap{flex-direction:column}
 @keyframes flbc{0%,100%{box-shadow:0 0 0 0 rgba(127,208,255,0)}50%{box-shadow:0 0 9px 2px rgba(127,208,255,.55)}}
 @keyframes flbg{0%,100%{box-shadow:0 0 0 0 rgba(255,215,94,0)}50%{box-shadow:0 0 9px 2px rgba(255,215,94,.55)}}
 .fl-blink-c{animation:flbc 1.3s ease-in-out infinite;border-color:#7fd0ff}
@@ -399,13 +408,22 @@ body.nocomments .ticker2 .ticker-text{visibility:hidden}
 .cast-track{position:relative;height:13px;margin-top:2px;border-top:1px dashed #223a5c}
 .cast-dot{position:absolute;top:0;font-size:9px;transition:left .5s linear;filter:drop-shadow(0 0 2px #7fd0ff66)}
 .cast-keeper{filter:drop-shadow(0 0 3px #ffd75e)}
+.occ-bay .occ-radar-wrap{flex:0 0 225px!important;min-height:225px!important;height:225px!important}
+.occ-bay #occRadar{min-height:0!important}
+.occ-bay .occ-cards{min-height:0!important;height:0!important;padding:0!important;margin:0!important;border:none!important;overflow:hidden}
 .bay-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.bay-card{background:#0e1a2e;border:1px solid #27436b;border-radius:7px;padding:6px 8px;min-height:150px;overflow:hidden}
+.bay-card{background:#0e1a2e;border:1px solid #27436b;border-radius:7px;padding:5px 8px;min-height:124px;overflow:hidden}
 .bay-h{display:flex;justify-content:space-between;font-size:10px;color:#7fd0ff}
 .bay-h b{color:#dfe8f5}
 .bay-ph{font-size:9.5px;margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bay-seats{display:grid;grid-template-columns:repeat(10,1fr);gap:1.5px;margin:3px 0}
-.bay-seats span{height:6px;border-radius:1.5px;background:#1b2a44}
+.bay-seats span{height:6px;border-radius:1.5px;background:#16243c}
+.bay-seats span.sb-empty{background:#16243c}
+.bay-seats span.sb-seated{background:#3d6fb5}
+.bay-seats span.sb-belt{background:#ffc85a}
+.bay-seats span.sb-locked{background:#2fa860}
+.bay-seats span.sb-released{background:#7b9ac4}
+.bay-seats span.sb-fault{background:#ff3b30;animation:occBlink .8s steps(2) infinite}
 .bay-bar{height:4px;background:#152a45;border-radius:2px;overflow:hidden;background:#152a45}
 .bay-bar span{display:block;height:100%;background:#5fd68f}
 .occ-alerts div{padding:3px 6px;border-left:3px solid #2e4a72;background:#0d1524;margin-bottom:3px;border-radius:0 4px 4px 0}
@@ -1955,7 +1973,7 @@ function liveRand(kind,dt){
   return rand01(kind+"|"+hourKey+"|"+(SHARED.salt||"local"));
 }
 
-const fmtT=tt=>{const h=Math.floor(tt),m=Math.round((tt-h)*60);return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");};
+const fmtT=tt=>{let h=Math.floor(tt),m=Math.round((tt-h)*60);if(m===60){h++;m=0;}return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");};
 
 /* ================= 天候（東京固定・日没つき） ================= */
 let WX={ok:false,temp:null,mul:1.0,condKey:null,icon:"…",sunset:null,wind:null};
@@ -2247,6 +2265,12 @@ function sysStateOf(spot,d,tt){
 function portersOf(s,veh,d,tt,rooms){
   const sp=RIDE_SPEC[s.id]||{};
   if (!veh) return null;
+  if (veh.cdPhase==="preopen") return [
+    {pos:"ホーム",n:3,st:"開園前点検・清掃"},{pos:"コース巡回",n:2,st:"目視点検・試運転立会"},
+    {pos:"ゲート",n:1,st:"開園準備・列整備"}];
+  if (veh.cdPhase==="sweep") return [
+    {pos:"場内スイープ",n:4,st:"閉園作業・残留確認"},{pos:"ホーム",n:2,st:"最終便確認・車庫回送立会"},
+    {pos:"ゲート",n:1,st:"クローズ表示・導線切替"}];
   if (veh.stype==="bay"){                          /* v56: シミュレーターの配置 */
     const stopEv=!!veh.esp;const out=[];
     out.push({pos:"ゲート/グルーピング",n:3,st:stopEv?"安全確認対応中":"案内・PP合流"});
@@ -2323,7 +2347,57 @@ function spotStatus(s,d,tt){
       return {st:"insp",until:pub.ann>=21.9?null:pub.ann,idx:w.idx,n:wins.length,bad:w.bad};
   }
   if (s.sunset&&tt>=sunsetH()&&tt<CLOSE_H) return {st:"sunset"};
+  if (s.type==="a"){
+    const cd2=closedownOf(s,d);
+    if (cd2&&tt>=cd2.tCut&&tt<CLOSE_H&&cd2.tCut<CLOSE_H-1e-6) return {st:"lastcall",cd:cd2};
+  }
   return {st:"open"};
+}
+/* 閉園クローズダウン(v61): 待ち時間が閉園までの残り時間を上回る時点で列最後尾を締切り、
+   並んでいるゲストを全員案内してから閉園作業(場内確認・車庫回送)→夜間点検へ。すべて決定論 */
+const _cdCache={};
+/* v62: パーク一括のクローズダウン計画。基準締切に「退園分散」の後ろ倒しを重ねる。
+   混雑日ほど残列の多い施設から+5分刻み(最大+20分)で締切を遅らせ、案内完了(〜22:30)と
+   退園ゲート通過のピークを平準化する。閑散日は後ろ倒しなし(厳格運用) */
+function closedownPlanOf(d){
+  const pk="plan"+dateKey(d);
+  if (_cdCache[pk]!==undefined) return _cdCache[pk]==="busy"?null:_cdCache[pk];
+  _cdCache[pk]="busy";
+  const att=dailyAttendance(d);
+  const bases=[];
+  SPOTS.filter(x=>x.type==="a"&&ROUTES[x.id]&&RIDE_SPEC[x.id]).forEach(spot=>{
+    let tCut=CLOSE_H,wCut=0;
+    for (let t=19;t<=CLOSE_H+1e-6;t+=1/12){
+      const tq=Math.min(t,CLOSE_H-0.001);
+      const w=calcWait(spot,d,tq,inParkOf(d,tq,att),1)||0;
+      if (w/60>(CLOSE_H-t)+0.08){tCut=t;wCut=w;break;}
+      wCut=w;
+    }
+    bases.push({id:spot.id,spot,tCut,wCut,qCut:queueCountOf(spot.id,wCut)||0});
+  });
+  const crowd=Math.max(0,Math.min(1,((att.total||0)-60000)/45000));
+  const cong=bases.filter(b=>{const de=Math.max(CLOSE_H+2/60,b.tCut+b.wCut/60+3/60);return de>=21.8&&de<=22.35&&b.qCut>=300;})
+    .sort((a,b)=>b.qCut-a.qCut);
+  const shiftRank=[20,15,10,5];
+  const plan={};
+  bases.forEach(b=>{
+    const r=cong.indexOf(b);
+    const shift=r>=0?Math.round((shiftRank[r]||0)*crowd/5)*5:0;
+    let tCut=Math.min(CLOSE_H-1/60,b.tCut+shift/60), wCut=b.wCut, qCut=b.qCut;
+    if (shift>0){
+      const tq=Math.min(tCut,CLOSE_H-0.001);
+      wCut=calcWait(b.spot,d,tq,inParkOf(d,tq,att),1)||wCut;
+      qCut=queueCountOf(b.id,wCut)||qCut;
+    }
+    const drainEnd=Math.min(CLOSE_H+0.5,Math.max(CLOSE_H+2/60,tCut+wCut/60+3/60));
+    plan[b.id]={tCut,base:b.tCut,shift,wCut,qCut,drainEnd,sweepEnd:drainEnd+0.25,shutEnd:drainEnd+0.42};
+  });
+  _cdCache[pk]=plan;return plan;
+}
+function closedownOf(spot,d){
+  if (!ROUTES[spot.id]||!RIDE_SPEC[spot.id]) return null;
+  const plan=closedownPlanOf(d);
+  return plan?plan[spot.id]||null:null;
 }
 /* 休止分の需要が稼働中アトラクションへ再配分される係数 */
 function redistFactor(d,tt){
@@ -2911,6 +2985,20 @@ function newsItems(now,att,rw,residual){
     });
     if (WX.ok&&WX.mul<0.9) items.push(J?"☔ 東京エリアは悪天候。屋内アトラクションと『ハーバー・カーゴ・ホール』がおすすめです":"☔ Wet weather — indoor rides and Harbor Cargo Hall recommended");
     items.push(J?`🌇 本日の日没は${fmtT(sunsetH())}。カヌー体験は日没で受付終了します`:`🌇 Sunset today at ${fmtT(sunsetH())}. Canoe Adventure closes at sunset`);
+    {  /* v62: 当日券の残数連動 */
+      const bi2=boothInfoOf(now,tt);
+      if (bi2.remaining<=0&&tt<21) urgent.push(J?"🎫 本日の当日券は完売しました。日付指定券・年間パスポートは引き続きご入園いただけます":"🎫 Same-day tickets are sold out");
+      else if (bi2.sellT&&bi2.remaining>0&&bi2.remaining<bi2.quota*0.12&&tt<21)
+        items.unshift(J?`🎫 当日券は残りわずかです（完売見込み ${fmtT(bi2.sellT)}頃）`:`🎫 Few same-day tickets left (sellout ~${fmtT(bi2.sellT)})`);
+      else if (bi2.blocked) items.push(J?"🎫 入場制限中につき当日券の販売を一時停止しています（解除後に再開）":"🎫 Day-ticket sales paused during entry restriction");
+    }
+    /* v61: 列締切と案内継続のお知らせ */
+    SPOTS.filter(x=>x.type==="a"&&ROUTES[x.id]).forEach(sp2=>{
+      const c2=closedownOf(sp2,now);
+      if (c2&&c2.tCut<CLOSE_H-1e-6&&tt>=c2.tCut&&tt<Math.min(CLOSE_H+0.3,c2.drainEnd))
+        urgent.push(J?`🎫 ${sp2.ja}：本日の列最後尾を締め切りました。お並びの皆さままで順次ご案内します`:`🎫 ${sp2.ja}: queue is closed for today — everyone in line will ride`);
+    });
+    if (tt>=21.85) items.unshift(J?"🌙 まもなく閉園時刻（22:00）です。ごゆっくりお気をつけてお帰りください":"🌙 Park closes at 22:00 — please make your way to the exit");
     if (openH(now)<9&&tt<9) items.push(J?`⏰ アーリーオープン中（${fmtT(openH(now))}〜）。9:00までは一部施設のみ営業しています`:`⏰ Early open since ${fmtT(openH(now))} — limited facilities until 9:00`);
     if (nightTicketDay(now)) items.push(J?"🌙 本日は17:00からナイトチケットで入園できます（平日限定）":"🌙 Night tickets valid from 17:00 today (weekdays only)");
     if (tt>=20.25&&tt<21) items.push(J?"🍽 テーブルサービス店のラストオーダーは21:00です":"🍽 Table-service restaurants: last orders 21:00");
@@ -2923,6 +3011,13 @@ function newsItems(now,att,rw,residual){
     } else if (night.residual&&tt>=night.residual.resolve){
       urgent.push(J?`✅ ${fmtT(night.residual.resolve)} すべてのお客様のご退園を確認しました。本日の閉園作業を完了します${night.residual.mallow?"（…最後まで残っていたのは、マロウ本人でした🦝）":""}`:`✅ All guests confirmed out at ${fmtT(night.residual.resolve)}. Closing complete${night.residual.mallow?" (...the last one out was Mallow himself 🦝)":""}`);
     }
+    /* v61: 閉園後もご案内継続中の施設 */
+    SPOTS.filter(x=>x.type==="a"&&ROUTES[x.id]).forEach(sp2=>{
+      const c2=closedownOf(sp2,now);
+      if (c2&&tt<c2.drainEnd)
+        urgent.push(J?`🎫 ${sp2.ja}：閉園時刻を過ぎましたが、お並びのお客様を最後までご案内しています`:`🎫 ${sp2.ja}: still boarding guests who were in line at closing`);
+    });
+    if (tt>=22.45) items.push(J?"🛠 各アトラクションで夜間点検を開始しました。あすの安全運行に備えます":"🛠 Overnight inspections underway for tomorrow's safe operation");
     items.push(J?"🌙 本日の営業は終了しました。ご来園ありがとうございました":"🌙 The park is now closed. Thank you for visiting");
     items.push(J?"🦝 マロウ『今日もいっぱい遊んでくれてありがとう！また明日ね』":"🦝 Mallow: \"Thanks for playing today! See you tomorrow!\"");
     const toh=openH(tomorrow);
@@ -2939,12 +3034,13 @@ function newsItems(now,att,rw,residual){
       urgent.push(J?`⚠ 本日は入場制限の可能性があります（想定来場 約${att.total.toLocaleString()}人）。制限中も再入園の方とパークホテル「バケーションプラン」ご宿泊の方はご入園いただけます`
                   :`⚠ Entry restrictions likely today (~${att.total.toLocaleString()} expected)`);
     if (minsTo<=60&&minsTo>0) urgent.push(J?`🔔 開園まであと${minsTo}分`:`🔔 Park opens in ${minsTo} min`);
+    if (minsTo<=45&&minsTo>0) items.push(J?"🛠 各アトラクションで開園前の安全点検・無人試運転を実施しています":"🛠 Pre-opening safety checks & empty test runs in progress");
     {
       const q0=entranceQueue(now,tt,att,rw);
       if (q0>0) items.push(J?`🎟 現在の入園待ち 約${q0.toLocaleString()}人`:`🎟 Entrance queue now ~${q0.toLocaleString()}`);
     }
     items.push(J?`☀ おはようございます。本日は${fmtT(oh)}開園・22:00閉園です${oh<9?"（アーリーオープン！）":""}`:`☀ Good morning! Today: ${fmtT(oh)}–22:00${oh<9?" (early open!)":""}`);
-    if (isMuscleDay) items.push(J?"🏆 本日15:00『サマーマッスル・コンテスト』開催！優勝はXのいいねで決まる！ #マローブルック":"🏆 SUMMER MUSCLE CONTEST today 15:00! Winner by likes on X!");
+    if (isMuscleDay) items.push(J?"🏆 本日16:00『サマーマッスル・コンテスト』開催（18:00審査投票・19:15結果発表）！優勝はXのいいねで決まる！ #マローブルック":"🏆 SUMMER MUSCLE CONTEST today 15:00! Winner by likes on X!");
     items.push(J?`📊 本日の混雑予想: ${t("fcLevels")[fcLevelOf(att.total)]}（想定 約${att.total.toLocaleString()}人${peakPredict(now,att)>=MAX_CAP?"・入場制限見込み":""}）`:`📊 Today's forecast: ${t("fcLevels")[fcLevelOf(att.total)]} (~${att.total.toLocaleString()}${peakPredict(now,att)>=MAX_CAP?", entry limits likely":""})`);
     const chInfo=ppInfo("chase",now,oh+0.01,att.total);
     if (chInfo&&chInfo.endT) items.push(J?`🎫 本日のPP早期終了予想: 大時計塔チェイス ${fmtT(chInfo.endT)}頃`:`🎫 PP est. sellout today: Clocktower Chase ~${fmtT(chInfo.endT)}`);
@@ -3075,7 +3171,135 @@ window.phCheck=function phCheck(id){
   show(0);
 };
 /* スマホのメニューシート: ヘッダーから外したボタンをここへ集約 */
+/* v62: 入退園ゲートの10分別通過数(客層別)。累計はENTRIESモデル・在園数と厳密整合 */
+const COHORT_COLORS_G={heavy:"#e05c5c",far:"#e0975c",genH:"#e6c95a",genL:"#8fd06a",kidsH:"#5fd0a8",
+  kidsL:"#5cc0e0",hotel:"#5c8de0",tourD:"#8f6ce0",inbound:"#d06ccf",student:"#9aa4b5",night:"#f2e28a"};
+const _gateCache={};
+function gateFlowsOf(d){
+  const key=dateKey(d);
+  if (_gateCache[key]) return _gateCache[key];
+  const att=dailyAttendance(d),rw=restrictionWindow(d,att),oh=openH(d);
+  const cs=cohortsOf(d),shift=wxDepartShift();
+  const plan=closedownPlanOf(d)||{};
+  const maxDrain=Math.max(CLOSE_H+0.15,...Object.values(plan).map(p=>p.drainEnd));
+  const nf=nightFrac(d,att);
+  const wIn=(t)=>{const o={};let s=0;
+    cs.forEach(c=>{const v=Math.max(0,c.share*(sig(t+1/12,c.inC,c.inK)-sig(t,c.inC,c.inK)));o[c.id]=v;s+=v;});
+    if (nf>0){const v=nf*Math.max(0,sig(t+1/12,17.15,5.0)-sig(t,17.15,5.0));o.night=v;s+=v;}
+    return {o,s};};
+  const wOut=(t)=>{const o={};let s=0;
+    cs.forEach(c=>{const oc=c.outC-shift*c.wx,ok=c.outK*(shift>0?1.15:1);
+      const v=Math.max(0,c.share*(sig(t+1/12,oc,ok)-sig(t,oc,ok)));o[c.id]=v;s+=v;});
+    if (nf>0){const v=nf*Math.max(0,sig(t+1/12,21.85-shift*0.8,5.0)-sig(t,21.85-shift*0.8,5.0));o.night=v;s+=v;}
+    return {o,s};};
+  const bins=[];let prevCum=0,prevDep=0;
+  for (let t=oh-1;t<23-1e-6;t+=1/6){
+    const t2=t+1/6;
+    const cum=t2<=oh?0:cumEntriesModel(d,Math.min(t2,CLOSE_H),att,rw,1);
+    let ip=inParkOf(d,Math.min(t2,CLOSE_H-0.001),att);
+    if (t2>CLOSE_H) ip=inParkOf(d,CLOSE_H-0.001,att)*Math.max(0,1-(t2-CLOSE_H)/Math.max(0.1,maxDrain-CLOSE_H));
+    const depCum=Math.max(prevDep,cum-Math.max(0,ip));
+    const nIn=Math.max(0,Math.round(cum-prevCum)),nOut=Math.max(0,Math.round(depCum-prevDep));
+    prevCum=Math.max(prevCum,cum);prevDep=Math.max(prevDep,depCum);
+    const win=wIn(t),wou=wOut(t);
+    const alloc=(n,w)=>{const out={};let used=0;const ids=Object.keys(w.o);
+      ids.forEach(id=>{const v=w.s>0?Math.floor(n*w.o[id]/w.s):0;out[id]=v;used+=v;});
+      let rem=n-used,gi=0;
+      ids.sort((a,b)=>w.o[b]-w.o[a]).forEach(id=>{if(rem>0){out[id]++;rem--;}});
+      return out;};
+    bins.push({t,inN:nIn,outN:nOut,inBy:alloc(nIn,win),outBy:alloc(nOut,wou)});
+  }
+  _gateCache[key]={bins,maxIn:Math.max(1,...bins.map(b=>b.inN)),maxOut:Math.max(1,...bins.map(b=>b.outN))};
+  return _gateCache[key];
+}
+/* v62: チケットブース(開園1時間前に販売開始・閉園1時間前に販売終了)。当日券残数と完売見込み */
+const _boothCache={};
+function boothSalesOf(d){
+  const key=dateKey(d);
+  if (_boothCache[key]) return _boothCache[key];
+  const att=dailyAttendance(d),rw=restrictionWindow(d,att),oh=openH(d);
+  const cs=cohortsOf(d),tm=ticketMixOf(d);
+  let dayShare=0;
+  cs.forEach(c=>{const m=(tm[c.id]||{}).mix||{};dayShare+=c.share*(m.day||0);});
+  dayShare=Math.max(0.06,Math.min(0.35,dayShare));
+  const expWalk=Math.round((att.total||0)*dayShare);
+  const quota=Math.max(expWalk,Math.round(PROC_CAP-(att.total||0)*(1-dayShare)));
+  const wSum=(t)=>{let s=0;cs.forEach(c=>{const m=(tm[c.id]||{}).mix||{};
+    s+=c.share*(m.day||0)*sig(t+0.25,c.inC,c.inK);});return s;};
+  const s0=wSum(oh-1),s1=wSum(21);
+  const pts=[];let sold=0,prevW=s0,sellT=null,stopT=null;
+  for (let t=oh-1;t<=21+1e-6;t+=1/12){
+    const w=wSum(t);
+    const blocked=rw&&t>=rw.start&&(rw.release==null||t<rw.release);
+    let inc=blocked?0:(att.total||0)*Math.max(0,(w-prevW))/Math.max(1e-6,(s1-s0))*dayShare/Math.max(1e-6,dayShare);
+    inc=blocked?0:(expWalk)*Math.max(0,(w-prevW))/Math.max(1e-6,(s1-s0));
+    prevW=w;
+    if (sold<quota){sold=Math.min(quota,sold+inc);if(sold>=quota&&sellT==null)sellT=t;}
+    if (blocked&&stopT==null&&t>=rw.start) stopT=rw.start;
+    pts.push({t,sold:Math.round(sold),blocked});
+  }
+  const wins=Math.min(10,Math.max(4,4+Math.round(((att.total||0)-40000)/12000)));
+  const r={quota,expWalk,dayShare,pts,sellT,wins,oh};
+  _boothCache[key]=r;return r;
+}
+function boothInfoOf(d,tt){
+  const b=boothSalesOf(d),rw=restrictionWindow(d,dailyAttendance(d));
+  const at=(t)=>{let p=b.pts[0];for(const x of b.pts){if(x.t<=t)p=x;else break;}return p;};
+  const cur=at(tt),prev=at(tt-1/6);
+  const remaining=Math.max(0,b.quota-cur.sold);
+  const rate10=Math.max(0,cur.sold-prev.sold);
+  const blocked=rw&&tt>=rw.start&&(rw.release==null||tt<rw.release);
+  let status,cls="ok";
+  if (tt<b.oh-1){status="販売前（"+fmtT(b.oh-1)+"より販売開始）";cls="pre";}
+  else if (remaining<=0){status="当日券 完売";cls="ng";}
+  else if (blocked){status="入場制限中につき当日券の販売を一時停止";cls="ng";}
+  else if (tt>=21){status="本日の販売終了（21:00）";cls="pre";}
+  else status="販売中";
+  return {status,cls,remaining,quota:b.quota,sold:cur.sold,rate10,sellT:b.sellT,wins:b.wins,night:nightTicketDay(d),blocked};
+}
 /* 入園状況シート: 待機列の推移・レーン別・並んでいる人の内訳 */
+function drawGateCharts(now,tt){
+  const gf=gateFlowsOf(now);
+  const tip=document.getElementById("gtTip");
+  [["gtIn","inN","inBy",gf.maxIn],["gtOut","outN","outBy",gf.maxOut]].forEach(([cid,nk,bk,mx])=>{
+    const cv=document.getElementById(cid);if(!cv)return;
+    const w=cv.clientWidth||300;cv.width=w*2;cv.height=240;
+    const g=cv.getContext("2d");g.setTransform(2,0,0,2,0,0);g.clearRect(0,0,w,120);
+    const bins=gf.bins,bw=w/bins.length;
+    bins.forEach((b,i)=>{
+      const future=b.t>=tt;
+      let y=104;
+      const order=Object.keys(COHORT_COLORS_G);
+      order.forEach(id=>{
+        const v=(b[bk]||{})[id]||0;if(!v)return;
+        const h=Math.max(0.5,v/mx*92);
+        g.globalAlpha=future?0.35:1;
+        g.fillStyle=COHORT_COLORS_G[id];
+        g.fillRect(i*bw+0.5,y-h,Math.max(1,bw-1),h);
+        y-=h;
+      });
+      g.globalAlpha=1;
+      if (Math.abs(b.t-Math.round(b.t))<0.01&&Math.round(b.t)%2===0){
+        g.fillStyle="#5f81ad";g.font="8px monospace";
+        g.fillText(String(Math.round(b.t)),i*bw,116);
+      }
+    });
+    /* 現在時刻ライン */
+    const xi=bins.findIndex(b=>b.t>=tt);
+    if (xi>=0){g.strokeStyle="#ffd75e";g.setLineDash([3,3]);
+      g.beginPath();g.moveTo(xi*bw,4);g.lineTo(xi*bw,108);g.stroke();g.setLineDash([]);}
+    cv.onmousemove=(e)=>{
+      const r=cv.getBoundingClientRect();
+      const i=Math.max(0,Math.min(bins.length-1,Math.floor((e.clientX-r.left)/(r.width/bins.length))));
+      const b=bins[i];
+      const list=Object.entries(b[bk]||{}).filter(x=>x[1]>0).sort((a,b2)=>b2[1]-a[1]).slice(0,4)
+        .map(([id,v])=>`${(COHORTS.find(x=>x.id===id)||{}).ja||(id==="night"?"ナイト":id)} ${v.toLocaleString()}`).join("・");
+      tip.style.display="block";tip.style.left=(e.clientX+12)+"px";tip.style.top=(e.clientY-10)+"px";
+      tip.innerHTML=`<b>${fmtT(b.t)}〜${fmtT(b.t+1/6)}</b> ${cid==="gtIn"?"入園":"退園"} ${b[nk].toLocaleString()}人${b.t>=tt?"（予測）":""}<br>${list||"—"}`;
+    };
+    cv.onmouseleave=()=>{tip.style.display="none";};
+  });
+}
 function openEntranceSheet(){
   const J=LANG==="ja";
   const now=new Date(),tt=now.getHours()+now.getMinutes()/60;
@@ -3126,8 +3350,31 @@ function openEntranceSheet(){
     rows.push([J?"現在の入園待ち":"Queue now",q>0?`${q.toLocaleString()}${J?"人":""}`:(J?"スムーズです":"smooth"),J?"入場制限なし":""]);
   }
   rows.push([J?"制限中に入園できる比率":"Admitted share",`${Math.round(adm*100)}%`,J?"日付指定・団体・VP・ナイト（年パス除く）":""]);
+  /* v62: 入退園ゲート・チケットブース */
+  const bi=boothInfoOf(now,tt);
+  const boothRows=[
+    [J?"ブース状態":"Booth", bi.status, J?`開園1時間前(${fmtT(oh-1)})販売開始・21:00終了`:""],
+    [J?"稼働窓口":"Windows", `${bi.wins}${J?"窓":""}`, J?`販売レート 約${bi.rate10.toLocaleString()}人/10分`:""],
+    [J?"当日券 残数":"Day tickets left", bi.remaining>0?`${bi.remaining.toLocaleString()}${J?"枚":""}`:(J?"完売":"sold out"),
+      bi.sellT?(J?`完売見込み ${fmtT(bi.sellT)}頃`:""):(J?"本日は完売の見込みなし":"")],
+    [J?"本日の販売累計":"Sold today", `${bi.sold.toLocaleString()}${J?"枚":""}`, bi.blocked?(J?"制限解除後に販売再開します":""):""],
+  ];
+  if (bi.night) boothRows.push([J?"ナイトチケット":"Night ticket",J?"17:00より販売（平日限定）":"from 17:00",""]);
+  const boothHtml=`<div class="att-sec">${J?"チケットブース 販売状況":"Ticket booth"}</div>
+    <table class="ent-tbl">${boothRows.map(r=>`<tr><td>${r[0]}</td><td><b>${r[1]}</b></td><td class="src">${r[2]||""}</td></tr>`).join("")}</table>`;
+  const gateHtml=`<div class="att-sec">${J?"入園・退園ゲート通過数（10分ごと・客層別）":"Gate throughput (10-min, by segment)"}</div>
+    <div class="gt-wrap">
+      <div class="gt-box"><div class="gt-h">▶ ${J?"入園ゲート":"Entry gate"}</div><canvas id="gtIn" height="120"></canvas></div>
+      <div class="gt-box"><div class="gt-h">◀ ${J?"退園ゲート":"Exit gate"}</div><canvas id="gtOut" height="120"></canvas></div>
+    </div>
+    <div class="gt-legend">${Object.entries(COHORT_COLORS_G).map(([id,c])=>{
+      const cj=(COHORTS.find(x=>x.id===id)||{}).ja||(id==="night"?"ナイト":id);
+      return `<span><i style="background:${c}"></i>${cj}</span>`;}).join("")}</div>
+    <div id="gtTip" class="gt-tip" style="display:none"></div>`;
   document.getElementById("entTitle").textContent=(J?"🎟 入園状況":"🎟 Entry status")+`　${fmtT(tt)}`;
+  setTimeout(()=>drawGateCharts(now,tt),30);
   document.getElementById("entBody").innerHTML=
+    gateHtml+boothHtml+
     `<div class="att-sec">${J?(tt<oh?"開園待ちの見込み（10分ごと）":"待機列の推移（10分ごと）"):"Queue trend"}</div>
      <div class="db-wrap"><div class="db-row">${bars}</div></div>
      <div class="att-sec">${J?"現在の状況":"Now"}</div>
@@ -3237,8 +3484,24 @@ function opStateOf(spot,d,tt){
     const ev=evacWindowOf(spot,d,tt);
     if (ev) return {id:"EVACUATING",note:`${ev.label}／${ev.clearQueue?"待機列は全員退出・優先搭乗券を配布":"車上ゲストの降車誘導中"}`,evac:ev};
   }
-  if (tt>=CLOSE_H) return {id:"CLOSED",note:""};
-  if (tt<oh) return {id:"PRE_OPEN",note:"点検・試運転"};
+  if (tt>=CLOSE_H){
+    const cd2=closedownOf(spot,d,tt&&null)||closedownOf(spot,d);
+    if (cd2&&spot.type==="a"){
+      if (tt<cd2.drainEnd) return {id:"OPEN",note:`列最後尾クローズ（${fmtT(cd2.tCut)}${cd2.shift>0?`｜基準${fmtT(cd2.base)}＋退園分散+${cd2.shift}分`:""}）・お並びのお客様を最後までご案内中`,lastcall:true};
+      if (tt<cd2.sweepEnd) return {id:"CLOSED",note:"閉園作業中：最終便確認・場内スイープ・車両を車庫へ回送",closing:true};
+      if (tt<cd2.shutEnd) return {id:"CLOSED",note:"閉園作業中：電源縮退・消灯確認",closing:true};
+      return {id:"CLOSED",note:"夜間点検中",night:true};
+    }
+    return {id:"CLOSED",note:""};
+  }
+  if (tt<oh){
+    if (spot.type==="a"&&tt>=oh-0.75) return {id:"PRE_OPEN",note:"開園前点検・無人試運転を実施中",preopen:true};
+    return {id:"PRE_OPEN",note:"点検・試運転"};
+  }
+  {
+    const st2=spotStatus(spot,d,tt);
+    if (st2.st==="lastcall") return {id:"OPEN",note:`列最後尾クローズ（${fmtT(st2.cd.tCut)}${st2.cd.shift>0?`｜基準${fmtT(st2.cd.base)}＋退園分散+${st2.cd.shift}分`:""}）・お並びのお客様を最後までご案内中`,lastcall:true};
+  }
   if (st.st==="maint") return {id:"MAINTENANCE",note:"大型メンテナンス期間"};
   if (st.st==="evac"){
     const J2=LANG==="ja";
@@ -3288,7 +3551,13 @@ function vehicleStates(spot,d,tt,opt){
   const esp=(opt&&opt.test)?null:stopEventOf(spot,d,tt);
   const minuteEff=minute-((opt&&opt.test)?0:stopShiftMin(spot,d,tt));
   const st=(opt&&opt.test)?{id:"RECOVERY_TEST"}:opStateOf(spot,d,tt);
-  const running=(opt&&opt.test)||!!esp||st.id==="OPEN"||st.id==="DELAYED"||st.id==="LIMITED_OPERATION";
+  /* v61: クローズダウン窓 */
+  const cd=(opt&&opt.test)?null:closedownOf(spot,d);
+  const oh0=openH(d);
+  const inPreOpen=!(opt&&opt.test)&&tt>=oh0-0.75&&tt<oh0;                 /* 開園前試運転(無人) */
+  const inSweep=cd&&tt>=cd.drainEnd&&tt<cd.sweepEnd;                      /* 閉園回送・場内確認 */
+  const inNight=!(opt&&opt.test)&&(tt>=(cd?cd.sweepEnd:CLOSE_H+0.3)||tt<oh0-0.75);  /* 夜間点検 */
+  const running=(opt&&opt.test)||!!esp||st.id==="OPEN"||st.id==="DELAYED"||st.id==="LIMITED_OPERATION"||inPreOpen||inSweep;
   const att=dailyAttendance(d);
   const lv=congestionLvRaw(spot.id,d,tt,att);
   const maintN=Math.max(1,Math.round(sp.spare*0.5));                       /* 常時整備中の編成 */
@@ -3310,7 +3579,10 @@ function vehicleStates(spot,d,tt,opt){
     let streak=1;while(streak<60&&overAt0(lapN0-streak))streak++;
     if (streak*gap0>=10) activeAdj=Math.min(sp.trains,active+1);
   })();
-  const active2=activeAdj;
+  let activeCd=activeAdj;
+  if (inPreOpen) activeCd=Math.min(3,sp.trains);                          /* 無人試運転は少数編成 */
+  else if (inSweep) activeCd=Math.max(0,Math.ceil(activeAdj*(1-(tt-cd.drainEnd)/0.25)));  /* 順次車庫へ */
+  const active2=Math.max(inSweep?0:1,activeCd);
   const gap=cycle/Math.max(1,active2);
   /* v56: 3Dフライトシミュレーター(ベイ運用)。6キャビンが75秒ずらしで並行、周期=乗降3分+上映4.5分 */
   if ((STATION_TYPE[spot.id]||"single")==="bay"){
@@ -3319,11 +3591,17 @@ function vehicleStates(spot,d,tt,opt){
     const testB=!!(opt&&opt.test), simB=!!(opt&&opt.sim);
     const fill=testB&&!simB?0:Math.min(1,0.72+lv*0.06);
     for (let i=0;i<N;i++){
-      if (!running&&!esp){outB.push({id:i+1,s:null,side:"maint",state:"夜間ローテ整備",n:0,kind:"bay"});continue;}
+      if (inPreOpen){outB.push({id:i+1,cabin:true,s:0,kind:"station",block:"乗降ベイ "+(i+1),n:0,lk:0,
+        state:"開園前試運転（無人）",delay:0,estop:false,frozen:false,hold:false,
+        seats:null,power:powerStateOf(spot.id,{kind:"station",p:0.5},0,i+1,Math.floor(minute)),
+        kindJa:"点検",speed:0,z:0,dwellP:0.5,dp:{phase:"safety",pp:0.5,label:"試運転・系統確認"},pos:"bay",posIdx:i,bayPhase:"safety"});continue;}
+      if (!running&&!esp){
+        const nightItems=["ドーム投映系","モーションベース","音響・空調","ベルトセンサー","非常扉"];
+        outB.push({id:i+1,s:null,side:"maint",state:(tt>=CLOSE_H+0.3||tt<oh0-0.75)?`夜間点検：${nightItems[(i+d.getDate())%5]}`:"夜間ローテ整備",n:0,kind:"bay"});continue;}
       const sB=((((minuteEff-i*OFF)/CYC)%1)+1)%1;
       const tIn=sB*CYC;
       const lapKey=Math.floor((minuteEff-i*OFF)/CYC);
-      const load=testB&&!simB?0:Math.round(40*(fill+rand01("bld-"+i+lapKey)*0.12));
+      const load=testB&&!simB?0:Math.min(40,Math.round(40*(fill+rand01("bld-"+i+lapKey)*0.12)));
       let phase,pp;
       if (tIn<0.4){phase="unload";pp=tIn/0.4;}
       else if (tIn<1.6){phase="board";pp=(tIn-0.4)/1.2;}
@@ -3358,7 +3636,7 @@ function vehicleStates(spot,d,tt,opt){
     for (let k=0;k<12;k++){const key="rot-"+spot.id+"-"+(lapR-k);
       const dl=rand01(key)<frB?8+rand01(key+"d")*20:rand01(key+"j")*4;acc+=75+dl;if(75+dl<=84)okN++;}
     return {blocks:[],list:outB,gap:OFF,cycle:CYC,active:running?N:0,lv,drive:"simulator",max:N,spare:0,
-      test:testB,tracks:N,stype:"bay",faultRate:frB,inStation:[],esp,boost:null,
+      test:testB,tracks:N,stype:"bay",faultRate:frB,inStation:[],esp,boost:null,cdPhase:inPreOpen?"preopen":(cd&&tt>=cd.tCut&&tt<cd.drainEnd)?"drain":null,cd,
       target:null,theo:75,actual:Math.round(acc/12),overRate:100-Math.round(okN/12*100),over:false,
       rota:{target:75,actual:Math.round(acc/12),comply:Math.round(okN/12*100)},safetyRate:0};
   }
@@ -3370,8 +3648,9 @@ function vehicleStates(spot,d,tt,opt){
   for (let i=0;i<sp.trains;i++){
     const idx=i+1;
     if (i>=active){
-      out.push({id:idx,block:i>=sp.trains-maintN?"整備側線":"待機線",n:0,
-        state:i>=sp.trains-maintN?"点検中":(running?"予備(即投入可)":"停止"),delay:0,s:null,seats:null});
+      const nightItems=["制御盤・PLC","ブレーキ系統","レール探傷・締結","照明・音響","安全バー作動"];
+      out.push({id:idx,block:i>=sp.trains-maintN?"整備側線":"待機線",n:0,side:i>=sp.trains-maintN?"maint":"wait",
+        state:inNight?`夜間点検：${nightItems[(idx+d.getDate())%5]}`:i>=sp.trains-maintN?"点検中":(running?"予備(即投入可)":"停止"),delay:0,s:null,seats:null});
       continue;
     }
     /* ルート上の位置 s(0-1)。区間ごとに速度が変わる(イベント中はminuteEffが凍結) */
@@ -3384,16 +3663,20 @@ function vehicleStates(spot,d,tt,opt){
     const estop=!testMode&&!!esp&&esp.phase===1;
     const simMode=opt&&opt.sim;
     const fillRate=simMode?({2:0.55,3:0.78,5:0.98}[opt.simLv||3]||0.78):0.78;
-    const load=(testMode&&!simMode)?0:Math.round(sp.seats*(fillRate+rand01("ld-"+spot.id+idx+mkey)*0.18));
+    /* v61: 締切後は残列に応じて乗車率が減衰し、最終便で0へ。試運転/回送は無人 */
+    let loadF=1;
+    if (inPreOpen||inSweep) loadF=0;
+    else if (cd&&tt>=cd.tCut){loadF=Math.max(0,Math.min(1,(cd.drainEnd-tt)/Math.max(0.05,(cd.drainEnd-cd.tCut))*1.3));}
+    const load=(testMode&&!simMode)?0:Math.round(sp.seats*(fillRate+rand01("ld-"+spot.id+idx+mkey)*0.18)*loadF);
     const lapKey=Math.floor(minuteEff/cycle-i/active2);         /* 周回ごとに固定・停車中は不変 */
-    const dp=isStation(seg.kind)?dispatchPhaseOf(spot.id,idx,seg,mkey,faultRate,testMode,lapKey):null;
+    const dp=(inPreOpen||inSweep)?null:isStation(seg.kind)?dispatchPhaseOf(spot.id,idx,seg,mkey,faultRate,testMode,lapKey):null;
     const dispLabel=dp?({unload:"降車中",board:"搭乗中",safety:"安全確認",ready:"発車待機"}[dp.phase]||dp.label):null;
     /* 降車中は空いた席のぶん乗車人数を減らす */
     const smTmp=seatMapOf(spot.id,idx,load,seg,s,mkey,testMode,dp,estop,lapKey);
     const nNow=dp&&dp.phase==="unload"&&smTmp?Math.max(0,load-smTmp.exited):
                dp&&dp.phase==="board"&&smTmp?smTmp.boarded:load;
     out.push({id:idx,s,block:seg.name,kind:seg.kind,n:nNow,lk:lapKey,
-      state:estop?(esp.kind==="sensor"?"緊急停止（エリア安全センサー作動）":"緊急停止（安全装置作動・全編成停止）"):(esp&&esp.phase===2)?"システム調整中（運転見合わせ）":held?"停止(前方占有)":(dp?dispLabel:
+      state:estop?(esp.kind==="sensor"?"緊急停止（エリア安全センサー作動）":"緊急停止（安全装置作動・全編成停止）"):(esp&&esp.phase===2)?"システム調整中（運転見合わせ）":inPreOpen?"開園前試運転（無人）":inSweep?"閉園回送・車庫入れ":held?"停止(前方占有)":(dp?dispLabel:
             (seg.kind==="steep_lift"||seg.kind==="lift")?"巻上中":
             (seg.kind==="steep_drop"||seg.kind==="drop")?"降下中":
             seg.kind==="airtime"?"エアタイム":seg.kind==="helix"?"らせん":
@@ -3486,7 +3769,7 @@ function vehicleStates(spot,d,tt,opt){
   }
   return {blocks,list:out,gap,cycle,active,lv,drive:(rt&&rt.drive)||"motor",max:sp.trains,spare:sp.spare,
     test:testMode,tracks,stype,faultRate,inStation:inStation.slice(0,tracks),
-    esp,boost,
+    esp,boost,cdPhase:inPreOpen?"preopen":inSweep?"sweep":(cd&&tt>=cd.tCut&&tt<cd.drainEnd)?"drain":inNight?"night":null,cd,
     target,theo:Math.round(theo),actual:Math.round(actual),overRate,
     over:target!=null&&actual>target,
     safetyRate:Math.round(safN/12*100)};
@@ -3940,6 +4223,7 @@ function occRenderTiles(){
     if (st.id==="EVACUATING") al.push(["a-crit",`OP-80 ${s.ja}：避難対応中 ${st.note}`]);
     else if (st.id==="TEMP_CLOSED") al.push(["a-warn",`OP-40 ${s.ja}：${st.note}`]);
     else if (st.id==="OPERATIONAL_HOLD") al.push(["a-warn",`OP-30 ${s.ja}：${st.note}`]);
+    else if (st.id==="OPEN"&&st.lastcall) al.push(["a-info",`🎫 ${s.ja}：${st.note}`]);
     else if (st.id==="DELAYED") al.push(st.note&&st.note.includes("救護")
       ?["a-warn",`OP-20 ${s.ja}：${st.note}`]
       :["a-info",`OP-20 ${s.ja}：処理能力を超える需要`]);
@@ -4083,6 +4367,8 @@ function occDrawRadar(ts){
   g.clearRect(0,0,cv.width,cv.height);   /* バッファ全域を必ずクリア */
   const snap=occSnap(false);   /* v53: 重いモデル計算は80msキャッシュ。位置は下で毎フレーム外挿 */
   const s=snap.s, veh=snap.veh, tt=snap.tt, d=snap.d, test=OCC.test;
+  {const oc=document.getElementById("occ");        /* v60: ベイ選択時はレーダー高さを圧縮 */
+   if (oc) oc.classList.toggle("occ-bay",!!(veh&&veh.stype==="bay"));}
   if (veh&&veh.stype==="bay"){                     /* v56: シミュレーターはベイ配置図 */
     occDrawBays(g,w,hgt,s,veh,d,tt,ts);
     occRenderStationLive(snap);occRenderCardsLive(snap);occLiveNumbers(snap);
@@ -4492,6 +4778,8 @@ function occRenderStationLive(snap){
         <div class="bay-h"><b>CABIN ${String(v.id).padStart(2,"0")}</b><span>${ph==="show"?"上映中":dp.label||""}</span></div>
         <div class="bay-seats">${(sm.arr||[]).map(x=>`<span class="sb-${x}"></span>`).join("")}</div>
         <div class="bay-ph stn-timer">${tmr}</div>
+        ${ph==="show"?`<div class="bay-ph" style="color:#7fd0ff">次便待機 ${Math.round(40*Math.min(1,(dp.pp||0)*1.25))}/40名 — ホームへ整列済み</div>`
+          :ph==="unload"?`<div class="bay-ph" style="color:#7fd0ff">次便待機 40/40名 — 降車完了後すぐ搭乗</div>`:""}
         <div class="bay-bar"><span style="width:${Math.round((dp.pp||0)*100)}%"></span></div>
         <div class="cast-track">${castBase==null?"":Array.from({length:2},(_,ci)=>`<span class="cast-dot" style="left:${Math.min(92,castBase+ci*10)}%">👤</span>`).join("")}</div>
         ${gpRow}
@@ -4637,6 +4925,12 @@ function occFlowStages(s,veh,sp,d,tt,o){
     const q0=queueCountOf(s.id,w0)||0, q1=queueCountOf(s.id,w1)||0;
     qTot=(q0+(q1-q0)*fr)*(1+(rand01("qj-"+s.id+Math.floor(tt*14400))-0.5)*0.006);
     qTot=Math.round(qTot*o.guests);
+    /* v61: 列締切後は新規流入なし。残列を案内完了までドレインして0へ */
+    const cd2=closedownOf(s,d);
+    if (cd2&&tt>=cd2.tCut){
+      const span=Math.max(0.03,cd2.drainEnd-cd2.tCut);
+      qTot=Math.max(0,Math.round(cd2.qCut*Math.max(0,1-(tt-cd2.tCut)/span)*(1+(rand01("qj2-"+s.id+Math.floor(tt*14400))-0.5)*0.004)));
+    }
   }
   const ppR=0.08+rand01("pp-"+s.id+dk)*0.07;                 /* PP列は通常列の8〜15% */
   let qPP=Math.round(qTot*ppR),qStd=Math.max(0,qTot-qPP);
@@ -4650,6 +4944,10 @@ function occFlowStages(s,veh,sp,d,tt,o){
     let prog=null,batch=0,period=(veh.gap||1)*60;
     if (o.hasPre&&fillingRoom){prog=1-fillingRoom.left/(4.5*60);prog=Math.min(1,prog/0.55);batch=fillingRoom.cap;period=2.25*60;}
     else if (!o.hasPre&&boardCar0){prog=boardCar0.dp.pp||0;batch=sp.seats||8;}
+    else if (veh.stype==="bay"){                     /* v59: 上映中の次便整列も案内扱い */
+      const sc=veh.list.filter(v=>v.bayPhase==="show"&&(v.dp.pp||0)<0.8).sort((a,b)=>(a.dp.pp||0)-(b.dp.pp||0))[0];
+      if (sc){prog=Math.min(1,(sc.dp.pp||0)*1.25);batch=sp.seats||40;period=450;}
+    }
     if (prog!=null){
       let ppTake=Math.round(batch/3);
       const ppCap=Math.round((sp.queueCap||0)*0.15);
@@ -4667,26 +4965,45 @@ function occFlowStages(s,veh,sp,d,tt,o){
     }
     qPP=Math.max(0,qPP-ppDef);qStd=Math.max(0,qStd-stdDef);
   }
-  const stages=[["キューライン（通常）",qStd,sp.queueCap||0,w!=null?w+"分待ち":"",guide==="std"?"fl-blink-c":""],
-                ["PP列（優先）",qPP,Math.round((sp.queueCap||0)*0.15)||0,w!=null?Math.max(5,Math.round(w*0.25/5)*5)+"分待ち":"",guide==="pp"?"fl-blink-g":""]];
+  const cdX=(()=>{const c2=o.test?null:closedownOf(s,d);
+    if (!c2||tt<c2.tCut) return null;
+    if (tt>=c2.drainEnd) return "本日の営業終了";
+    return `受付終了・残り約${Math.max(1,Math.ceil((c2.drainEnd-tt)*60))}分でご案内完了`;})();
+  const stages=[["キューライン（通常）",qStd,sp.queueCap||0,cdX!=null?cdX:(w!=null?w+"分待ち":""),guide==="std"?"fl-blink-c":""],
+                ["PP列（優先）",qPP,Math.round((sp.queueCap||0)*0.15)||0,cdX!=null?"受付終了":(w!=null?Math.max(5,Math.round(w*0.25/5)*5)+"分待ち":""),guide==="pp"?"fl-blink-g":""]];
   const rooms=o.hasPre?(preshowState(s,d,tt)||[]):[];
   if (o.hasPre){
     const inRoom=Math.round(rooms.reduce((a,r)=>a+r.n,0))*o.guests;
     stages.push(["プレショー在室",inRoom,o.pre||0,""]);
     const ph=rooms.length?rooms[0].left/(4.5*60):0.5;
-    const preCap=rooms.reduce((a,r)=>a+r.cap,0)||o.pre||0;
-    const postQ=Math.min(preCap,Math.round((sp.seats||8)*1.2+(1-ph)*preCap*0.35))*o.guests;
+    const preCap=(rooms.reduce((a,r)=>a+r.cap,0)||o.pre||0)*2;   /* v59: 定員2倍 */
+    const postQ=Math.min(preCap,Math.round((sp.seats||8)*1.2+(1-ph)*preCap*0.5))*o.guests;
     stages.push(["ショー後キューライン",postQ,preCap,""]);
   }
-  const stCars=veh.list.filter(v=>v.s!=null&&isStation(v.kind));
-  const platN=stCars.filter(v=>v.kind!=="unload"&&!(v.dp&&v.dp.phase==="unload"))
-    .reduce((a,v)=>a+((v.seats&&v.seats.boarded)||0),0);
-  const platCap=sp.seats*(veh.stype==="dual3"?3:1);
-  const exitN=stCars.filter(v=>v.kind==="unload"||(v.dp&&v.dp.phase==="unload"))
-    .reduce((a,v)=>a+((v.seats&&v.seats.exited)||0),0);
-  const onboard=o.onboard!=null?o.onboard:veh.list.reduce((a,v)=>a+(v.n||0),0);
-  stages.push(["搭乗ホーム",platN,platCap,""],
-    ["ライド乗車中",onboard,sp.seats*veh.active,""],
+  let platN,platCap,exitN,onboard,platLabel="搭乗ホーム",rideCap=sp.seats*veh.active;
+  if (veh.stype==="bay"){
+    /* v59: 6ベイぶんの搭乗ホーム(240名)。上映中も次便を各ベイに事前案内(ステージング) */
+    platLabel="搭乗ホーム（6ベイ）";platCap=(sp.seats||40)*6;rideCap=(sp.seats||40)*6;
+    platN=0;exitN=0;onboard=0;
+    veh.list.forEach(v=>{
+      if (v.side==="maint") return;
+      const ph=v.bayPhase, pp=(v.dp&&v.dp.pp)||0, bd=(v.seats&&v.seats.boarded)||0;
+      if (ph==="show"){onboard+=v.n||0;platN+=Math.round((sp.seats||40)*Math.min(1,pp*1.25));}   /* 次便整列 */
+      else if (ph==="unload"){exitN+=(v.seats&&v.seats.exited)||0;platN+=(sp.seats||40);}        /* 次便待機満了 */
+      else if (ph==="board"){platN+=Math.max(0,(sp.seats||40)-bd);onboard+=bd;}
+      else {onboard+=v.n||0;}                                                                     /* 施錠済は乗車中 */
+    });
+  } else {
+    const stCars=veh.list.filter(v=>v.s!=null&&isStation(v.kind));
+    platN=stCars.filter(v=>v.kind!=="unload"&&!(v.dp&&v.dp.phase==="unload"))
+      .reduce((a,v)=>a+((v.seats&&v.seats.boarded)||0),0);
+    platCap=sp.seats*(veh.stype==="dual3"?3:1);
+    exitN=stCars.filter(v=>v.kind==="unload"||(v.dp&&v.dp.phase==="unload"))
+      .reduce((a,v)=>a+((v.seats&&v.seats.exited)||0),0);
+    onboard=o.onboard!=null?o.onboard:veh.list.reduce((a,v)=>a+(v.n||0),0);
+  }
+  stages.push([platLabel,platN,platCap,""],
+    ["ライド乗車中",onboard,rideCap,""],
     ["降車・退場",exitN,sp.seats*2,""]);
   return stages;
 }
@@ -4747,9 +5064,9 @@ function occRenderCardsLive(snap){
   const box=document.getElementById("occCards");
   if (!box||!snap.veh) return;
   if (snap.veh.stype==="bay"){                     /* v57: ベイはSTATIONの6カードに統合表示 */
-    box.innerHTML=`<div class="stn-note">キャビン状態はSTATIONの6ベイカードに統合表示しています（座席・フェーズ・上映残りは同一情報源）</div>`;
+    box.innerHTML="";                                /* v60: 縦幅回収(説明は見出しサブに集約) */
     const sub=document.getElementById("occVehSub");
-    if (sub) sub.textContent="CABINS 6/6 — STATIONに統合";
+    if (sub) sub.textContent="CABINS 6/6 — キャビン状態はSTATIONの6ベイカードに統合（同一情報源）";
     return;
   }
   const sp=RIDE_SPEC[snap.s.id]||{};
@@ -4924,6 +5241,7 @@ function openOpsConsole(id){
 }
 function statusShort(st){
   if (st.st==="estop") return LANG==="ja"?"安全確認のため一時停止":"Paused for safety check";
+  if (st.st==="lastcall") return LANG==="ja"?"列受付終了・ご案内中":"Queue closed - boarding continues";
   if (st.st==="lo") return LANG==="ja"?"L.O.終了":"Last order done";
   if (st.st==="prep") return LANG==="ja"?"準備中":"Preparing";
   return st.st==="maint"?t("stMaintS"):st.st==="insp"?t("stInspS"):st.st==="quake"?t("stQuakeS"):st.st==="sunset"?t("stSunsetS"):null;
