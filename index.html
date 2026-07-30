@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>const APP_VERSION="v62",APP_DATE="2026-07-27";</script>
+<script>const APP_VERSION="v63",APP_DATE="2026-07-27";</script>
 <title>MALLOWBROOK PARK｜リアルタイム運営情報</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Cinzel:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -389,6 +389,24 @@ body.nocomments .ticker2 .ticker-text{visibility:hidden}
 .gp-pp{font-style:normal;background:#3a2f0e;color:#ffd75e;border-radius:4px;padding:0 5px;margin-left:4px}
 .gp-idle{font-style:normal;color:#3f5a80}
 .pre-po{font-size:9px;color:#9db8d9;margin-top:3px}
+.inc-box{border:1px solid #3a557f;border-radius:8px;padding:7px 10px;margin:6px 0;background:#0e1a2e}
+.inc-drill{border-color:#7fd0ff}
+.inc-real{border-color:#ff5f52;box-shadow:0 0 12px rgba(255,95,82,.25)}
+.inc-h{display:flex;align-items:center;gap:8px;font-size:11px;color:#dfe8f5}
+.inc-badge{background:#123a5c;color:#7fd0ff;border-radius:4px;padding:1px 7px;font-size:10px}
+.inc-badge-r{background:#4a1512;color:#ffb3ab;animation:occBlink 1.2s steps(2) infinite}
+.inc-t{margin-left:auto;color:#ffd75e;font-variant-numeric:tabular-nums}
+.inc-steps{margin-top:5px}
+.inc-step{display:flex;gap:7px;align-items:baseline;font-size:10px;line-height:1.9;position:relative;flex-wrap:wrap}
+.inc-step i{width:12px;font-style:normal}
+.inc-tt{color:#5f81ad;font-variant-numeric:tabular-nums;width:34px}
+.inc-done .inc-step{}
+.inc-step.inc-done{color:#5fd68f;opacity:.75}
+.inc-step.inc-cur{color:#ffd75e}
+.inc-step.inc-todo{color:#6c86ab}
+.inc-bar{flex-basis:100%;height:3px;background:#152a45;border-radius:2px;margin:1px 0 2px 53px;overflow:hidden}
+.inc-bar span{display:block;height:100%;background:#ffd75e}
+.inc-done{margin-top:4px;font-size:10.5px;color:#5fd68f}
 .gt-wrap{display:flex;gap:10px;margin:6px 0 2px}
 .gt-box{flex:1;min-width:0}
 .gt-h{font-size:10px;color:#7fd0ff;margin-bottom:3px;letter-spacing:.08em}
@@ -2243,6 +2261,21 @@ function effectSummaryOf(spotId,d){
 }
 /* システム状態(v55): 油圧/空気圧/電源電圧/PLCリンク。決定論の微振動+低頻度の異常窓 */
 function sysStateOf(spot,d,tt){
+  if (OCC&&OCC.drill){
+    const scn=OCC.drill.scn, ela=(performance.now()-OCC.drill.startMs)/1000;
+    const bad=(k)=>({k,ok:false});
+    const base=sysStateOfBase(spot,d,tt);
+    return base.map(m=>{
+      if (scn==="power"&&(m.k==="volt"||m.k==="power")&&ela<75) return {...m,ok:false,v:"0"};
+      if (scn==="power"&&(m.k==="volt"||m.k==="power")) return {...m,v:"非常電源",ok:ela>=75};
+      if (scn==="power"&&m.k==="plc") return {...m,ok:false};
+      if (scn==="equip"&&(m.k==="air"||m.k==="hyd")) return {...m,ok:false};
+      if (scn==="fire"&&m.k==="air") return {...m,ok:false};
+      return m;});
+  }
+  return sysStateOfBase(spot,d,tt);
+}
+function sysStateOfBase(spot,d,tt){
   const water=(ROUTES[spot.id]||{}).drive==="waterflow";
   const dk=dateKey(d), m=tt*60;
   const osc=(k,amp)=>Math.sin(m*1.7+rand01("sy-"+spot.id+k+dk)*20)*amp
@@ -2265,6 +2298,11 @@ function sysStateOf(spot,d,tt){
 function portersOf(s,veh,d,tt,rooms){
   const sp=RIDE_SPEC[s.id]||{};
   if (!veh) return null;
+  if (veh.drill){
+    const stp=veh.drill.step;
+    return [{pos:"全ポーター",n:8,st:stp.po},{pos:"リーダー",n:1,st:"手順統制・時刻記録"},
+      {pos:"ハーバーキーパー",n:2,st:veh.drill.scn==="fire"?"初期消火・規制支援":"動線確保・支援"}];
+  }
   if (veh.cdPhase==="preopen") return [
     {pos:"ホーム",n:3,st:"開園前点検・清掃"},{pos:"コース巡回",n:2,st:"目視点検・試運転立会"},
     {pos:"ゲート",n:1,st:"開園準備・列整備"}];
@@ -2356,6 +2394,62 @@ function spotStatus(s,d,tt){
 /* 閉園クローズダウン(v61): 待ち時間が閉園までの残り時間を上回る時点で列最後尾を締切り、
    並んでいるゲストを全員案内してから閉園作業(場内確認・車庫回送)→夜間点検へ。すべて決定論 */
 const _cdCache={};
+/* v63: インシデント対応手順(避難訓練と実発生で同一のスクリプト・同一の画面を使用)。
+   各ステップ: t=経過秒, s=手順名, veh=編成側の状態, po=ポーター動作 */
+const INCIDENT_SCRIPTS={
+  power:{ja:"停電",icon:"⚡",steps:[
+    {t:0,  s:"停電検知 — 安全装置作動・全編成が非常停止",veh:"緊急停止（停電・非常照明点灯）",po:"位置確保・ゲスト声かけ",red:true},
+    {t:30, s:"館内アナウンス（自動）— お座席でお待ちください",veh:"緊急停止（車上待機）",po:"アナウンス補助・状況把握",red:true},
+    {t:75, s:"非常電源へ切替 — 編成を最寄りの安全位置へ低速回送",veh:"非常電源で安全位置へ移動中",po:"移動監視",amber:true},
+    {t:150,s:"安全位置到達 — 順次バー解除・降車誘導",veh:"降車誘導中（係員対応）",po:"降車誘導・介助",amber:true,unload:true},
+    {t:300,s:"全ゲスト降車確認 — コース内点呼・残留確認",veh:"車内・コース点呼中",po:"点呼・コース巡回",amber:true,empty:true},
+    {t:390,s:"完了報告 — 電源復旧後に無人試運転のうえ再開判断",veh:"待機（復旧待ち）",po:"報告・再開準備",empty:true}]},
+  equip:{ja:"機器故障",icon:"🔧",steps:[
+    {t:0,  s:"センサー異常検知 — 該当区間で自動停止",veh:"緊急停止（機器故障検知）",po:"位置確保",red:true},
+    {t:40, s:"安全確認 — 故障箇所の特定・影響範囲判断",veh:"停止（点検中）",po:"目視確認・報告",red:true},
+    {t:110,s:"該当編成から手動降車 — 係員が順次対応",veh:"手動降車対応中",po:"降車誘導・介助",amber:true,unload:true},
+    {t:240,s:"残る編成を順次ホームへ回送し降車",veh:"低速回送→ホーム降車",po:"降車誘導",amber:true,unload:true},
+    {t:360,s:"全編成空車確認 — 部品交換・調整",veh:"整備対応中",po:"エリア規制",empty:true},
+    {t:450,s:"復旧試運転（無人）→ 再開判断",veh:"復旧試運転（無人）",po:"再開準備",empty:true}]},
+  quake:{ja:"地震",icon:"🌊",steps:[
+    {t:0,  s:"揺れ検知 — 全編成が自動停止・安全バー保持",veh:"緊急停止（地震検知・バー保持）",po:"姿勢低く・声かけ",red:true},
+    {t:45, s:"揺れ収まり確認 — 館内アナウンス",veh:"停止（車上待機）",po:"状況アナウンス",red:true},
+    {t:100,s:"係員によるコース・構造物の目視点検",veh:"停止（点検待ち）",po:"コース点検・写真記録",amber:true},
+    {t:220,s:"点検良好 — 徒歩通路から降車誘導",veh:"徒歩降車誘導中",po:"降車誘導・介助",amber:true,unload:true},
+    {t:380,s:"園路の避難場所へ誘導・点呼",veh:"空車確認",po:"避難誘導・点呼",amber:true,empty:true},
+    {t:480,s:"点呼完了 — 施設別点検のうえ再開判断",veh:"待機（本格点検待ち）",po:"報告",empty:true}]},
+  weather:{ja:"荒天（強風・雷）",icon:"🌩",steps:[
+    {t:0,  s:"雷雲接近 — 屋外走行区間の運転を停止",veh:"天候待機（安全位置で停止）",po:"ゲスト周知",amber:true},
+    {t:45, s:"ホームへ低速回送 — 順次降車",veh:"低速回送→降車",po:"降車誘導",amber:true,unload:true},
+    {t:150,s:"ゲストを屋内待機場所へ誘導",veh:"空車・雨養生",po:"屋内誘導・傘貸出",empty:true},
+    {t:300,s:"気象情報の監視 — 再開判断（雷雲通過待ち）",veh:"待機（気象監視）",po:"再開準備",empty:true}]},
+  fire:{ja:"小規模出火",icon:"🔥",steps:[
+    {t:0,  s:"感知器発報 — 該当エリアの運転停止",veh:"緊急停止（火災感知器発報）",po:"発報箇所へ急行",red:true},
+    {t:35, s:"初期消火班が対応 — 消火器・散水",veh:"停止（車上待機）",po:"初期消火・延焼防止",red:true},
+    {t:90, s:"ゲスト避難誘導 — 風上側の避難経路へ",veh:"降車・避難誘導中",po:"避難誘導・点呼",red:true,unload:true},
+    {t:210,s:"消防へ通報連携 — エリア立入規制",veh:"空車・エリア閉鎖",po:"規制線・消防誘導",amber:true,empty:true},
+    {t:330,s:"鎮火確認 — 煙排出・安全確認",veh:"待機（安全確認中）",po:"確認巡回",amber:true,empty:true},
+    {t:450,s:"完了報告 — 設備点検のうえ再開判断",veh:"待機（点検待ち）",po:"報告",empty:true}]},
+};
+function incidentStepOf(scn,ela){
+  const sc=INCIDENT_SCRIPTS[scn];if(!sc)return null;
+  let cur=sc.steps[0],idx=0;
+  sc.steps.forEach((st2,i)=>{if(ela>=st2.t){cur=st2;idx=i;}});
+  const next=sc.steps[idx+1]||null;
+  return {sc,step:cur,idx,next,ela,prog:next?Math.min(1,(ela-cur.t)/Math.max(1,next.t-cur.t)):1,
+    done:!next&&ela>=cur.t+60};
+}
+/* 実発生イベントを同じ手順ビューに写像(訓練と同一画面) */
+function realIncidentOf(spot,d,tt,st){
+  if (typeof QUAKE!=="undefined"&&QUAKE.active) return {scn:"quake",start:QUAKE.startH!=null?QUAKE.startH:tt-0.02,real:true};
+  const ev=evacWindowOf(spot,d,tt);
+  if (ev) return {scn:ev.fire?"fire":"equip",start:ev.start,real:true,label:ev.label};
+  const ep=estopPhase(spot,d,tt);
+  if (ep) return {scn:"equip",start:ep.ev.start,real:true,label:ep.kind==="sensor"?"安全センサー作動":"安全装置作動"};
+  if (st&&st.id==="WEATHER_HOLD") return {scn:"weather",start:Math.floor(tt*12)/12,real:true};
+  if (st&&st.fault&&String(st.fault[0]||"").startsWith("PWR")) return {scn:"power",start:Math.floor(tt*12)/12,real:true};
+  return null;
+}
 /* v62: パーク一括のクローズダウン計画。基準締切に「退園分散」の後ろ倒しを重ねる。
    混雑日ほど残列の多い施設から+5分刻み(最大+20分)で締切を遅らせ、案内完了(〜22:30)と
    退園ゲート通過のピークを平準化する。閑散日は後ろ倒しなし(厳格運用) */
@@ -3549,7 +3643,10 @@ function vehicleStates(spot,d,tt,opt){
   const minute=tt*60;
   /* 停止イベント(v55統合): 安全装置作動+ライドエリア安全センサー。発生中は全編成停止・時間凍結 */
   const esp=(opt&&opt.test)?null:stopEventOf(spot,d,tt);
-  const minuteEff=minute-((opt&&opt.test)?0:stopShiftMin(spot,d,tt));
+  /* v63: 避難訓練(opt.drill)は位置凍結+手順ステップに応じた状態へ */
+  const drill=opt&&opt.drill?incidentStepOf(opt.drill.scn,opt.drill.ela):null;
+  let minuteEff=minute-((opt&&opt.test)?0:stopShiftMin(spot,d,tt));
+  if (drill&&opt.drill.startMin!=null) minuteEff=Math.min(minuteEff,opt.drill.startMin);   /* 訓練中は位置凍結 */
   const st=(opt&&opt.test)?{id:"RECOVERY_TEST"}:opStateOf(spot,d,tt);
   /* v61: クローズダウン窓 */
   const cd=(opt&&opt.test)?null:closedownOf(spot,d);
@@ -3557,7 +3654,7 @@ function vehicleStates(spot,d,tt,opt){
   const inPreOpen=!(opt&&opt.test)&&tt>=oh0-0.75&&tt<oh0;                 /* 開園前試運転(無人) */
   const inSweep=cd&&tt>=cd.drainEnd&&tt<cd.sweepEnd;                      /* 閉園回送・場内確認 */
   const inNight=!(opt&&opt.test)&&(tt>=(cd?cd.sweepEnd:CLOSE_H+0.3)||tt<oh0-0.75);  /* 夜間点検 */
-  const running=(opt&&opt.test)||!!esp||st.id==="OPEN"||st.id==="DELAYED"||st.id==="LIMITED_OPERATION"||inPreOpen||inSweep;
+  const running=(opt&&opt.test)||!!drill||!!esp||st.id==="OPEN"||st.id==="DELAYED"||st.id==="LIMITED_OPERATION"||inPreOpen||inSweep;
   const att=dailyAttendance(d);
   const lv=congestionLvRaw(spot.id,d,tt,att);
   const maintN=Math.max(1,Math.round(sp.spare*0.5));                       /* 常時整備中の編成 */
@@ -3691,6 +3788,27 @@ function vehicleStates(spot,d,tt,opt){
       dwellP:isStation(seg.kind)?seg.p:null,
       dp});
   }
+  /* v63: 訓練/手順対応の編成表現(状態・座席の段階遷移) */
+  if (drill){
+    const stp=drill.step;
+    out.forEach(v=>{
+      if (v.s==null) return;
+      v.frozen=true;v.hold=!stp.red;v.estop=!!stp.red;v.speed=0;v.state=stp.veh;v.delay=Math.round(drill.ela);
+      if (v.seats){
+        if (stp.empty){v.seats.arr=v.seats.arr.map(()=>"empty");v.n=0;v.seats.boarded=0;v.seats.exited=v.seats.load;}
+        else if (stp.unload){
+          const p=drill.prog;
+          let ex=0;
+          v.seats.arr=v.seats.arr.map((x,i)=>{if(x==="empty")return x;
+            const th=(i+0.5)/v.seats.arr.length;
+            if (p>=th){ex++;return "empty";}
+            return p>th-0.15?"released":"locked";});
+          v.seats.exited=ex;v.n=Math.max(0,(v.seats.load||0)-ex);
+        } else v.seats.arr=v.seats.arr.map(x=>x==="empty"?x:"locked");
+      }
+      v.dp=null;
+    });
+  }
   /* v58: 当日スケジュールの降車対応を、最も進んだ降車側の編成に付与 */
   {
     const careAct=(opt&&opt.test)?null:careActiveOf(spot,d,tt);
@@ -3703,8 +3821,8 @@ function vehicleStates(spot,d,tt,opt){
   }
   /* ホーム構成に応じた在線の割当(v52: 区間種別で判定 / v53: 残り秒は周回シード×進捗のカウントダウン) */
   const inStation=out.filter(v=>v.s!=null&&isStation(v.kind)).sort((a,b)=>(b.dwellP||0)-(a.dwellP||0));
-  if (esp){ /* イベント中は乗降・入線を行わない(全編成停止のまま) */
-    if (esp.phase===2) out.forEach(v=>{if(v.s!=null)v.hold=true;});
+  if (esp||drill){ /* イベント/訓練中は乗降・入線を行わない(全編成停止のまま) */
+    if (esp&&esp.phase===2) out.forEach(v=>{if(v.s!=null)v.hold=true;});
   }
   else if (stype==="dual3"){
     /* 独立降車ホーム(unload区間)と縦列搭乗ホーム(load区間・混雑に応じ1〜3編成在線) */
@@ -3769,7 +3887,7 @@ function vehicleStates(spot,d,tt,opt){
   }
   return {blocks,list:out,gap,cycle,active,lv,drive:(rt&&rt.drive)||"motor",max:sp.trains,spare:sp.spare,
     test:testMode,tracks,stype,faultRate,inStation:inStation.slice(0,tracks),
-    esp,boost,cdPhase:inPreOpen?"preopen":inSweep?"sweep":(cd&&tt>=cd.tCut&&tt<cd.drainEnd)?"drain":inNight?"night":null,cd,
+    esp,boost,drill:drill?{...drill,scn:opt.drill.scn}:null,cdPhase:inPreOpen?"preopen":inSweep?"sweep":(cd&&tt>=cd.tCut&&tt<cd.drainEnd)?"drain":inNight?"night":null,cd,
     target,theo:Math.round(theo),actual:Math.round(actual),overRate,
     over:target!=null&&actual>target,
     safetyRate:Math.round(safN/12*100)};
@@ -3921,10 +4039,19 @@ function preshowState(spot,d,tt){
   const sp=RIDE_SPEC[spot.id];
   if (!sp||!sp.preshow) return null;
   const cycleMin=4.5, m=tt*60, mkey=Math.floor(m);   /* v53: 位相は連続時刻、揺らぎシードのみ分丸め */
+  /* v63: 営業窓に連動。開園前=準備中/締切後は残列に応じて減衰し、案内完了で0/夜間=本日終了 */
+  const oh=openH(d), cd=closedownOf(spot,d);
+  const endT=cd?cd.drainEnd:CLOSE_H;
+  if (tt<oh||tt>=endT){
+    return sp.preshow.map((cap,i)=>({room:String.fromCharCode(65+i),cap,n:0,left:0,
+      state:tt<oh?"準備中":"本日終了"}));
+  }
+  let occF=1;
+  if (cd&&tt>=cd.tCut) occF=Math.max(0,(cd.drainEnd-tt)/Math.max(0.03,cd.drainEnd-cd.tCut));
   return sp.preshow.map((cap,i)=>{
     const ph=((m+ i*cycleMin/2)%cycleMin)/cycleMin;
     const filling=ph<0.55;
-    const n=Math.round(cap*(filling?ph/0.55:1)*(0.85+rand01("ps-"+spot.id+i+mkey)*0.15));
+    const n=Math.round(cap*(filling?ph/0.55:1)*(0.85+rand01("ps-"+spot.id+i+mkey)*0.15)*occF);
     return {room:String.fromCharCode(65+i),cap,n:Math.min(cap,n),
       left:Math.max(0,Math.round((1-ph)*cycleMin*60)),
       state:filling?"入場中":"上映中"};
@@ -4258,7 +4385,7 @@ function occSnap(force){
   const d=test?new Date(2026,6,25):now;
   if (!force&&OCC.snap&&OCC.snap.sel===OCC.sel&&ts-OCC.snap.ts<80) return OCC.snap;
   const s=SPOTS.find(x=>x.id===OCC.sel);
-  const veh=s?vehicleStates(s,d,tt,{test,sim:OCC.mode==="sim",simLv:OCC.simLv}):null;
+  const veh=s?vehicleStates(s,d,tt,{test,sim:OCC.mode==="sim",simLv:OCC.simLv,drill:OCC.drill?{scn:OCC.drill.scn,ela:(performance.now()-OCC.drill.startMs)/1000,startMin:OCC.drill.startMin}:null}):null;
   OCC.snap={ts,tt,d,s,veh,sel:OCC.sel};
   return OCC.snap;
 }
@@ -4378,6 +4505,7 @@ function occDrawRadar(ts){
   occRenderStationLive(snap);      /* STATIONも同じスナップショットで更新 */
   occRenderCardsLive(snap);
   occLiveNumbers(snap);            /* v53: フロー数値・プレショー残り秒の軽量更新 */
+  occRenderIncident(snap);         /* v63: 訓練/実対応の手順ビュー(同一コンポーネント) */
   /* ルートの外接矩形に合わせて自動スケール(余白を最小化) */
   let X=x=>x,Y=y=>y;
   if (tb){
@@ -4648,7 +4776,7 @@ function occRenderPanels(){
     return;
   }
   if (!s) return;
-  const veh=vehicleStates(s,d,tt,{test,sim:OCC.mode==="sim",simLv:OCC.simLv});
+  const veh=vehicleStates(s,d,tt,{test,sim:OCC.mode==="sim",simLv:OCC.simLv,drill:OCC.drill?{scn:OCC.drill.scn,ela:(performance.now()-OCC.drill.startMs)/1000,startMin:OCC.drill.startMin}:null});
   const sp=RIDE_SPEC[s.id]||{};
   if (!veh){
     const zones=AREA_ZONES[s.id]||[];
@@ -4977,7 +5105,9 @@ function occFlowStages(s,veh,sp,d,tt,o){
     stages.push(["プレショー在室",inRoom,o.pre||0,""]);
     const ph=rooms.length?rooms[0].left/(4.5*60):0.5;
     const preCap=(rooms.reduce((a,r)=>a+r.cap,0)||o.pre||0)*2;   /* v59: 定員2倍 */
-    const postQ=Math.min(preCap,Math.round((sp.seats||8)*1.2+(1-ph)*preCap*0.5))*o.guests;
+    const cdP=o.test?null:closedownOf(s,d);
+    const occF2=!cdP?1:tt>=cdP.drainEnd?0:tt>=cdP.tCut?Math.max(0,(cdP.drainEnd-tt)/Math.max(0.03,cdP.drainEnd-cdP.tCut)):1;
+    const postQ=Math.round(Math.min(preCap,Math.round((sp.seats||8)*1.2+(1-ph)*preCap*0.5))*occF2)*o.guests;
     stages.push(["ショー後キューライン",postQ,preCap,""]);
   }
   let platN,platCap,exitN,onboard,platLabel="搭乗ホーム",rideCap=sp.seats*veh.active;
@@ -5008,6 +5138,37 @@ function occFlowStages(s,veh,sp,d,tt,o){
   return stages;
 }
 /* 250ms軽量アップデータ(v53): DOM再構築なしでフロー数値・プレショー残り秒を差し替え */
+/* v63: 手順ビュー — 避難訓練と実発生イベントで同じ画面。訓練は🎓バッジ、実対応は🔴バッジ */
+function occRenderIncident(snap){
+  const box=document.getElementById("occIncident");
+  if (!box) return;
+  const {s,veh,d,tt}=snap;
+  let inc=null,isDrill=false;
+  if (veh&&veh.drill){inc=veh.drill;isDrill=true;}
+  else if (s&&veh){
+    const ri=realIncidentOf(s,d,tt,opStateOf(s,d,tt));
+    if (ri) inc=incidentStepOf(ri.scn,Math.max(0,(tt-ri.start)*3600)),inc&&(inc.real=true,inc.scn=ri.scn);
+  }
+  if (!inc){box.style.display="none";box.innerHTML="";return;}
+  const sc=inc.sc;
+  const mmss=x=>Math.floor(x/60)+":"+String(Math.floor(x%60)).padStart(2,"0");
+  box.style.display="block";
+  box.innerHTML=`<div class="inc-box ${isDrill?"inc-drill":"inc-real"}">
+    <div class="inc-h">${isDrill?'<b class="inc-badge">🎓 訓練</b>':'<b class="inc-badge inc-badge-r">🔴 実対応</b>'}
+      ${sc.steps===INCIDENT_SCRIPTS.power.steps?"":""}${INCIDENT_SCRIPTS[inc.scn||veh.drill?.scn]?.icon||""} ${sc===INCIDENT_SCRIPTS[Object.keys(INCIDENT_SCRIPTS).find(k=>INCIDENT_SCRIPTS[k]===sc)]?sc.ja:sc.ja} 対応手順
+      <span class="inc-t">経過 ${mmss(inc.ela)}</span>
+      ${isDrill?'<button class="occ-x" onclick="OCC.drill=null;document.getElementById(\'occMode\').value=\'off\';OCC.mode=\'off\';OCC.test=false;">訓練終了</button>':""}</div>
+    <div class="inc-steps">${sc.steps.map((st2,i)=>{
+      const state=i<inc.idx?"done":i===inc.idx?"cur":"todo";
+      return `<div class="inc-step inc-${state}">
+        <i>${state==="done"?"✔":state==="cur"?"▶":"・"}</i>
+        <span class="inc-tt">${mmss(st2.t)}</span>
+        <span>${st2.s}</span>
+        ${state==="cur"?`<div class="inc-bar"><span style="width:${Math.round(inc.prog*100)}%"></span></div>`:""}
+      </div>`;}).join("")}</div>
+    ${inc.done?`<div class="inc-done">✅ 手順完了${isDrill?" — 訓練を終了できます":" — 復旧判断へ"}</div>`:""}
+  </div>`;
+}
 function occLiveNumbers(snap){
   const {s,veh,d,tt}=snap;
   if (!s||!veh) return;
@@ -5176,11 +5337,21 @@ function openOpsCenter(){
   occRenderTiles();occRenderShows();occRenderPanels();
   {
     const md=document.getElementById("occMode"), lv=document.getElementById("occSimLv");
+    const ds=document.getElementById("occDrillScn");
+    if (ds&&!ds.__wired){ds.__wired=true;
+      ds.addEventListener("change",()=>{if(OCC.mode==="drill"){OCC.drill={scn:ds.value,startMs:performance.now(),startMin:(OCC.snap&&OCC.snap.tt?OCC.snap.tt:12)*60};if(typeof sndBeep==="function")sndBeep("warn");}});
+    }
     if (md&&!md.dataset.bound){
       md.dataset.bound=1;
       const apply=()=>{
         OCC.mode=md.value;
-        OCC.test=(md.value!=="off");
+        OCC.test=(md.value==="test"||md.value==="sim");   /* v63: 訓練はゲスト有のまま */
+        const ds2=document.getElementById("occDrillScn");
+        if (ds2) ds2.style.display=md.value==="drill"?"":"none";
+        if (md.value==="drill"){
+          OCC.drill={scn:(ds2&&ds2.value)||"power",startMs:performance.now(),startMin:(OCC.snap&&OCC.snap.tt?OCC.snap.tt:12)*60};
+          if (typeof sndBeep==="function") sndBeep("warn");
+        } else OCC.drill=null;
         OCC.simLv=+lv.value||3;
         lv.style.display=md.value==="sim"?"":"none";
         md.style.color=md.value==="off"?"":"#ffd75e";
@@ -8053,6 +8224,14 @@ setInterval(fetchQuake,300000);
         <option value="off">運転モード: 通常</option>
         <option value="test">無人試運転</option>
         <option value="sim">ゲスト想定試運転</option>
+        <option value="drill">避難訓練</option>
+      </select>
+      <select class="occ-x" id="occDrillScn" title="訓練シナリオ" style="display:none">
+        <option value="power">⚡ 停電</option>
+        <option value="equip">🔧 機器故障</option>
+        <option value="quake">🌊 地震</option>
+        <option value="weather">🌩 荒天</option>
+        <option value="fire">🔥 小規模出火</option>
       </select>
       <select class="occ-x" id="occSimLv" title="想定混雑" style="display:none">
         <option value="2">想定: 閑散</option><option value="3" selected>想定: 通常</option><option value="5">想定: 満員</option>
@@ -8074,7 +8253,8 @@ setInterval(fetchQuake,300000);
       <div class="occ-legend" id="occLegend"></div>
       <div class="occ-h">DISPATCH — 発車間隔の管理</div>
       <div class="occ-dispatch" id="occDispatch"></div>
-      <div class="occ-h">STATION — 搭乗 / 降車</div>
+      <div id="occIncident" style="display:none"></div>
+  <div class="occ-h">STATION — 搭乗 / 降車</div>
       <div class="occ-station" id="occStation"></div>
       <div class="occ-h">VEHICLES <i id="occVehSub"></i></div>
       <div class="occ-cards" id="occCards"></div>
