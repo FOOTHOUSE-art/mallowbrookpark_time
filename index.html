@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>const APP_VERSION="v63",APP_DATE="2026-07-27";</script>
+<script>const APP_VERSION="v64",APP_DATE="2026-07-27";</script>
 <title>MALLOWBROOK PARK｜リアルタイム運営情報</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Cinzel:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -2459,7 +2459,7 @@ function closedownPlanOf(d){
   _cdCache[pk]="busy";
   const att=dailyAttendance(d);
   const bases=[];
-  SPOTS.filter(x=>x.type==="a"&&ROUTES[x.id]&&RIDE_SPEC[x.id]).forEach(spot=>{
+  SPOTS.filter(x=>x.type==="a"&&ROUTES[x.id]&&RIDE_SPEC[x.id]&&!x.sunset&&!maintOf(x.id,d)).forEach(spot=>{   /* v64: 日没クローズ・終日休止は対象外 */
     let tCut=CLOSE_H,wCut=0;
     for (let t=19;t<=CLOSE_H+1e-6;t+=1/12){
       const tq=Math.min(t,CLOSE_H-0.001);
@@ -2492,6 +2492,15 @@ function closedownOf(spot,d){
   if (!ROUTES[spot.id]||!RIDE_SPEC[spot.id]) return null;
   const plan=closedownPlanOf(d);
   return plan?plan[spot.id]||null:null;
+}
+/* v64: クローズダウンの二段階減衰。残列がある間(前半60%)は満率で回し、最終盤に枯らす */
+function drainF(cd,tt){
+  if (!cd||tt<cd.tCut) return 1;
+  if (tt>=cd.drainEnd) return 0;
+  const p=(tt-cd.tCut)/Math.max(0.02,cd.drainEnd-cd.tCut);
+  if (p<0.6) return 1;
+  const x=(p-0.6)/0.4;
+  return 1-x*x*(3-2*x);
 }
 /* 休止分の需要が稼働中アトラクションへ再配分される係数 */
 function redistFactor(d,tt){
@@ -3687,7 +3696,9 @@ function vehicleStates(spot,d,tt,opt){
     const outB=[];const frB=lv>=4?0.07:0.045;
     const testB=!!(opt&&opt.test), simB=!!(opt&&opt.sim);
     const fill=testB&&!simB?0:Math.min(1,0.72+lv*0.06);
+    const bLF=inPreOpen?0:drainF(cd,tt);                       /* v64: 締切後は乗車率が二段階で減衰 */
     for (let i=0;i<N;i++){
+      if (inSweep){outB.push({id:i+1,s:null,side:"maint",state:"閉園作業・電源縮退中",n:0,kind:"bay"});continue;}   /* v64 */
       if (inPreOpen){outB.push({id:i+1,cabin:true,s:0,kind:"station",block:"乗降ベイ "+(i+1),n:0,lk:0,
         state:"開園前試運転（無人）",delay:0,estop:false,frozen:false,hold:false,
         seats:null,power:powerStateOf(spot.id,{kind:"station",p:0.5},0,i+1,Math.floor(minute)),
@@ -3698,7 +3709,7 @@ function vehicleStates(spot,d,tt,opt){
       const sB=((((minuteEff-i*OFF)/CYC)%1)+1)%1;
       const tIn=sB*CYC;
       const lapKey=Math.floor((minuteEff-i*OFF)/CYC);
-      const load=testB&&!simB?0:Math.min(40,Math.round(40*(fill+rand01("bld-"+i+lapKey)*0.12)));
+      const load=testB&&!simB?0:Math.min(40,Math.round(40*(fill+rand01("bld-"+i+lapKey)*0.12)*bLF));
       let phase,pp;
       if (tIn<0.4){phase="unload";pp=tIn/0.4;}
       else if (tIn<1.6){phase="board";pp=(tIn-0.4)/1.2;}
@@ -3763,7 +3774,7 @@ function vehicleStates(spot,d,tt,opt){
     /* v61: 締切後は残列に応じて乗車率が減衰し、最終便で0へ。試運転/回送は無人 */
     let loadF=1;
     if (inPreOpen||inSweep) loadF=0;
-    else if (cd&&tt>=cd.tCut){loadF=Math.max(0,Math.min(1,(cd.drainEnd-tt)/Math.max(0.05,(cd.drainEnd-cd.tCut))*1.3));}
+    else if (cd&&tt>=cd.tCut) loadF=drainF(cd,tt);   /* v64: 二段階減衰 */
     const load=(testMode&&!simMode)?0:Math.round(sp.seats*(fillRate+rand01("ld-"+spot.id+idx+mkey)*0.18)*loadF);
     const lapKey=Math.floor(minuteEff/cycle-i/active2);         /* 周回ごとに固定・停車中は不変 */
     const dp=(inPreOpen||inSweep)?null:isStation(seg.kind)?dispatchPhaseOf(spot.id,idx,seg,mkey,faultRate,testMode,lapKey):null;
@@ -4046,8 +4057,7 @@ function preshowState(spot,d,tt){
     return sp.preshow.map((cap,i)=>({room:String.fromCharCode(65+i),cap,n:0,left:0,
       state:tt<oh?"準備中":"本日終了"}));
   }
-  let occF=1;
-  if (cd&&tt>=cd.tCut) occF=Math.max(0,(cd.drainEnd-tt)/Math.max(0.03,cd.drainEnd-cd.tCut));
+  const occF=drainF(cd,tt);   /* v64: 二段階減衰 */
   return sp.preshow.map((cap,i)=>{
     const ph=((m+ i*cycleMin/2)%cycleMin)/cycleMin;
     const filling=ph<0.55;
@@ -4886,7 +4896,7 @@ function occRenderStationLive(snap){
   if (veh.stype==="bay"){                          /* v56: 6ベイ固定カード(バッチ式乗降) */
     const nC=(c)=>Math.min(3,Math.max(1,Math.ceil(40/14)));
     el.innerHTML=`<div class="bay-grid">${veh.list.map(v=>{
-      if (v.side==="maint") return `<div class="bay-card"><div class="bay-h"><b>CABIN ${String(v.id).padStart(2,"0")}</b><span>整備</span></div><div class="bay-ph">夜間ローテ整備</div></div>`;
+      if (v.side==="maint") return `<div class="bay-card"><div class="bay-h"><b>CABIN ${String(v.id).padStart(2,"0")}</b><span>${/閉園作業/.test(v.state)?"閉園作業":"整備"}</span></div><div class="bay-ph">${v.state||"夜間ローテ整備"}</div></div>`;
       const dp=v.dp||{},sm=v.seats||{arr:[],cols:4};
       const ph=v.bayPhase;
       const care=v.care||null;
@@ -4906,8 +4916,14 @@ function occRenderStationLive(snap){
         <div class="bay-h"><b>CABIN ${String(v.id).padStart(2,"0")}</b><span>${ph==="show"?"上映中":dp.label||""}</span></div>
         <div class="bay-seats">${(sm.arr||[]).map(x=>`<span class="sb-${x}"></span>`).join("")}</div>
         <div class="bay-ph stn-timer">${tmr}</div>
-        ${ph==="show"?`<div class="bay-ph" style="color:#7fd0ff">次便待機 ${Math.round(40*Math.min(1,(dp.pp||0)*1.25))}/40名 — ホームへ整列済み</div>`
-          :ph==="unload"?`<div class="bay-ph" style="color:#7fd0ff">次便待機 40/40名 — 降車完了後すぐ搭乗</div>`:""}
+        ${(()=>{
+          const cdB=veh.cd, tNow=OCC.snap?OCC.snap.tt:12;
+          const sF=drainF(cdB,tNow), last=sF<0.999&&sF>0;
+          if (ph==="show"){const n2=Math.round(40*Math.min(1,(dp.pp||0)*1.25)*sF);
+            return n2>0?`<div class="bay-ph" style="color:#7fd0ff">次便待機 ${n2}/40名 — ホームへ整列済み${last?"（最終便）":""}</div>`:"";}
+          if (ph==="unload"){const n2=Math.round(40*sF);
+            return n2>0?`<div class="bay-ph" style="color:#7fd0ff">次便待機 ${n2}/40名 — 降車完了後すぐ搭乗${last?"（最終便）":""}</div>`:"";}
+          return "";})()}
         <div class="bay-bar"><span style="width:${Math.round((dp.pp||0)*100)}%"></span></div>
         <div class="cast-track">${castBase==null?"":Array.from({length:2},(_,ci)=>`<span class="cast-dot" style="left:${Math.min(92,castBase+ci*10)}%">👤</span>`).join("")}</div>
         ${gpRow}
@@ -5106,7 +5122,7 @@ function occFlowStages(s,veh,sp,d,tt,o){
     const ph=rooms.length?rooms[0].left/(4.5*60):0.5;
     const preCap=(rooms.reduce((a,r)=>a+r.cap,0)||o.pre||0)*2;   /* v59: 定員2倍 */
     const cdP=o.test?null:closedownOf(s,d);
-    const occF2=!cdP?1:tt>=cdP.drainEnd?0:tt>=cdP.tCut?Math.max(0,(cdP.drainEnd-tt)/Math.max(0.03,cdP.drainEnd-cdP.tCut)):1;
+    const occF2=drainF(cdP,tt);
     const postQ=Math.round(Math.min(preCap,Math.round((sp.seats||8)*1.2+(1-ph)*preCap*0.5))*occF2)*o.guests;
     stages.push(["ショー後キューライン",postQ,preCap,""]);
   }
@@ -5118,8 +5134,9 @@ function occFlowStages(s,veh,sp,d,tt,o){
     veh.list.forEach(v=>{
       if (v.side==="maint") return;
       const ph=v.bayPhase, pp=(v.dp&&v.dp.pp)||0, bd=(v.seats&&v.seats.boarded)||0;
-      if (ph==="show"){onboard+=v.n||0;platN+=Math.round((sp.seats||40)*Math.min(1,pp*1.25));}   /* 次便整列 */
-      else if (ph==="unload"){exitN+=(v.seats&&v.seats.exited)||0;platN+=(sp.seats||40);}        /* 次便待機満了 */
+      const stgF=o.test?1:drainF(closedownOf(s,d),tt);
+      if (ph==="show"){onboard+=v.n||0;platN+=Math.round((sp.seats||40)*Math.min(1,pp*1.25)*stgF);}   /* 次便整列(v64:減衰連動) */
+      else if (ph==="unload"){exitN+=(v.seats&&v.seats.exited)||0;platN+=Math.round((sp.seats||40)*stgF);}
       else if (ph==="board"){platN+=Math.max(0,(sp.seats||40)-bd);onboard+=bd;}
       else {onboard+=v.n||0;}                                                                     /* 施錠済は乗車中 */
     });
@@ -5131,6 +5148,12 @@ function occFlowStages(s,veh,sp,d,tt,o){
     exitN=stCars.filter(v=>v.kind==="unload"||(v.dp&&v.dp.phase==="unload"))
       .reduce((a,v)=>a+((v.seats&&v.seats.exited)||0),0);
     onboard=o.onboard!=null?o.onboard:veh.list.reduce((a,v)=>a+(v.n||0),0);
+  }
+  {
+    const cdT=o.test?null:closedownOf(s,d);
+    if (cdT&&tt>=cdT.drainEnd&&tt<cdT.drainEnd+5/60){
+      exitN=Math.max(exitN,Math.round((sp.seats||8)*1.6*(1-(tt-cdT.drainEnd)/(5/60))));   /* v64: 最終便の退場 */
+    } else if (cdT&&tt>=cdT.drainEnd+5/60){exitN=0;platN=0;onboard=0;}
   }
   stages.push([platLabel,platN,platCap,""],
     ["ライド乗車中",onboard,rideCap,""],
