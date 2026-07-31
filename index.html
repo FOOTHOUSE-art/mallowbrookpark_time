@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>const APP_VERSION="v64",APP_DATE="2026-07-27";</script>
+<script>const APP_VERSION="v70",APP_DATE="2026-07-27";</script>
 <title>MALLOWBROOK PARK｜リアルタイム運営情報</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Cinzel:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -389,6 +389,29 @@ body.nocomments .ticker2 .ticker-text{visibility:hidden}
 .gp-pp{font-style:normal;background:#3a2f0e;color:#ffd75e;border-radius:4px;padding:0 5px;margin-left:4px}
 .gp-idle{font-style:normal;color:#3f5a80}
 .pre-po{font-size:9px;color:#9db8d9;margin-top:3px}
+.occ-gsi{border:1px solid #3a557f;border-radius:5px;padding:1px 7px;background:#12233c}
+.occ-gsi b{color:#ffd75e}
+.kpi-back{position:fixed;inset:0;background:rgba(4,8,16,.72);z-index:340;display:none;align-items:center;justify-content:center}
+.kpi-back.show{display:flex}
+.kpi-sheet{width:min(880px,94vw);max-height:88vh;overflow:auto;background:#0c1626;border:1px solid #3a557f;border-radius:10px;padding:12px 16px;color:#dfe8f5}
+.kpi-h{display:flex;align-items:center;gap:10px;font-size:12px}
+.kpi-h span{color:#ffd75e;margin-left:auto}
+.kpi-row{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+.kpi-big{background:#101d33;border:1px solid #3a557f;border-radius:8px;padding:8px 16px;text-align:center}
+.kpi-big b{font-size:30px;color:#ffd75e}
+.kpi-big i,.kpi-mini i{display:block;font-style:normal;font-size:9px;color:#7fa0c8;letter-spacing:.1em}
+.kpi-mini{background:#0f1c30;border:1px solid #27436b;border-radius:8px;padding:8px 12px;text-align:center}
+.kpi-mini b{font-size:17px}
+#kpiTrend{width:100%;height:110px;background:#0a1424;border:1px solid #223a5c;border-radius:6px}
+.kpi-cols{display:flex;gap:16px;margin-top:6px}
+.kpi-cols>div{flex:1;min-width:0}
+.kpi-bars{margin:4px 0 8px}
+.kpi-bar{display:flex;align-items:center;gap:6px;font-size:9.5px;line-height:1.9}
+.kpi-bar span{width:96px;color:#9db8d9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi-bar i{flex:1;height:7px;background:#152a45;border-radius:4px;overflow:hidden;font-style:normal}
+.kpi-bar i b{display:block;height:100%}
+.kpi-bar em{font-style:normal;width:22px;text-align:right;color:#dfe8f5}
+body.m-sp .kpi-cols{flex-direction:column}
 .inc-box{border:1px solid #3a557f;border-radius:8px;padding:7px 10px;margin:6px 0;background:#0e1a2e}
 .inc-drill{border-color:#7fd0ff}
 .inc-real{border-color:#ff5f52;box-shadow:0 0 12px rgba(255,95,82,.25)}
@@ -2394,6 +2417,59 @@ function spotStatus(s,d,tt){
 /* 閉園クローズダウン(v61): 待ち時間が閉園までの残り時間を上回る時点で列最後尾を締切り、
    並んでいるゲストを全員案内してから閉園作業(場内確認・車庫回送)→夜間点検へ。すべて決定論 */
 const _cdCache={};
+/* v68: ゲスト満足度指数 GSI。基準100点から待ち・乗車機会・制限・トラブル・天候で減点、
+   ショー・イベント・閉園案内で加点。客層10層の感応度差で加重平均。全て既存モデルからの決定論導出 */
+const GSI_SENS={heavy:{w:0.8,r:1.4},far:{w:1.0,r:1.2},genH:{w:1.0,r:1.1},genL:{w:1.1,r:0.9},
+  kidsH:{w:1.35,r:0.9},kidsL:{w:1.3,r:0.8},hotel:{w:0.7,r:1.0},tourD:{w:0.9,r:1.0},
+  inbound:{w:0.85,r:1.1},student:{w:1.05,r:1.15}};
+const _gsiCache={};
+function gsiFactorsOf(d,tt){
+  const att=dailyAttendance(d), ip=Math.max(1,inParkOf(d,tt,att));
+  const rw=restrictionWindow(d,att);
+  const spots=SPOTS.filter(x=>x.type==="a"&&RIDE_SPEC[x.id]);
+  let wSum=0,wN=0,capSum=0,troubles=0,shows=0;
+  spots.forEach(s=>{
+    const st=spotStatus(s,d,tt);
+    if (st.st==="open"||st.st==="sunset"||st.st==="lastcall"){
+      const w=calcWait(s,d,Math.min(tt,CLOSE_H-0.01),ip,1)||0;
+      const cap=RIDE_SPEC[s.id].cap||500;
+      wSum+=w*cap;wN+=cap;capSum+=cap;
+    } else if (st.st==="estop"||st.st==="trouble"||st.st==="insp") troubles++;
+  });
+  const avgW=wN?wSum/wN:0;
+  todaysEntertainment(d).forEach(e=>{
+    try{const ss=showStatus(e,d,tt);if(ss&&ss.st==="live")shows++;}catch(err){}
+  });
+  const rph=ip>0?capSum*0.82/ip:1;                       /* 1人あたり乗車機会(回/時) */
+  const wx=att.dwx&&att.dwx.mul<1?1:0;
+  const hot=isSummerEvent(d)&&tt>=12&&tt<15?1:0;
+  const bi=(tt>=openH(d)-1&&tt<21)?boothInfoOf(d,tt):null;
+  const restr=rw&&tt>=rw.start&&(rw.release==null||tt<rw.release)?1:0;
+  const evening=tt>=21&&closedownPlanOf(d)?1:0;
+  return {avgW,rph,troubles,shows,wx,hot,restr,evening,
+    boothW:bi?bi.wait:0,
+    pWait:Math.min(30,Math.max(0,(avgW-35)/120*30)),
+    pRide:Math.min(12,Math.max(-8,(0.75-rph)*20)),
+    pRestr:restr?6:0,pTrouble:Math.min(9,troubles*3),pWx:wx*5+hot*2,
+    pBooth:bi&&bi.wait>20?2:0,
+    bShow:shows*3,bEvent:isSummerEvent(d)||isChristmasEvent(d)?2:0,bClose:evening*2};
+}
+function gsiOf(d,tt){
+  const key=dateKey(d)+"-"+Math.round(tt*2);
+  if (_gsiCache[key]) return _gsiCache[key];
+  const f=gsiFactorsOf(d,tt);
+  const cs=cohortsOf(d);
+  const byC={};let total=0;
+  cs.forEach(c=>{
+    const sn=GSI_SENS[c.id]||{w:1,r:1};
+    const g=Math.max(35,Math.min(100,Math.round(100
+      -f.pWait*sn.w-f.pRide*sn.r-f.pRestr*(c.id==="hotel"?0.5:1)-f.pTrouble-f.pWx-f.pBooth
+      +f.bShow+f.bEvent+f.bClose)));
+    byC[c.id]=g;total+=g*c.share;
+  });
+  const r={gsi:Math.round(total/cs.reduce((a,c)=>a+c.share,0)),byC,f};
+  _gsiCache[key]=r;return r;
+}
 /* v63: インシデント対応手順(避難訓練と実発生で同一のスクリプト・同一の画面を使用)。
    各ステップ: t=経過秒, s=手順名, veh=編成側の状態, po=ポーター動作 */
 const INCIDENT_SCRIPTS={
@@ -2713,24 +2789,36 @@ function admitShare(d){
 function prebuyRate(d){return admitShare(d);}
 function restrictionWindow(d,att){
   if (peakPredict(d,att)<MAX_CAP*0.997) return null;
-  let start=null,rel=null,peaked=false,prev=0,below=0;
+  /* v69: 開始=在園70,000到達 または 30分先の予測在園が73,000超(予測併用の早め発動)。
+     解除=在園68,000を下回り、かつ以降の予測在園が71,000を超えない最初の時点(出来る限り早く) */
+  let start=null,rel=null,prev=0;
+  const ipAt=x=>inParkOf(d,Math.min(x,CLOSE_H-0.001),att);
   for (let x=openH(d);x<=CLOSE_H;x+=1/12){
-    const p=inParkOf(d,x,att);
-    if (start==null&&p>=START_LINE*0.999) start=x;
-    if (p<prev) peaked=true;
-    if (start!=null&&peaked&&rel==null){
-      below=(p<RELEASE_LINE)?below+1:0;
-      if (below>=4) rel=x;                                  /* 68,000未満が20分継続で解除 */
+    const p=ipAt(x);
+    if (start==null&&(p>=START_LINE*0.999||ipAt(x+0.5)>=73000)) start=x;
+    if (start!=null&&rel==null&&x>start&&p<RELEASE_LINE){
+      let safe=true;
+      for (let y=x;y<=CLOSE_H;y+=1/6){ if (ipAt(y)>71000){safe=false;break;} }
+      if (safe) rel=x;                                       /* 再発動見込みなし=即解除 */
     }
     prev=p;
   }
   if (start==null) return null;
   start=Math.round(start*12)/12;
+  /* v70: 段階解除 — ピーク後、在園72,500未満に空きが出た最初の時点から待機列を部分開放(流し込み)。
+     全面解除は列がほぼ捌け、在園68,000割れ+再発動見込みなしの最速時点(v69基準) */
+  let partial=null;
+  for (let x=start;x<=CLOSE_H&&partial==null;x+=1/12){
+    if (ipAt(x)>74000) continue;
+    let mf=0;for(let y=x;y<=CLOSE_H;y+=1/6)mf=Math.max(mf,ipAt(y));
+    if (mf<=74300) partial=Math.round(x*12)/12;    /* 日のピークを過ぎ、以降74,300を超えない */
+  }
   const soldOutDay=peakPredict(d,att)>=95000;
   let release=null,reentry=null,relWin=null,resume=null;
   if (rel!=null){
-    release=Math.ceil(rel*4)/4;                              /* 15分刻みで全解除 */
+    release=Math.ceil(rel*12)/12;                            /* v69: 5分刻みで即時解除 */
     relWin=[Math.max(start,release-0.5),release+0.5];
+    if (partial!=null&&release!=null) partial=Math.min(partial,release);
     resume=soldOutDay?null:Math.max(start,release-0.25);
     let s2=null,r2=null,pk2=false,pv=0,bl=0;
     for (let x=release+1/12;x<=CLOSE_H;x+=1/12){
@@ -2742,7 +2830,7 @@ function restrictionWindow(d,att){
     }
     if (s2!=null) reentry={start:Math.round(s2*12)/12,release:r2==null?null:Math.ceil(r2*4)/4};
   }
-  return {start,release,relWin,resume,reentry,soldOutDay,
+  return {start,release,relWin,resume,reentry,soldOutDay,partial,
           preAnnounce:Math.round((start-0.75)*12)/12,stopDayTix:Math.round((start-0.33)*12)/12};
 }
 const mealFactor=tt=>0.35+1.9*Math.exp(-Math.pow(tt-12.4,2)/1.445)+1.6*Math.exp(-Math.pow(tt-18.4,2)/1.62);
@@ -2975,8 +3063,18 @@ function entranceQueue(d,tt,att,rw){
     const rel=rw.release??CLOSE_H;
     if (tt<rel){
       const up=Math.min(1,(tt-rw.start)/1.3);                          /* 制限開始から待機列形成 */
-      const down=tt>rel-0.7?Math.max(0.3,1-(tt-(rel-0.7))/0.7*0.7):1;  /* 解除が近づくと減少 */
-      q+=8500*up*down;
+      let held=8500*up;
+      /* v70: 部分開放 — 在園の空き(73,500−在園)に比例したレートで流し込み(15分毎積分・決定論) */
+      if (rw.partial!=null&&tt>rw.partial){
+        let drained=0;
+        for (let x=rw.partial;x<Math.min(tt,rel);x+=0.25){
+          const room=Math.max(0,74200-inParkOf(d,x,att));            /* バッファ800人まで流し込み */
+          drained+=Math.min(room*0.75,2600)*0.25;                      /* 最大2,600人/15分 */
+        }
+        held=Math.max(0,held-drained*4*0.25);
+      }
+      const down=tt>rel-0.7?Math.max(0.3,1-(tt-(rel-0.7))/0.7*0.7):1;
+      q+=held*(rw.partial!=null&&tt>rw.partial?1:down);
     } else {
       q+=Math.max(0,8500*0.3*(1-(tt-rel)/0.35));                       /* 解除後20分で消化 */
     }
@@ -3088,6 +3186,11 @@ function newsItems(now,att,rw,residual){
     });
     if (WX.ok&&WX.mul<0.9) items.push(J?"☔ 東京エリアは悪天候。屋内アトラクションと『ハーバー・カーゴ・ホール』がおすすめです":"☔ Wet weather — indoor rides and Harbor Cargo Hall recommended");
     items.push(J?`🌇 本日の日没は${fmtT(sunsetH())}。カヌー体験は日没で受付終了します`:`🌇 Sunset today at ${fmtT(sunsetH())}. Canoe Adventure closes at sunset`);
+    {  /* v70: 部分開放の告知 */
+      const rwT=restrictionWindow(now,dailyAttendance(now));
+      if (rwT&&rwT.partial!=null&&tt>=rwT.partial&&(rwT.release==null||tt<rwT.release))
+        urgent.push(J?"🎟 入場制限中ですが、園内の状況に応じて入園待ちのお客様を少しずつご案内しています（段階解除）":"🎟 Restriction easing: guests in line are being admitted gradually");
+    }
     {  /* v62: 当日券の残数連動 */
       const bi2=boothInfoOf(now,tt);
       if (bi2.remaining<=0&&tt<21) urgent.push(J?"🎫 本日の当日券は完売しました。日付指定券・年間パスポートは引き続きご入園いただけます":"🎫 Same-day tickets are sold out");
@@ -3325,24 +3428,47 @@ function boothSalesOf(d){
   let dayShare=0;
   cs.forEach(c=>{const m=(tm[c.id]||{}).mix||{};dayShare+=c.share*(m.day||0);});
   dayShare=Math.max(0.06,Math.min(0.35,dayShare));
+  /* v66: 混雑日は事前購入・日付指定の比率が上がり当日券は絞られる(閑散×1.25〜混雑×0.65) */
+  const crowdN=Math.max(0,Math.min(1,((att.total||0)-30000)/70000));
+  dayShare*=(1.25-0.60*crowdN);
   const expWalk=Math.round((att.total||0)*dayShare);
-  const quota=Math.max(expWalk,Math.round(PROC_CAP-(att.total||0)*(1-dayShare)));
+  /* v67: 発行枠 = 処理能力の余裕(115,000−事前券分−運営バッファ5,000)。
+     閑散期は上限いっぱいまで販売可能とし、混雑日は事前券の膨張により枠が自動的に縮小する。
+     完売 = 日次115,000への到達(年末年始級のみ発生) */
+  const capRoom=Math.max(0,PROC_CAP-(att.total||0)*(1-dayShare)-5000);
+  const quota=Math.max(500,Math.round(capRoom/100)*100);
   const wSum=(t)=>{let s=0;cs.forEach(c=>{const m=(tm[c.id]||{}).mix||{};
     s+=c.share*(m.day||0)*sig(t+0.25,c.inC,c.inK);});return s;};
+  const winsBase=Math.min(10,Math.max(4,4+Math.round(((att.total||0)-30000)/14000)));   /* v66: 混雑日は最大10窓 */
   const s0=wSum(oh-1),s1=wSum(21);
+  /* v65: 実売は予測から±上下振れ(0.85〜1.25×)。上振れ日は枠に到達して完売が発生する */
+  const expReal=Math.round(expWalk*(0.85+rand01("tqr-"+dateKey(d))*0.40));
   const pts=[];let sold=0,prevW=s0,sellT=null,stopT=null;
   for (let t=oh-1;t<=21+1e-6;t+=1/12){
     const w=wSum(t);
     const blocked=rw&&t>=rw.start&&(rw.release==null||t<rw.release);
     let inc=blocked?0:(att.total||0)*Math.max(0,(w-prevW))/Math.max(1e-6,(s1-s0))*dayShare/Math.max(1e-6,dayShare);
-    inc=blocked?0:(expWalk)*Math.max(0,(w-prevW))/Math.max(1e-6,(s1-s0));
+    const rawInc=(expReal)*Math.max(0,(w-prevW))/Math.max(1e-6,(s1-s0));
+    inc=blocked?0:rawInc;
     prevW=w;
     if (sold<quota){sold=Math.min(quota,sold+inc);if(sold>=quota&&sellT==null)sellT=t;}
     if (blocked&&stopT==null&&t>=rw.start) stopT=rw.start;
-    pts.push({t,sold:Math.round(sold),blocked});
+    /* v66: ブース待ち行列。窓口処理は約22人/窓/5分。滞留に応じ窓口を+2まで増開 */
+    if (pts.length===0) pts._q=0;
+    /* v68: 制限中の到着の35%は解除待ちで持ち越し、解除後に順次購入する */
+    if (pts._def===undefined) pts._def=0;
+    let inc2=inc;
+    if (blocked){pts._def+=rawInc*0.35;inc2=0;}
+    else if (pts._def>0){const rel=Math.min(pts._def,120+inc*0.3);pts._def-=rel;inc2=inc+rel;}
+    if (!blocked&&sold<quota){sold=Math.min(quota,sold+ (inc2-inc));}   /* 繰越分を先に計上 */
+    const arr5=(blocked||sold>=quota)?0:inc2;
+    const winsNow=Math.min(14,winsBase+((pts._q||0)>500?4:(pts._q||0)>150?2:0));   /* 臨時窓口・キオスク増開で最大14 */
+    const svc=winsNow*26;                                                            /* 約26人/窓/5分 */
+    pts._q=Math.max(0,(pts._q||0)+arr5-svc);
+    pts.push({t,sold:Math.round(sold),blocked,q:Math.round(pts._q),wins:winsNow});
   }
-  const wins=Math.min(10,Math.max(4,4+Math.round(((att.total||0)-40000)/12000)));
-  const r={quota,expWalk,dayShare,pts,sellT,wins,oh};
+  const winsBase2=winsBase;
+  const r={quota,expWalk,dayShare,pts,sellT,wins:winsBase2,oh};
   _boothCache[key]=r;return r;
 }
 function boothInfoOf(d,tt){
@@ -3351,6 +3477,9 @@ function boothInfoOf(d,tt){
   const cur=at(tt),prev=at(tt-1/6);
   const remaining=Math.max(0,b.quota-cur.sold);
   const rate10=Math.max(0,cur.sold-prev.sold);
+  const bq=cur.q||0, bWins=cur.wins||b.wins;
+  const bWait=bq>0?Math.max(1,Math.round(bq/(bWins*26)*5)):0;    /* 分 */
+  const bLv=bq>=400?"混雑":bq>=150?"やや混雑":"空いています";
   const blocked=rw&&tt>=rw.start&&(rw.release==null||tt<rw.release);
   let status,cls="ok";
   if (tt<b.oh-1){status="販売前（"+fmtT(b.oh-1)+"より販売開始）";cls="pre";}
@@ -3358,7 +3487,8 @@ function boothInfoOf(d,tt){
   else if (blocked){status="入場制限中につき当日券の販売を一時停止";cls="ng";}
   else if (tt>=21){status="本日の販売終了（21:00）";cls="pre";}
   else status="販売中";
-  return {status,cls,remaining,quota:b.quota,sold:cur.sold,rate10,sellT:b.sellT,wins:b.wins,night:nightTicketDay(d),blocked};
+  return {status,cls,remaining,quota:b.quota,sold:cur.sold,rate10,sellT:b.sellT,wins:bWins,night:nightTicketDay(d),blocked,
+    q:bq,wait:bWait,lv:bLv};
 }
 /* 入園状況シート: 待機列の推移・レーン別・並んでいる人の内訳 */
 function drawGateCharts(now,tt){
@@ -3458,8 +3588,15 @@ function openEntranceSheet(){
   const boothRows=[
     [J?"ブース状態":"Booth", bi.status, J?`開園1時間前(${fmtT(oh-1)})販売開始・21:00終了`:""],
     [J?"稼働窓口":"Windows", `${bi.wins}${J?"窓":""}`, J?`販売レート 約${bi.rate10.toLocaleString()}人/10分`:""],
-    [J?"当日券 残数":"Day tickets left", bi.remaining>0?`${bi.remaining.toLocaleString()}${J?"枚":""}`:(J?"完売":"sold out"),
-      bi.sellT?(J?`完売見込み ${fmtT(bi.sellT)}頃`:""):(J?"本日は完売の見込みなし":"")],
+    [J?"ブース待ち":"Booth queue", bi.q>0?`${bi.q.toLocaleString()}${J?"人・約":" ppl ~"}${bi.wait}${J?"分":"min"}`:(J?"待ちなし":"no wait"),
+      `<b style="color:${bi.lv==="混雑"?"#c0392b":bi.lv==="やや混雑"?"#b8860b":"#2e7d4f"}">${bi.lv}</b>`],
+    [J?"当日券 残数":"Day tickets left",
+      bi.remaining<=0?(J?"完売":"sold out")
+        :(bi.remaining>=12000&&!bi.sellT)?(J?"十分あり":"plenty")
+        :`${bi.remaining.toLocaleString()}${J?"枚":""}`,
+      bi.sellT?(J?`完売見込み ${fmtT(bi.sellT)}頃`:"")
+        :(bi.remaining>=12000?(J?`発行上限（処理能力の余裕）まで余裕あり`:"")
+        :(J?"本日は完売の見込みなし":""))],
     [J?"本日の販売累計":"Sold today", `${bi.sold.toLocaleString()}${J?"枚":""}`, bi.blocked?(J?"制限解除後に販売再開します":""):""],
   ];
   if (bi.night) boothRows.push([J?"ナイトチケット":"Night ticket",J?"17:00より販売（平日限定）":"from 17:00",""]);
@@ -4352,7 +4489,8 @@ function occRenderTiles(){
     `<span>IN PARK<b>${inPark.toLocaleString()}</b></span>
      <span>ENTRIES<b>${todayCumActual(now,tt,att,rw).toLocaleString()}</b></span>
      <span>RESTRICTION<b>${rw&&tt>=rw.start&&(rw.release==null||tt<rw.release)?"ACTIVE":"—"}</b></span>
-     <span>QUEUE<b>${(entranceQueue(now,tt,att,rw)||0).toLocaleString()}</b></span>`;
+     <span>QUEUE<b>${(entranceQueue(now,tt,att,rw)||0).toLocaleString()}</b></span>
+     <span class="occ-gsi" id="occGsiChip" style="cursor:pointer" title="ゲスト満足度指数 — クリックで詳細分析">GSI <b id="occKgsi">–</b> 📊</span>`;
   /* アラート */
   const al=[];
   list.forEach(s=>{
@@ -4516,6 +4654,8 @@ function occDrawRadar(ts){
   occRenderCardsLive(snap);
   occLiveNumbers(snap);            /* v53: フロー数値・プレショー残り秒の軽量更新 */
   occRenderIncident(snap);         /* v63: 訓練/実対応の手順ビュー(同一コンポーネント) */
+  {const el=document.getElementById("occKgsi");
+   if (el){const g=gsiOf(snap.d,snap.tt);if(el.textContent!==String(g.gsi))el.textContent=String(g.gsi);}}
   /* ルートの外接矩形に合わせて自動スケール(余白を最小化) */
   let X=x=>x,Y=y=>y;
   if (tb){
@@ -5162,6 +5302,65 @@ function occFlowStages(s,veh,sp,d,tt,o){
 }
 /* 250ms軽量アップデータ(v53): DOM再構築なしでフロー数値・プレショー残り秒を差し替え */
 /* v63: 手順ビュー — 避難訓練と実発生イベントで同じ画面。訓練は🎓バッジ、実対応は🔴バッジ */
+/* v68: KPI分析パネル */
+function openKpiSheet(){
+  const now=new Date(), tt=now.getHours()+now.getMinutes()/60+now.getSeconds()/3600;
+  const d=now;
+  const g=gsiOf(d,tt), f=g.f;
+  const att=dailyAttendance(d);
+  document.getElementById("kpiBack").classList.add("show");
+  document.getElementById("kpiTime").textContent=fmtT(tt);
+  /* GSI推移(30分ビン) */
+  const oh=openH(d);
+  const series=[];
+  for (let t=oh;t<=Math.min(tt,CLOSE_H)+1e-6;t+=0.5) series.push({t,g:gsiOf(d,t).gsi});
+  const fut=[];
+  for (let t=Math.ceil(tt*2)/2;t<=CLOSE_H+1e-6;t+=0.5) fut.push({t,g:gsiOf(d,t).gsi});
+  const spots=SPOTS.filter(x=>x.type==="a"&&RIDE_SPEC[x.id]);
+  const ip=Math.max(1,inParkOf(d,Math.min(tt,CLOSE_H-0.01),att));
+  const waits=spots.map(s=>({ja:s.ja,w:calcWait(s,d,Math.min(tt,CLOSE_H-0.01),ip,1)||0}))
+    .sort((a,b)=>b.w-a.w).slice(0,5);
+  const cj=id=>(COHORTS.find(x=>x.id===id)||{}).ja||id;
+  const fac=[["平均待ち時間",`${Math.round(f.avgW)}分`,-Math.round(f.pWait),"35分超過分を客層感応度で減点"],
+    ["乗車機会",`${f.rph.toFixed(2)}回/時・人`,f.pRide>0?-Math.round(f.pRide):Math.round(-f.pRide),"0.75回/時を基準に加減点"],
+    ["入場制限",f.restr?"実施中":"—",-Math.round(f.pRestr),""],
+    ["トラブル遭遇",`${f.troubles}施設`,-f.pTrouble,"停止・調整中の施設数"],
+    ["天候・暑さ","",-Math.round(f.pWx),""],
+    ["ブース待ち",f.boothW?`約${f.boothW}分`:"—",-f.pBooth,""],
+    ["ショー公演中",`${f.shows}公演`, +f.bShow,""],
+    ["イベント日","", +f.bEvent,""],
+    ["閉園案内・夜の運営","", +f.bClose,"最後までご案内の丁寧さ"]];
+  document.getElementById("kpiBody").innerHTML=`
+    <div class="kpi-row">
+      <div class="kpi-big"><i>GSI 現在</i><b>${g.gsi}</b><span>/100</span></div>
+      <div class="kpi-mini"><i>平均待ち</i><b>${Math.round(f.avgW)}分</b></div>
+      <div class="kpi-mini"><i>乗車機会</i><b>${f.rph.toFixed(2)}</b><span>回/時</span></div>
+      <div class="kpi-mini"><i>在園</i><b>${Math.round(ip).toLocaleString()}</b></div>
+      <div class="kpi-mini"><i>公演中</i><b>${f.shows}</b></div>
+      <div class="kpi-mini"><i>制限</i><b>${f.restr?"実施中":"—"}</b></div>
+    </div>
+    <div class="att-sec">GSI 推移（30分ごと・薄色は予測）</div>
+    <canvas id="kpiTrend" height="110"></canvas>
+    <div class="kpi-cols">
+      <div><div class="att-sec">要因分解（現在）</div>
+        <table class="ent-tbl">${fac.map(x=>`<tr><td>${x[0]}</td><td>${x[1]}</td><td style="text-align:right"><b style="color:${x[2]>0?"#2e7d4f":x[2]<0?"#c0392b":"#888"}">${x[2]>0?"+":""}${x[2]}</b></td><td class="src">${x[3]}</td></tr>`).join("")}</table></div>
+      <div><div class="att-sec">客層別 GSI</div>
+        <div class="kpi-bars">${Object.entries(g.byC).map(([id,v])=>`<div class="kpi-bar"><span>${cj(id)}</span><i><b style="width:${v}%;background:${(COHORT_COLORS_G||{})[id]||"#5c8de0"}"></b></i><em>${v}</em></div>`).join("")}</div>
+        <div class="att-sec">待ち時間 上位（満足度への主要因）</div>
+        <table class="ent-tbl">${waits.map(x=>`<tr><td>${x.ja}</td><td style="text-align:right"><b>${Math.round(x.w)}分</b></td></tr>`).join("")}</table></div>
+    </div>`;
+  const cv=document.getElementById("kpiTrend");
+  const w2=cv.clientWidth||600;cv.width=w2*2;cv.height=220;
+  const gx=cv.getContext("2d");gx.setTransform(2,0,0,2,0,0);gx.clearRect(0,0,w2,110);
+  const all=series.concat(fut);
+  const X=t=>( (t-oh)/(CLOSE_H-oh) )*(w2-30)+22, Y=v=>100-(v-40)/60*86;
+  gx.strokeStyle="#223a5c";[50,70,90].forEach(v=>{gx.beginPath();gx.moveTo(22,Y(v));gx.lineTo(w2-8,Y(v));gx.stroke();
+    gx.fillStyle="#5f81ad";gx.font="8px monospace";gx.fillText(String(v),4,Y(v)+3);});
+  const line=(arr,alpha)=>{if(arr.length<2)return;gx.globalAlpha=alpha;gx.strokeStyle="#ffd75e";gx.lineWidth=2;
+    gx.beginPath();arr.forEach((p,i)=>{i?gx.lineTo(X(p.t),Y(p.g)):gx.moveTo(X(p.t),Y(p.g));});gx.stroke();gx.globalAlpha=1;gx.lineWidth=1;};
+  line(series,1);line(fut,0.35);
+  gx.fillStyle="#5f81ad";for(let h=Math.ceil(oh);h<=22;h+=2){gx.fillText(String(h),X(h)-4,108);}
+}
 function occRenderIncident(snap){
   const box=document.getElementById("occIncident");
   if (!box) return;
@@ -5381,6 +5580,12 @@ function openOpsCenter(){
         occRenderTiles();occRenderShows();occRenderPanels();
       };
       md.addEventListener("change",apply);
+      if (!document.__gsiW){document.__gsiW=1;
+        document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest("#occGsiChip"))openKpiSheet();});}
+      const kc=document.getElementById("kpiClose");
+      if (kc&&!kc.__w){kc.__w=1;kc.addEventListener("click",()=>document.getElementById("kpiBack").classList.remove("show"));}
+      const kb=document.getElementById("kpiBack");
+      if (kb&&!kb.__w){kb.__w=1;kb.addEventListener("click",e=>{if(e.target.id==="kpiBack")kb.classList.remove("show");});}
       lv.addEventListener("change",apply);
     }
   }
@@ -8277,6 +8482,10 @@ setInterval(fetchQuake,300000);
       <div class="occ-h">DISPATCH — 発車間隔の管理</div>
       <div class="occ-dispatch" id="occDispatch"></div>
       <div id="occIncident" style="display:none"></div>
+  <div id="kpiBack" class="kpi-back"><div class="kpi-sheet">
+    <div class="kpi-h"><b>📊 KPI 分析 — GUEST SATISFACTION & OPERATIONS</b><span id="kpiTime"></span><button class="occ-x" id="kpiClose">× 閉じる</button></div>
+    <div id="kpiBody"></div>
+  </div></div>
   <div class="occ-h">STATION — 搭乗 / 降車</div>
       <div class="occ-station" id="occStation"></div>
       <div class="occ-h">VEHICLES <i id="occVehSub"></i></div>
