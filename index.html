@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>const APP_VERSION="v70",APP_DATE="2026-07-27";</script>
+<script>const APP_VERSION="v72",APP_DATE="2026-07-27";</script>
 <title>MALLOWBROOK PARK｜リアルタイム運営情報</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Cinzel:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -389,6 +389,17 @@ body.nocomments .ticker2 .ticker-text{visibility:hidden}
 .gp-pp{font-style:normal;background:#3a2f0e;color:#ffd75e;border-radius:4px;padding:0 5px;margin-left:4px}
 .gp-idle{font-style:normal;color:#3f5a80}
 .pre-po{font-size:9px;color:#9db8d9;margin-top:3px}
+.dm-info{color:#7fd0ff}
+.vc-boost{outline:2px solid #ffd75e;box-shadow:0 0 10px rgba(255,215,94,.35);position:relative}
+.vc-boost::after{content:"増発";position:absolute;top:-7px;right:6px;background:#3a2f0e;color:#ffd75e;
+  font-size:8px;padding:0 5px;border-radius:4px;letter-spacing:.1em}
+.snd-toast{position:fixed;right:16px;bottom:16px;z-index:420;max-width:min(420px,80vw);
+  background:#101d33;border:1px solid #3a557f;border-radius:8px;padding:8px 13px;font-size:11px;color:#dfe8f5;
+  opacity:0;transform:translateY(8px);transition:.25s;pointer-events:none;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+.snd-toast.show{opacity:1;transform:none}
+.snd-crit{border-color:#ff5f52;box-shadow:0 0 14px rgba(255,95,82,.35)}
+.snd-warn{border-color:#ffc85a}
+.snd-info{border-color:#3a557f}
 .occ-gsi{border:1px solid #3a557f;border-radius:5px;padding:1px 7px;background:#12233c}
 .occ-gsi b{color:#ffd75e}
 .kpi-back{position:fixed;inset:0;background:rgba(4,8,16,.72);z-index:340;display:none;align-items:center;justify-content:center}
@@ -3673,6 +3684,7 @@ const FAULT_CODES={powerW:["PWR-001","受電設備異常"],powerA:["PWR-014","�
    長時間調整(30分超)は待機列を全員退出とし、優先搭乗券(リカバリーパス)を配布する */
 const EVAC_MIN_INSP=0.5;          /* この時間を超える調整は全員退出の対象(30分) */
 function evacWindowOf(spot,d,tt){
+  if (spot.type!=="a") return null;   /* v72: 避難昇格はアトラクション限定(滞在型含む)。レストラン等は「調整中」のまま */
   const st0=(function(){
     const trV=troubleVisible(d,troubleOf(d));
     return trV?troublePublic(d,trV,tt):null;
@@ -3807,21 +3819,39 @@ function vehicleStates(spot,d,tt,opt){
   const deployable=sp.trains-maintN;
   const active=(opt&&opt.test)?Math.min(deployable,Math.max(2,Math.round(sp.trains*0.4)))
               :(running?Math.min(deployable,activeTrainsOf(spot.id,d,tt,st.id==="LIMITED_OPERATION"?2:lv)):0);
-  /* v56: 増発中は予備を+1投入(検討満了後・決定論)。gapを再算出 */
-  let activeAdj=active;
-  (function(){
+  /* v71: 増発判定を単一情報源に統合(旧: 実効側と表示側で条件が食い違い、表示どおりに増発されないバグ)。
+     基準gap・故障率・stopShiftMinで一度だけ評価し、実効(activeAdj)と表示(boost)の両方に使う。
+     残り時間は周回内進捗で連続化、終了後10分は「増発終了」を表示 */
+  let activeAdj=active, boostPre=null;
+  {
     const target0=DISPATCH_TARGET[spot.id]??null;
-    if (target0==null||!running||(opt&&opt.test)||(sp.spare||0)<=0) return;
-    const gap0=cycle/Math.max(1,active), theo0=gap0*60;
-    const fr0=lv>=4?0.08:0.05;
-    const lapN0=Math.floor((minute-((opt&&opt.test)?0:estopShiftMin(spot,d,tt)))/Math.max(0.2,gap0));
-    const overAt0=(lap)=>{let a2=0;for(let k=0;k<12;k++){const key="dsp-"+spot.id+"-"+(lap-k);
-      const f=rand01(key)<fr0;a2+=(f?12+rand01(key+"f")*25:0)+(rand01(key+"h")<0.10?2+rand01(key+"h2")*5:0);}
-      return theo0+a2/12>target0;};
-    if (!overAt0(lapN0)) return;
-    let streak=1;while(streak<60&&overAt0(lapN0-streak))streak++;
-    if (streak*gap0>=10) activeAdj=Math.min(sp.trains,active+1);
-  })();
+    if (target0!=null&&(STATION_TYPE[spot.id]||"single")!=="bay"&&running&&!(opt&&opt.test)){
+      const gapB=cycle/Math.max(1,active), theoB=gapB*60;
+      const frB2=0.05*(1+(lv-1)*0.16);
+      const mEffB=minute-stopShiftMin(spot,d,tt);
+      const lapB=Math.floor(mEffB/Math.max(0.2,gapB));
+      const frac=Math.max(0,Math.min(1,(mEffB/Math.max(0.2,gapB))%1));
+      const overAtB=(lap)=>{let a2=0;for(let k=0;k<12;k++){const key="dsp-"+spot.id+"-"+(lap-k);
+        const f=rand01(key)<frB2;a2+=(f?12+rand01(key+"f")*25:0)+(rand01(key+"h")<0.10?2+rand01(key+"h2")*5:0);}
+        return theoB+a2/12>target0;};
+      const REVIEW=10;
+      if (overAtB(lapB)){
+        let streak=1;while(streak<60&&overAtB(lapB-streak))streak++;
+        const streakMinC=(streak-1+frac)*gapB;
+        if (streakMinC<REVIEW) boostPre={state:"review",remainSec:Math.max(0,Math.round((REVIEW-streakMinC)*60))};
+        else if ((sp.spare||0)>0){boostPre={state:"added",n:1,sinceMin:Math.round(streakMinC-REVIEW)};activeAdj=Math.min(sp.trains,active+1);}
+        else boostPre={state:"nospare"};
+      } else {
+        /* 終了検知: 直近10分以内に増発条件(検討満了)が成立していたか */
+        const K=Math.ceil(REVIEW/Math.max(0.2,gapB));
+        for (let k2=1;k2<=K;k2++){
+          if (!overAtB(lapB-k2)) continue;
+          let st2=1;while(st2<60&&overAtB(lapB-k2-st2))st2++;
+          if (st2*gapB>=REVIEW){boostPre={state:"ended",agoMin:Math.max(1,Math.round((k2-1+frac)*gapB))};break;}
+        }
+      }
+    }
+  }
   let activeCd=activeAdj;
   if (inPreOpen) activeCd=Math.min(3,sp.trains);                          /* 無人試運転は少数編成 */
   else if (inSweep) activeCd=Math.max(0,Math.ceil(activeAdj*(1-(tt-cd.drainEnd)/0.25)));  /* 順次車庫へ */
@@ -4018,21 +4048,8 @@ function vehicleStates(spot,d,tt,opt){
     if (e.t>=wS&&e.t<tt) careD+=e.extra;});
   const actual=theo+(accD+careD)/12;
   const overRate=Math.min(100,Math.round(ovN/12*100));
-  /* v56: 目標超過が継続したら「検討10分」を明示し、満了で予備を増発(すべて決定論) */
-  let boost=null;
-  if (target!=null&&(STATION_TYPE[spot.id]||"single")!=="bay"&&running&&!testMode){
-    const overAt=(lap)=>{let a2=0;for(let k=0;k<12;k++){const key="dsp-"+spot.id+"-"+(lap-k);
-      const f=rand01(key)<faultRate;a2+=(f?12+rand01(key+"f")*25:0)+(rand01(key+"h")<0.10?2+rand01(key+"h2")*5:0);}
-      return theo+a2/12>target;};
-    if (overAt(lapNow)){
-      let streak=1;
-      while (streak<60&&overAt(lapNow-streak)) streak++;
-      const streakMin=streak*gap, REVIEW=10;
-      if (streakMin<REVIEW) boost={state:"review",remainSec:Math.max(0,Math.round((REVIEW-streakMin)*60))};
-      else if ((sp.spare||0)>0) boost={state:"added",n:1,sinceMin:Math.round(streakMin-REVIEW)};
-      else boost={state:"nospare"};
-    }
-  }
+  /* v71: 表示も実効判定(boostPre)と同一情報源 */
+  const boost=boostPre;
   return {blocks,list:out,gap,cycle,active,lv,drive:(rt&&rt.drive)||"motor",max:sp.trains,spare:sp.spare,
     test:testMode,tracks,stype,faultRate,inStation:inStation.slice(0,tracks),
     esp,boost,drill:drill?{...drill,scn:opt.drill.scn}:null,cdPhase:inPreOpen?"preopen":inSweep?"sweep":(cd&&tt>=cd.tCut&&tt<cd.drainEnd)?"drain":inNight?"night":null,cd,
@@ -4514,7 +4531,16 @@ function occRenderTiles(){
   {
     const el=document.getElementById("occAlerts");
     const crit=al.some(a=>a[0]==="a-crit"),warn2=al.some(a=>a[0]==="a-warn");
-    if (crit) sndBeep("crit"); else if (warn2) sndBeep("warn");
+    /* v71: 新規に増えたアラートを検知して重大度別に鳴らす(理由付き)。軽微(a-info)も対象 */
+    const sig=al.map(a=>a[0]+"|"+a[1]);
+    const prevSig=OCC._alSig||[];
+    const added2=sig.filter(x=>!prevSig.includes(x));
+    OCC._alSig=sig;
+    if (added2.length){
+      const sev=added2.some(x=>x.startsWith("a-crit"))?"crit":added2.some(x=>x.startsWith("a-warn"))?"warn":"info";
+      const first=added2.find(x=>x.startsWith("a-"+ (sev==="crit"?"crit":sev==="warn"?"warn":"info")))||added2[0];
+      sndBeep(sev,first.split("|").slice(1).join("|"));
+    }
     if (!al.length) el.innerHTML=`<div class="al-line al-ok">✅ ALL CLEAR — 異常なし</div>`;
     else {
       const open=!!OCC.alertsOpen;
@@ -4573,7 +4599,12 @@ function sndEnsureBtn(){
   b.onclick=()=>{SND.on=!SND.on;b.textContent=SND.on?"🔔":"🔕";};
   c.parentElement.insertBefore(b,c);SND.btn=b;
 }
-function sndBeep(kind){
+function sndBeep(kind,reason){
+  /* v71: 3段階(info=軽微/warn=注意/crit=重大)+理由トースト+ログ。ミュート中も理由は表示 */
+  SND.log=SND.log||[];
+  if (reason){SND.log.unshift({at:new Date(),kind,reason});SND.log=SND.log.slice(0,8);
+    if (SND.btn) SND.btn.title="音通知の履歴:\n"+SND.log.map(l=>`${String(l.at.getHours()).padStart(2,"0")}:${String(l.at.getMinutes()).padStart(2,"0")} [${l.kind}] ${l.reason}`).join("\n");}
+  if (OCC.on&&reason) sndToast(kind,reason);
   if (!SND.on||!OCC.on) return;
   try{if(!SND.ctx)SND.ctx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){return;}
   const c=SND.ctx;if(!c)return;
@@ -4581,12 +4612,23 @@ function sndBeep(kind){
   if (SND.last[kind]&&now-SND.last[kind]<9000) return;
   SND.last[kind]=now;
   const t=c.currentTime;
-  const mk=(f,at,dur)=>{const o=c.createOscillator(),gn=c.createGain();o.frequency.value=f;o.type="sine";
-    gn.gain.setValueAtTime(0.0001,t+at);gn.gain.exponentialRampToValueAtTime(0.10,t+at+0.02);
+  const mk=(f,at,dur,g0)=>{const o=c.createOscillator(),gn=c.createGain();o.frequency.value=f;o.type="sine";
+    gn.gain.setValueAtTime(0.0001,t+at);gn.gain.exponentialRampToValueAtTime(g0,t+at+0.02);
     gn.gain.exponentialRampToValueAtTime(0.0001,t+at+dur);
     o.connect(gn);gn.connect(c.destination);o.start(t+at);o.stop(t+at+dur+0.05);};
-  if (kind==="warn") mk(880,0,0.18);
-  else {mk(660,0,0.22);mk(520,0.28,0.22);mk(660,0.56,0.22);}
+  if (kind==="info") mk(520,0,0.14,0.05);                        /* 軽微: 低め単音・小音量 */
+  else if (kind==="warn") mk(880,0,0.18,0.10);                    /* 注意: 高め単音 */
+  else {mk(660,0,0.22,0.13);mk(520,0.28,0.22,0.13);mk(660,0.56,0.22,0.13);}   /* 重大: 3音 */
+}
+function sndToast(kind,reason){
+  let el=document.getElementById("sndToast");
+  if (!el){el=document.createElement("div");el.id="sndToast";document.body.appendChild(el);}
+  const ic=kind==="crit"?"🚨":kind==="warn"?"⚠️":"ℹ️";
+  el.className="snd-toast snd-"+kind;
+  el.textContent=`${ic} ${reason}`;
+  el.classList.add("show");
+  clearTimeout(el.__t);
+  el.__t=setTimeout(()=>el.classList.remove("show"),4500);
 }
 function fmtMMSS(sec){sec=Math.max(0,Math.round(sec));return Math.floor(sec/60)+":"+String(sec%60).padStart(2,"0");}
 function mkeyB(m){return Math.floor(m);}
@@ -4654,6 +4696,24 @@ function occDrawRadar(ts){
   occRenderCardsLive(snap);
   occLiveNumbers(snap);            /* v53: フロー数値・プレショー残り秒の軽量更新 */
   occRenderIncident(snap);         /* v63: 訓練/実対応の手順ビュー(同一コンポーネント) */
+  {  /* v71: 増発表示のライブ更新+状態遷移の音通知 */
+    const bEl=document.querySelector("[data-boost]");
+    if (bEl&&veh){const h=boostHTML(veh);if(bEl.innerHTML!==h)bEl.innerHTML=h;}
+    if (veh){
+      const st3=veh.boost?veh.boost.state:"none";
+      const key3=(s&&s.id)||"";
+      if (!OCC._bst) OCC._bst={};
+      if (OCC._bst[key3]!==st3){
+        const prev3=OCC._bst[key3];OCC._bst[key3]=st3;
+        if (prev3!==undefined){
+          if (st3==="review") sndBeep("info",`${s.ja}：発車間隔が目標未達 — 増発判断を開始（検討10分）`);
+          else if (st3==="added") sndBeep("warn",`${s.ja}：増発実施 — 予備+1編成を投入（${veh.active}編成）`);
+          else if (st3==="ended") sndBeep("info",`${s.ja}：増発終了 — 予備編成へ戻し`);
+          else if (st3==="nospare") sndBeep("warn",`${s.ja}：増発不可（予備なし）— 確認分担へ切替`);
+        }
+      }
+    }
+  }
   {const el=document.getElementById("occKgsi");
    if (el){const g=gsiOf(snap.d,snap.tt);if(el.textContent!==String(g.gsi))el.textContent=String(g.gsi);}}
   /* ルートの外接矩形に合わせて自動スケール(余白を最小化) */
@@ -5009,11 +5069,7 @@ function occRenderPanels(){
           <span class="${veh.over?"dm-ng":"dm-ok"}">実績 <b>${veh.actual}s</b></span>
           <span>理論 <b>${veh.theo}s</b></span>
           <span class="${veh.overRate>=12?"dm-ng":""}">超過便 <b>${veh.overRate}%</b>（うち安全確認 ${veh.safetyRate}%）</span>
-          <span data-boost="1">${!veh.over?'<b class="dm-ok">目標内</b>':
-  veh.boost&&veh.boost.state==="review"?`<b class="dm-ng">目標未達 — 増発判断中（検討10分・残り ${Math.floor(veh.boost.remainSec/60)}:${String(veh.boost.remainSec%60).padStart(2,"0")}）</b>`:
-  veh.boost&&veh.boost.state==="added"?`<b class="dm-ok">増発実施 +${veh.boost.n}編成（${veh.boost.sinceMin}分経過）</b>`:
-  veh.boost&&veh.boost.state==="nospare"?'<b class="dm-ng">増発不可 — 予備なし、安全確認の分担へ切替</b>':
-  '<b class="dm-ng">目標未達 — 増発/確認分担を検討</b>'}</span>`;
+          <span data-boost="1">${boostHTML(veh)}</span>`;
     }
   }
   document.getElementById("occLegend").innerHTML=
@@ -5361,6 +5417,16 @@ function openKpiSheet(){
   line(series,1);line(fut,0.35);
   gx.fillStyle="#5f81ad";for(let h=Math.ceil(oh);h<=22;h+=2){gx.fillText(String(h),X(h)-4,108);}
 }
+/* v71: 増発状態の共通表示(パネル初期描画と250msライブ更新で共用) */
+function boostHTML(veh){
+  const b2=veh.boost;
+  if (b2&&b2.state==="review") return `<b class="dm-ng">目標未達 — 増発判断中（検討10分・残り ${Math.floor(b2.remainSec/60)}:${String(b2.remainSec%60).padStart(2,"0")}）</b>`;
+  if (b2&&b2.state==="added") return `<b class="dm-ok">増発実施 +${b2.n}編成（${b2.sinceMin}分経過・${veh.active}編成で運行中）</b>`;
+  if (b2&&b2.state==="nospare") return `<b class="dm-ng">増発不可 — 予備なし、安全確認の分担へ切替</b>`;
+  if (b2&&b2.state==="ended") return `<b class="dm-info">増発終了（${b2.agoMin}分前）— 予備編成へ戻し、所定編成で運行中</b>`;
+  if (veh.over) return '<b class="dm-ng">目標未達 — 増発/確認分担を検討</b>';
+  return '<b class="dm-ok">目標内</b>';
+}
 function occRenderIncident(snap){
   const box=document.getElementById("occIncident");
   if (!box) return;
@@ -5454,8 +5520,9 @@ function occRenderCardsLive(snap){
   }
   const sp=RIDE_SPEC[snap.s.id]||{};
   box.innerHTML=snap.veh.list.map(v=>{
-    const cls=v.hold?"vc-hold":v.side==="maint"?"vc-maint":v.side==="wait"?"vc-wait":
-      v.state.includes("停止")?"vc-stop":isStation(v.kind)?"vc-station":"vc-run";
+    const isBoost=snap.veh.boost&&snap.veh.boost.state==="added"&&v.id===snap.veh.active&&v.s!=null;
+    const cls=(v.hold?"vc-hold":v.side==="maint"?"vc-maint":v.side==="wait"?"vc-wait":
+      v.state.includes("停止")?"vc-stop":isStation(v.kind)?"vc-station":"vc-run")+(isBoost?" vc-boost":"");
     const sm=v.seats;
     return `<div class="vc ${cls}${OCC.selVeh===v.id?" vc-sel":""}" data-v="${v.id}">
       <div class="vc-h"><b>${snap.veh.stype==="bay"?"C":"V"}${String(v.id).padStart(2,"0")}</b><span>${v.block}</span></div>
@@ -5643,7 +5710,9 @@ function statusShort(st){
   if (st.st==="lastcall") return LANG==="ja"?"列受付終了・ご案内中":"Queue closed - boarding continues";
   if (st.st==="lo") return LANG==="ja"?"L.O.終了":"Last order done";
   if (st.st==="prep") return LANG==="ja"?"準備中":"Preparing";
-  return st.st==="maint"?t("stMaintS"):st.st==="insp"?t("stInspS"):st.st==="quake"?t("stQuakeS"):st.st==="sunset"?t("stSunsetS"):null;
+  const v=st.st==="maint"?t("stMaintS"):st.st==="insp"?t("stInspS"):st.st==="quake"?t("stQuakeS"):st.st==="sunset"?t("stSunsetS"):
+    st.st==="evac"?(LANG==="ja"?"係員がご案内中":"Staff guidance"):null;
+  return v!=null?v:(LANG==="ja"?"一時休止":"Temporarily unavailable");   /* v72: 未知状態の包括フォールバック */
 }
 function statusLong(st){
   if (st.st==="trouble"){
@@ -5730,7 +5799,7 @@ function renderLists(){
     panel.innerHTML=sorted.map((s,i)=>{
       const w=currentWaits[s.id],st=currentStatus[s.id];
       let wc,wtxt,down="";
-      if (st&&st.st!=="open"){wc="w-maint";wtxt=statusShort(st);down="down";}
+      if (st&&st.st!=="open"){wc="w-maint";wtxt=statusShort(st)||(LANG==="ja"?"一時休止":"—");down="down";}
       else if (w==null){wc="w-closed";wtxt=beforeOrClosed();}
       else {wc=waitClass(w);wtxt=`${w}<small> ${t("min")}</small>`;}
       const pp=ppText(s.id,new Date(),currentSimT,currentAtt,st,fcMode);
@@ -6061,7 +6130,7 @@ function refresh(){
     if (stt.st==="open"&&(fcMode||(tt>=oh&&tt<CLOSE_H))) w=calcWait(s,now,simT,fcMode?att.total:inPark,redist);
     currentWaits[s.id]=w;
     const chip=document.getElementById("chip-"+s.id),min=document.getElementById("min-"+s.id);
-    if (stt.st!=="open"){chip.className="chip w-maint";min.textContent=statusShort(stt);}
+    if (stt.st!=="open"){chip.className="chip w-maint";min.textContent=statusShort(stt)||"—";}
     else if (w==null){chip.className="chip w-closed";min.textContent="--";}
     else {chip.className="chip "+waitClass(w);min.textContent=w+t("min");}
   });
